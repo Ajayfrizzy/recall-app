@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "recall-temp",
-    "slug": "recall-temp",
+    "name": "Recall",
+    "slug": "recall-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "recalltemp",
+    "scheme": "recall",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"

@@ -1,5 +1,5 @@
 {
-  "name": "recall-temp",
+  "name": "recall-app",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {

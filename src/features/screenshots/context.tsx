@@ -10,9 +10,9 @@ import {
 } from 'react';
 
 import {
-  getScreenshotPermission,
   loadDeviceScreenshots,
-  requestScreenshotPermission,
+  getScreenshotPermissionState,
+  requestScreenshotPermissionState,
   type ScreenshotPermission,
 } from './media-library';
 import type { RecallScreenshot, ScreenshotStatus } from './types';
@@ -40,6 +40,7 @@ function reducer(state: State, action: Action): State {
 type ContextValue = {
   screenshots: RecallScreenshot[];
   permission: ScreenshotPermission | null;
+  canAskAgain: boolean;
   loading: boolean;
   refreshing: boolean;
   error: string | null;
@@ -53,38 +54,46 @@ const ScreenshotContext = createContext<ContextValue | null>(null);
 export function ScreenshotProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(reducer, {});
   const [permission, setPermission] = useState<ScreenshotPermission | null>(null);
+  const [canAskAgain, setCanAskAgain] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadForPermission = useCallback(async (nextPermission: ScreenshotPermission) => {
+    if (nextPermission !== 'granted' && nextPermission !== 'limited') return;
+    dispatch({ type: 'replace', screenshots: await loadDeviceScreenshots(nextPermission) });
+  }, []);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
     try {
-      const currentPermission = permission ?? (await getScreenshotPermission());
-      setPermission(currentPermission);
-      if (currentPermission !== 'granted' && currentPermission !== 'limited') return;
-      dispatch({ type: 'replace', screenshots: await loadDeviceScreenshots() });
+      const current = await getScreenshotPermissionState();
+      setPermission(current.permission);
+      setCanAskAgain(current.canAskAgain);
+      await loadForPermission(current.permission);
     } catch {
       setError('We could not load your screenshots. Try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [permission]);
+  }, [loadForPermission]);
 
   const requestAccess = useCallback(async () => {
     setError(null);
     try {
-      const nextPermission = await requestScreenshotPermission();
-      setPermission(nextPermission);
-      if (nextPermission === 'granted' || nextPermission === 'limited') await refresh();
+      const next = await requestScreenshotPermissionState();
+      setPermission(next.permission);
+      setCanAskAgain(next.canAskAgain);
+      await loadForPermission(next.permission);
     } catch {
       setPermission('denied');
+      setCanAskAgain(false);
     } finally {
       setLoading(false);
     }
-  }, [refresh]);
+  }, [loadForPermission]);
 
   useEffect(() => {
     void refresh();
@@ -96,6 +105,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
         (a, b) => (b.creationTime ?? 0) - (a.creationTime ?? 0),
       ),
       permission,
+      canAskAgain,
       loading,
       refreshing,
       error,
@@ -103,7 +113,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       requestAccess,
       setStatus: (id: string, status: ScreenshotStatus) => dispatch({ type: 'status', id, status }),
     }),
-    [state, permission, loading, refreshing, error, refresh, requestAccess],
+    [state, permission, canAskAgain, loading, refreshing, error, refresh, requestAccess],
   );
 
   return <ScreenshotContext.Provider value={value}>{children}</ScreenshotContext.Provider>;

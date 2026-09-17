@@ -1,4 +1,4 @@
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -6,8 +6,17 @@ import { ScreenshotCard } from '@/features/screenshots/components/screenshot-car
 import { useScreenshots } from '@/features/screenshots/context';
 
 export default function InboxScreen() {
-  const { screenshots, permission, loading, refreshing, error, refresh, requestAccess, setStatus } =
-    useScreenshots();
+  const {
+    screenshots,
+    permission,
+    canAskAgain,
+    loading,
+    refreshing,
+    error,
+    refresh,
+    requestAccess,
+    setStatus,
+  } = useScreenshots();
   const pending = screenshots.filter((item) => item.status === 'pending');
   const needsPermission =
     permission === null || permission === 'denied' || permission === 'unavailable';
@@ -31,7 +40,9 @@ export default function InboxScreen() {
             error={error}
             permission={permission}
             hasScreenshots={screenshots.length > 0}
+            canAskAgain={canAskAgain}
             onRequest={requestAccess}
+            onOpenSettings={() => void Linking.openSettings()}
             onRetry={() => void refresh()}
           />
         }
@@ -56,14 +67,18 @@ function StateView({
   error,
   permission,
   hasScreenshots,
+  canAskAgain,
   onRequest,
+  onOpenSettings,
   onRetry,
 }: {
   loading: boolean;
   error: string | null;
   permission: 'granted' | 'limited' | 'denied' | 'unavailable' | null;
   hasScreenshots: boolean;
+  canAskAgain: boolean;
   onRequest: () => Promise<void>;
+  onOpenSettings: () => void;
   onRetry: () => void;
 }) {
   if (loading)
@@ -84,15 +99,22 @@ function StateView({
         <ThemedText themeColor="textSecondary">
           Your screenshots stay on your device during this milestone.
         </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => void onRequest()}
-          style={styles.button}
-        >
-          <ThemedText style={styles.buttonText}>
-            {permission === 'denied' ? 'Try Again' : 'Allow Screenshot Access'}
-          </ThemedText>
-        </Pressable>
+        {permission !== 'denied' || canAskAgain ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void onRequest()}
+            style={styles.button}
+          >
+            <ThemedText style={styles.buttonText}>
+              {permission === 'denied' ? 'Try Again' : 'Allow Screenshot Access'}
+            </ThemedText>
+          </Pressable>
+        ) : null}
+        {permission === 'denied' && !canAskAgain ? (
+          <Pressable accessibilityRole="button" onPress={onOpenSettings} style={styles.button}>
+            <ThemedText style={styles.buttonText}>Open Settings</ThemedText>
+          </Pressable>
+        ) : null}
       </View>
     );
   if (error)

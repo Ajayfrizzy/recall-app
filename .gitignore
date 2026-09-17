@@ -150,7 +150,9 @@ expo-env.d.ts
 
 .expo/
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 
 .claude/
 AGENTS.md

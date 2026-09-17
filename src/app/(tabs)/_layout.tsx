@@ -9,10 +9,44 @@ const icons = {
 } as const;
 
 export default function TabsLayout() {
-  return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: '#111827' }}>
-    <Tabs.Screen name="index" options={{ title: 'Inbox', tabBarIcon: ({ color, size }) => <SymbolView name={icons.inbox} tintColor={color} size={size} /> }} />
-    <Tabs.Screen name="upcoming" options={{ title: 'Upcoming', tabBarIcon: ({ color, size }) => <SymbolView name={icons.upcoming} tintColor={color} size={size} /> }} />
-    <Tabs.Screen name="library" options={{ title: 'Library', tabBarIcon: ({ color, size }) => <SymbolView name={icons.library} tintColor={color} size={size} /> }} />
-    <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <SymbolView name={icons.profile} tintColor={color} size={size} /> }} />
-  </Tabs>;
+  return (
+    <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: '#111827' }}>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Inbox',
+          tabBarIcon: ({ color, size }) => (
+            <SymbolView name={icons.inbox} tintColor={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="upcoming"
+        options={{
+          title: 'Upcoming',
+          tabBarIcon: ({ color, size }) => (
+            <SymbolView name={icons.upcoming} tintColor={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="library"
+        options={{
+          title: 'Library',
+          tabBarIcon: ({ color, size }) => (
+            <SymbolView name={icons.library} tintColor={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <SymbolView name={icons.profile} tintColor={color} size={size} />
+          ),
+        }}
+      />
+    </Tabs>
+  );
 }

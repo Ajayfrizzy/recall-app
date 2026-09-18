@@ -1,0 +1,25 @@
+{
+  "name": "recall-analysis-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "fixtures:check": "tsx src/schemas/check-fixtures.ts",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "openai": "^5.12.2",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/node": "^24.3.0",
+    "prettier": "^3.9.7",
+    "tsx": "^4.19.4",
+    "typescript": "^5.9.2"
+  }
+}

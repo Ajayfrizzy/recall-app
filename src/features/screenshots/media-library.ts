@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as MediaLibrary from 'expo-media-library/legacy';
 
 import type { RecallScreenshot } from './types';
+import { createIdleScreenshotAnalysis } from '@/services/understanding/types';
 
 const PAGE_SIZE = 50;
 
@@ -73,5 +74,6 @@ export async function loadDeviceScreenshots(
     height: asset.height,
     creationTime: asset.creationTime,
     status: 'pending',
+    analysis: createIdleScreenshotAnalysis(),
   }));
 }

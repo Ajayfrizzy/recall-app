@@ -101,6 +101,8 @@ export const AnalyzeRequestSchema = z
         width: z.number().optional(),
         height: z.number().optional(),
         creationTime: z.number().optional(),
+        analysisWidth: z.number().optional(),
+        analysisHeight: z.number().optional(),
       })
       .optional(),
   })

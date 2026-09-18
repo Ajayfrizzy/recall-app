@@ -156,6 +156,12 @@ function AnalysisSection({
           <PrimaryButton label="Try Again" onPress={onAnalyze} />
         </>
       ) : null}
+      {__DEV__ && analysis.status === 'complete' && analysis.analysisSource ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.analysisSource}>
+          Analysis source:{' '}
+          {analysis.analysisSource === 'semantic' ? 'Semantic' : 'On-device fallback'}
+        </ThemedText>
+      ) : null}
       {analysis.status === 'complete' ? (
         analysis.semantic ? (
           <SemanticResult analysis={analysis.semantic} />
@@ -358,6 +364,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sectionLabel: { color: '#60646C' },
+  analysisSource: { opacity: 0.75 },
   processing: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   details: { gap: 12, paddingVertical: 4 },
   detailRow: { gap: 2 },

@@ -11,4 +11,5 @@ export interface UpcomingItem {
   createdAt: number;
   externalCalendarId?: string;
   notificationId?: string;
+  semanticFingerprint?: string;
 }

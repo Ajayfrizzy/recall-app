@@ -11,6 +11,7 @@ import { useLibrary } from '@/features/library/context';
 import { usePersistence } from '@/features/persistence/context';
 import { useScreenshots } from '@/features/screenshots/context';
 import { useUpcoming } from '@/features/upcoming/context';
+import { findDuplicateUpcoming } from '@/features/upcoming/duplicates';
 import { actionTypeForItem, executeAction as runAction } from './execute-action';
 import type { ExecuteActionInput, RecallActionRecord, RecallActionType } from './types';
 
@@ -64,6 +65,20 @@ export function ActionProvider({ children }: PropsWithChildren) {
       const id = `${input.screenshotId}:${input.itemIndex}:${actionType}`;
       const completed = records.some((record) => record.id === id && record.status === 'completed');
       if (completed || inFlight.current.has(id)) return completed;
+      if (
+        (input.item.type === 'event' || input.item.type === 'deadline') &&
+        !input.allowSemanticDuplicate &&
+        input.exactDate &&
+        findDuplicateUpcoming(upcoming.items, {
+          type: input.item.type,
+          title: input.title ?? input.item.title,
+          location:
+            input.item.type === 'event' ? (input.location ?? input.item.location) : undefined,
+          date: input.exactDate.getTime(),
+        })
+      ) {
+        return false;
+      }
 
       inFlight.current.add(id);
       dispatch({

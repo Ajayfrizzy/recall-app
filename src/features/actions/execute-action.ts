@@ -1,5 +1,6 @@
 import type { LibraryItem } from '@/features/library/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
+import { createUpcomingFingerprint } from '@/features/upcoming/duplicates';
 import { addEventToCalendar } from './calendar';
 import { scheduleDeadlineReminder } from './reminders';
 import type { ExecuteActionInput, RecallActionType } from './types';
@@ -81,20 +82,22 @@ export async function executeAction(input: ExecuteActionInput): Promise<{
       location: input.location ?? item.location,
       startDate: input.exactDate,
     });
+    const upcomingItem: UpcomingItem = {
+      id,
+      screenshotId,
+      itemIndex,
+      createdAt,
+      type: 'event',
+      title: input.title ?? item.title,
+      location: input.location ?? item.location,
+      date: input.exactDate.getTime(),
+      rawDate: item.dates[0]?.raw,
+      externalCalendarId: externalId,
+    };
+    upcomingItem.semanticFingerprint = createUpcomingFingerprint(upcomingItem);
     return {
       externalId,
-      upcomingItem: {
-        id,
-        screenshotId,
-        itemIndex,
-        createdAt,
-        type: 'event',
-        title: input.title ?? item.title,
-        location: input.location ?? item.location,
-        date: input.exactDate.getTime(),
-        rawDate: item.dates[0]?.raw,
-        externalCalendarId: externalId,
-      },
+      upcomingItem,
     };
   }
   if (item.type === 'deadline') {
@@ -106,20 +109,22 @@ export async function executeAction(input: ExecuteActionInput): Promise<{
       deadline: input.exactDate,
       timing: input.reminderTiming,
     });
+    const upcomingItem: UpcomingItem = {
+      id,
+      screenshotId,
+      itemIndex,
+      createdAt,
+      type: 'deadline',
+      title: input.title ?? item.title,
+      date: input.exactDate.getTime(),
+      rawDate: item.dates[0]?.raw,
+      reminderAt: result.reminderAt.getTime(),
+      notificationId: result.notificationId,
+    };
+    upcomingItem.semanticFingerprint = createUpcomingFingerprint(upcomingItem);
     return {
       externalId: result.notificationId,
-      upcomingItem: {
-        id,
-        screenshotId,
-        itemIndex,
-        createdAt,
-        type: 'deadline',
-        title: input.title ?? item.title,
-        date: input.exactDate.getTime(),
-        rawDate: item.dates[0]?.raw,
-        reminderAt: result.reminderAt.getTime(),
-        notificationId: result.notificationId,
-      },
+      upcomingItem,
     };
   }
   return {};

@@ -2,6 +2,7 @@ import type { RecallActionRecord, RecallActionType } from '@/features/actions/ty
 import type { LibraryItem } from '@/features/library/types';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
+import { createUpcomingFingerprint } from '@/features/upcoming/duplicates';
 import { isRecallAnalysis } from '@/services/ai/validation';
 import type {
   ScreenshotAnalysis,
@@ -270,7 +271,10 @@ export function migratePersistedState(raw: unknown): PersistedRecallStateV1 {
     return createEmptyPersistedState();
   }
   const library = validUniqueItems(raw.library, validateLibraryItem);
-  const upcoming = validUniqueItems(raw.upcoming, validateUpcomingItem);
+  const upcoming = validUniqueItems(raw.upcoming, validateUpcomingItem).map((item) => ({
+    ...item,
+    semanticFingerprint: createUpcomingFingerprint(item),
+  }));
   const actions = validUniqueItems(raw.actions, validateAction);
   return {
     version: PERSISTED_STATE_VERSION,

@@ -14,11 +14,15 @@ import {
 } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ConfirmationModal } from '@/components/confirmation-modal';
 import { useActions } from '@/features/actions/context';
 import { actionTypeForItem } from '@/features/actions/execute-action';
 import type { ExecuteActionInput, RecallActionType } from '@/features/actions/types';
 import { useScreenshots } from '@/features/screenshots/context';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
+import { useUpcoming } from '@/features/upcoming/context';
+import { findDuplicateUpcoming } from '@/features/upcoming/duplicates';
+import type { UpcomingItem } from '@/features/upcoming/types';
 import type { RecallAnalysis, RecallDate, RecallItem } from '@/services/ai/types';
 import type {
   ScreenshotAnalysis,
@@ -397,7 +401,12 @@ function ItemAction({
   item: RecallItem;
 }) {
   const [showForm, setShowForm] = useState(false);
+  const [duplicateRequest, setDuplicateRequest] = useState<{
+    duplicate: UpcomingItem;
+    values: Partial<ExecuteActionInput>;
+  } | null>(null);
   const { executeAction, getAction } = useActions();
+  const upcoming = useUpcoming();
   const input = { screenshotId, sourceApp, itemIndex, item };
   const actionType = actionTypeForItem(input);
   const action = getAction(screenshotId, itemIndex, actionType);
@@ -438,13 +447,62 @@ function ItemAction({
           actionDebugMessage={action?.debugMessage}
           onClose={() => setShowForm(false)}
           onSubmit={async (values) => {
+            const duplicate = findDuplicateUpcoming(upcoming.items, {
+              type: item.type as 'event' | 'deadline',
+              title: values.title ?? item.title,
+              location: item.type === 'event' ? (values.location ?? item.location) : undefined,
+              date: values.exactDate?.getTime(),
+            });
+            if (duplicate) {
+              setShowForm(false);
+              setDuplicateRequest({ duplicate, values });
+              return;
+            }
             const succeeded = await executeAction({ ...input, ...values });
             if (succeeded) setShowForm(false);
           }}
         />
       ) : null}
+      <ConfirmationModal
+        visible={duplicateRequest !== null}
+        title={
+          duplicateRequest?.duplicate.type === 'event'
+            ? 'Similar event already exists'
+            : 'Similar reminder already exists'
+        }
+        message={duplicateRequest ? duplicateMessage(duplicateRequest.duplicate) : ''}
+        confirmLabel={duplicateRequest?.duplicate.type === 'event' ? 'Add Anyway' : 'Create Anyway'}
+        onCancel={() => setDuplicateRequest(null)}
+        onConfirm={() => {
+          const request = duplicateRequest;
+          setDuplicateRequest(null);
+          if (request) {
+            void executeAction({
+              ...input,
+              ...request.values,
+              allowSemanticDuplicate: true,
+            });
+          }
+        }}
+      />
     </>
   );
+}
+
+function duplicateMessage(item: UpcomingItem): string {
+  if (item.type === 'event') return `${item.title} is already in Upcoming.`;
+  const date = item.date
+    ? new Date(item.date).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : undefined;
+  return date
+    ? `${item.title} is already scheduled for ${date}.`
+    : `${item.title} already has a reminder in Upcoming.`;
 }
 
 function DateActionModal({

@@ -26,4 +26,5 @@ export interface ExecuteActionInput {
   reminderTiming?: ReminderTiming;
   title?: string;
   location?: string;
+  allowSemanticDuplicate?: boolean;
 }

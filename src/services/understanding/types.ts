@@ -20,6 +20,7 @@ export interface ScreenshotMetadata {
 
 export interface ScreenshotAnalysis {
   status: 'idle' | 'processing' | 'complete' | 'failed';
+  analysisVersion?: 1;
   extractedText: string;
   blocks: OcrBlock[];
   category: ScreenshotCategory;

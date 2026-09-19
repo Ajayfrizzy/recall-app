@@ -6,6 +6,7 @@ import {
   useReducer,
   type PropsWithChildren,
 } from 'react';
+import { usePersistence } from '@/features/persistence/context';
 import type { LibraryItem } from './types';
 
 type ContextValue = {
@@ -21,13 +22,25 @@ function reducer(state: LibraryItem[], item: LibraryItem): LibraryItem[] {
 }
 
 export function LibraryProvider({ children }: PropsWithChildren) {
-  const [items, save] = useReducer(reducer, []);
+  const { state: persistedState, updateState } = usePersistence();
+  const [items, dispatch] = useReducer(reducer, persistedState.library);
+  const save = useCallback(
+    (item: LibraryItem) => {
+      dispatch(item);
+      void updateState((current) =>
+        current.library.some((saved) => saved.id === item.id)
+          ? current
+          : { ...current, library: [item, ...current.library] },
+      );
+    },
+    [updateState],
+  );
   const isSaved = useCallback(
     (screenshotId: string, itemIndex: number) =>
       items.some((item) => item.screenshotId === screenshotId && item.itemIndex === itemIndex),
     [items],
   );
-  const value = useMemo(() => ({ items, save, isSaved }), [items, isSaved]);
+  const value = useMemo(() => ({ items, save, isSaved }), [items, save, isSaved]);
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }
 

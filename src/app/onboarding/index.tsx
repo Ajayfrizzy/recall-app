@@ -2,13 +2,18 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { usePersistence } from '@/features/persistence/context';
 export default function OnboardingScreen() {
+  const persistence = usePersistence();
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="subtitle">Your screenshots are unfinished intentions.</ThemedText>
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.replace('/(tabs)')}
+        onPress={async () => {
+          await persistence.updateState((current) => ({ ...current, onboardingCompleted: true }));
+          router.replace('/(tabs)');
+        }}
         style={styles.button}
       >
         <ThemedText style={styles.buttonText}>Get Started</ThemedText>

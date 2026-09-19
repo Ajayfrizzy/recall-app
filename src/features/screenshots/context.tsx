@@ -9,6 +9,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import {
   loadDeviceScreenshots,
@@ -16,6 +17,7 @@ import {
   requestScreenshotPermissionState,
   type ScreenshotPermission,
 } from './media-library';
+import { usePersistence } from '@/features/persistence/context';
 import type { RecallScreenshot, ScreenshotStatus } from './types';
 import { OcrError, recognizeScreenshotText } from '@/services/ocr';
 import {
@@ -27,6 +29,7 @@ import {
   understandScreenshotText,
   type ScreenshotAnalysis,
 } from '@/services/understanding';
+import { ANALYSIS_VERSION } from '@/services/storage/types';
 
 type State = Record<string, RecallScreenshot>;
 type Action =
@@ -36,7 +39,7 @@ type Action =
 
 function reducer(state: State, action: Action): State {
   if (action.type === 'replace') {
-    const next = { ...state };
+    const next: State = {};
     action.screenshots.forEach((screenshot) => {
       next[screenshot.id] = {
         ...screenshot,
@@ -72,19 +75,36 @@ type ContextValue = {
 const ScreenshotContext = createContext<ContextValue | null>(null);
 
 export function ScreenshotProvider({ children }: PropsWithChildren) {
+  const { state: persistedState, updateState } = usePersistence();
+  const persistedScreenshotsRef = useRef(persistedState.screenshots);
   const [state, dispatch] = useReducer(reducer, {});
   const [permission, setPermission] = useState<ScreenshotPermission | null>(null);
   const [canAskAgain, setCanAskAgain] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [semanticAnalysisAcknowledged, setSemanticAnalysisAcknowledged] = useState(false);
-  const semanticAnalysisAcknowledgedRef = useRef(false);
+  const [semanticAnalysisAcknowledged, setSemanticAnalysisAcknowledged] = useState(
+    persistedState.semanticAnalysisAcknowledged,
+  );
+  const semanticAnalysisAcknowledgedRef = useRef(persistedState.semanticAnalysisAcknowledged);
   const analysesInFlight = useRef(new Set<string>());
 
   const loadForPermission = useCallback(async (nextPermission: ScreenshotPermission) => {
     if (nextPermission !== 'granted' && nextPermission !== 'limited') return;
-    dispatch({ type: 'replace', screenshots: await loadDeviceScreenshots(nextPermission) });
+    const screenshots = await loadDeviceScreenshots(nextPermission);
+    dispatch({
+      type: 'replace',
+      screenshots: screenshots.map((screenshot) => {
+        const restored = persistedScreenshotsRef.current[screenshot.id];
+        return restored
+          ? {
+              ...screenshot,
+              status: restored.status,
+              analysis: restored.analysis ?? screenshot.analysis,
+            }
+          : screenshot;
+      }),
+    });
   }, []);
 
   const refresh = useCallback(async () => {
@@ -144,6 +164,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
         const ocr = await recognizeScreenshotText(screenshot.uri);
         const localAnalysis: ScreenshotAnalysis = {
           status: 'complete',
+          analysisVersion: ANALYSIS_VERSION,
           extractedText: ocr.text,
           blocks: ocr.blocks,
           analysisSource: 'local',
@@ -167,6 +188,14 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           id,
           analysis: finalAnalysis,
         });
+        await updateState((current) => {
+          const saved = {
+            status: current.screenshots[id]?.status ?? screenshot.status,
+            analysis: finalAnalysis,
+          };
+          persistedScreenshotsRef.current = { ...current.screenshots, [id]: saved };
+          return { ...current, screenshots: persistedScreenshotsRef.current };
+        });
       } catch (analysisError) {
         let message = "Recall couldn't analyze this screenshot. Try again.";
         if (analysisError instanceof OcrError) {
@@ -187,8 +216,29 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
         analysesInFlight.current.delete(id);
       }
     },
-    [state],
+    [state, updateState],
   );
+
+  const setStatus = useCallback(
+    (id: string, status: ScreenshotStatus) => {
+      dispatch({ type: 'status', id, status });
+      void updateState((current) => {
+        const saved = { ...current.screenshots[id], status };
+        persistedScreenshotsRef.current = { ...current.screenshots, [id]: saved };
+        return { ...current, screenshots: persistedScreenshotsRef.current };
+      });
+    },
+    [updateState],
+  );
+
+  const acknowledgeSemanticAnalysis = useCallback(() => {
+    semanticAnalysisAcknowledgedRef.current = true;
+    setSemanticAnalysisAcknowledged(true);
+    void updateState((current) => ({
+      ...current,
+      semanticAnalysisAcknowledged: true,
+    }));
+  }, [updateState]);
 
   const value = useMemo(
     () => ({
@@ -202,13 +252,10 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       error,
       refresh,
       requestAccess,
-      setStatus: (id: string, status: ScreenshotStatus) => dispatch({ type: 'status', id, status }),
+      setStatus,
       analyzeScreenshot,
       semanticAnalysisAcknowledged,
-      acknowledgeSemanticAnalysis: () => {
-        semanticAnalysisAcknowledgedRef.current = true;
-        setSemanticAnalysisAcknowledged(true);
-      },
+      acknowledgeSemanticAnalysis,
     }),
     [
       state,
@@ -220,10 +267,19 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       refresh,
       requestAccess,
       analyzeScreenshot,
+      setStatus,
       semanticAnalysisAcknowledged,
+      acknowledgeSemanticAnalysis,
     ],
   );
 
+  if (loading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator accessibilityLabel="Loading screenshots" />
+      </View>
+    );
+  }
   return <ScreenshotContext.Provider value={value}>{children}</ScreenshotContext.Provider>;
 }
 
@@ -232,3 +288,7 @@ export function useScreenshots() {
   if (!value) throw new Error('useScreenshots must be used within ScreenshotProvider');
   return value;
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+});

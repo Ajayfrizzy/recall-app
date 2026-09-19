@@ -8,6 +8,7 @@ import {
   type PropsWithChildren,
 } from 'react';
 import { useLibrary } from '@/features/library/context';
+import { usePersistence } from '@/features/persistence/context';
 import { useScreenshots } from '@/features/screenshots/context';
 import { useUpcoming } from '@/features/upcoming/context';
 import { actionTypeForItem, executeAction as runAction } from './execute-action';
@@ -50,7 +51,8 @@ function reducer(state: RecallActionRecord[], action: StateAction): RecallAction
 const ActionContext = createContext<ContextValue | null>(null);
 
 export function ActionProvider({ children }: PropsWithChildren) {
-  const [records, dispatch] = useReducer(reducer, []);
+  const { state: persistedState, updateState } = usePersistence();
+  const [records, dispatch] = useReducer(reducer, persistedState.actions);
   const inFlight = useRef(new Set<string>());
   const library = useLibrary();
   const screenshots = useScreenshots();
@@ -81,6 +83,21 @@ export function ActionProvider({ children }: PropsWithChildren) {
         if (result.upcomingItem) upcoming.add(result.upcomingItem);
         if (input.item.type === 'general') screenshots.setStatus(input.screenshotId, 'kept');
         dispatch({ type: 'complete', id, externalId: result.externalId });
+        await updateState((current) => {
+          const completedRecord: RecallActionRecord = {
+            id,
+            screenshotId: input.screenshotId,
+            itemIndex: input.itemIndex,
+            type: actionType,
+            status: 'completed',
+            createdAt: current.actions.find((record) => record.id === id)?.createdAt ?? Date.now(),
+            externalId: result.externalId,
+          };
+          return {
+            ...current,
+            actions: [...current.actions.filter((record) => record.id !== id), completedRecord],
+          };
+        });
         return true;
       } catch (error) {
         dispatch({
@@ -100,7 +117,7 @@ export function ActionProvider({ children }: PropsWithChildren) {
         inFlight.current.delete(id);
       }
     },
-    [library, records, screenshots, upcoming],
+    [library, records, screenshots, upcoming, updateState],
   );
 
   const getAction = useCallback(

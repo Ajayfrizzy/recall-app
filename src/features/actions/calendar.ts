@@ -12,8 +12,18 @@ export async function addEventToCalendar(input: {
   }
 
   try {
+    if (Platform.OS === 'android') {
+      const Calendar = await import('expo-calendar/legacy');
+      const result = await Calendar.createEventInCalendarAsync({
+        title: input.title,
+        location: input.location,
+        startDate: input.startDate,
+      });
+      return result.id ?? undefined;
+    }
+
     const Calendar = await import('expo-calendar');
-    const permission = await Calendar.requestCalendarPermissions(Platform.OS === 'ios');
+    const permission = await Calendar.requestCalendarPermissions(true);
     if (!permission.granted) {
       throw new CalendarActionError(
         permission.canAskAgain
@@ -22,16 +32,7 @@ export async function addEventToCalendar(input: {
       );
     }
 
-    const calendars =
-      Platform.OS === 'android' ? await Calendar.getCalendars(Calendar.EntityTypes.EVENT) : [];
-    const calendar =
-      Platform.OS === 'ios'
-        ? Calendar.getDefaultCalendarSync()
-        : (calendars.find((candidate) => candidate.allowsModifications && candidate.isPrimary) ??
-          calendars.find((candidate) => candidate.allowsModifications));
-    if (!calendar) throw new CalendarActionError('No writable calendar is available.');
-
-    const result = await calendar.addEventWithForm({
+    const result = await Calendar.getDefaultCalendarSync().addEventWithForm({
       title: input.title,
       location: input.location,
       startDate: input.startDate,

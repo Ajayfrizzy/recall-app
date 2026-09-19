@@ -414,15 +414,23 @@ function ItemAction({
           else void executeAction(input);
         }}
       />
-      {action?.status === 'failed' ? (
-        <ThemedText type="small" style={styles.errorText}>
-          {action.error}
-        </ThemedText>
+      {action?.status === 'failed' && !showForm ? (
+        <>
+          <ThemedText type="small" style={styles.errorText}>
+            {action.error}
+          </ThemedText>
+          {__DEV__ && action.debugMessage ? (
+            <ThemedText type="small" style={styles.errorText}>
+              Calendar debug: {action.debugMessage}
+            </ThemedText>
+          ) : null}
+        </>
       ) : null}
       {needsDateForm && showForm ? (
         <DateActionModal
           item={item}
           actionError={action?.status === 'failed' ? action.error : undefined}
+          actionDebugMessage={action?.debugMessage}
           onClose={() => setShowForm(false)}
           onSubmit={async (values) => {
             const succeeded = await executeAction({ ...input, ...values });
@@ -437,11 +445,13 @@ function ItemAction({
 function DateActionModal({
   item,
   actionError,
+  actionDebugMessage,
   onClose,
   onSubmit,
 }: {
   item: Extract<RecallItem, { type: 'event' | 'deadline' }>;
   actionError?: string;
+  actionDebugMessage?: string;
   onClose: () => void;
   onSubmit: (values: Partial<ExecuteActionInput>) => Promise<void>;
 }) {
@@ -514,6 +524,11 @@ function DateActionModal({
           ) : null}
           {error || actionError ? (
             <ThemedText style={styles.errorText}>{error ?? actionError}</ThemedText>
+          ) : null}
+          {__DEV__ && actionDebugMessage ? (
+            <ThemedText type="small" style={styles.errorText}>
+              Calendar debug: {actionDebugMessage}
+            </ThemedText>
           ) : null}
           <View style={styles.modalActions}>
             <Pressable accessibilityRole="button" onPress={onClose} style={styles.secondaryButton}>

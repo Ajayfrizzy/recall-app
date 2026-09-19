@@ -12,6 +12,7 @@ export interface RecallActionRecord {
   createdAt: number;
   externalId?: string;
   error?: string;
+  debugMessage?: string;
 }
 
 export type ReminderTiming = 'at_deadline' | 'one_hour_before' | 'one_day_before';

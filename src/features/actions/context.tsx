@@ -26,7 +26,7 @@ type ContextValue = {
 type StateAction =
   | { type: 'start'; record: RecallActionRecord }
   | { type: 'complete'; id: string; externalId?: string }
-  | { type: 'fail'; id: string; error: string };
+  | { type: 'fail'; id: string; error: string; debugMessage?: string };
 
 function reducer(state: RecallActionRecord[], action: StateAction): RecallActionRecord[] {
   if (action.type === 'start') {
@@ -41,6 +41,7 @@ function reducer(state: RecallActionRecord[], action: StateAction): RecallAction
           status: action.type === 'complete' ? 'completed' : 'failed',
           externalId: action.type === 'complete' ? action.externalId : record.externalId,
           error: action.type === 'fail' ? action.error : undefined,
+          debugMessage: action.type === 'fail' ? action.debugMessage : undefined,
         }
       : record,
   );
@@ -86,6 +87,13 @@ export function ActionProvider({ children }: PropsWithChildren) {
           type: 'fail',
           id,
           error: error instanceof Error ? error.message : 'The action could not be completed.',
+          debugMessage:
+            __DEV__ &&
+            error instanceof Error &&
+            'debugMessage' in error &&
+            typeof error.debugMessage === 'string'
+              ? error.debugMessage
+              : undefined,
         });
         return false;
       } finally {

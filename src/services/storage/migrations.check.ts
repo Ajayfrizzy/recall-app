@@ -40,6 +40,7 @@ assert(restored.screenshots.screenshot?.status === 'processed', 'screenshot meta
 assert(restored.library.length === 1, 'library items were dropped');
 assert(restored.upcoming.length === 1, 'upcoming items were dropped');
 assert(restored.actions.length === 2, 'durable actions were not reconstructed');
+assert(restored.bundles.length === 0, 'legacy state did not default bundles to empty');
 assert(restored.semanticAnalysisAcknowledged, 'semantic acknowledgement was dropped');
 assert(restored.onboardingCompleted, 'onboarding state was dropped');
 assert(
@@ -51,5 +52,34 @@ assert(
     }),
   'legacy upcoming fingerprint was not derived',
 );
+
+const archivedBundle = migratePersistedState({
+  version: 1,
+  screenshots: {},
+  library: [],
+  upcoming: [],
+  actions: [],
+  bundles: [
+    {
+      id: 'bundle:shopping:ingrem-products',
+      title: 'INGREM Products',
+      type: 'shopping',
+      screenshotIds: ['ingrem'],
+      itemRefs: [
+        { screenshotId: 'ingrem', itemIndex: 0 },
+        { screenshotId: 'ingrem', itemIndex: 1 },
+      ],
+      createdAt: 1,
+      updatedAt: 2,
+      confidence: 0.92,
+      reason: 'same merchant',
+      status: 'archived',
+    },
+  ],
+  semanticAnalysisAcknowledged: false,
+  onboardingCompleted: false,
+});
+assert(archivedBundle.bundles.length === 1, 'valid bundles were dropped');
+assert(archivedBundle.bundles[0].status === 'archived', 'archived bundle state was dropped');
 
 console.log('Persistence migration checks passed');

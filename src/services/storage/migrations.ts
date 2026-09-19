@@ -1,4 +1,5 @@
 import type { RecallActionRecord, RecallActionType } from '@/features/actions/types';
+import type { BundleType, RecallBundle } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
@@ -38,6 +39,15 @@ const ACTIONS = new Set<SuggestedAction>([
 const ACTION_TYPES = new Set<RecallActionType>(ACTIONS);
 const LIBRARY_TYPES = new Set<LibraryItem['type']>(['product', 'place', 'content']);
 const UPCOMING_TYPES = new Set<UpcomingItem['type']>(['event', 'deadline']);
+const BUNDLE_TYPES = new Set<BundleType>([
+  'event',
+  'project',
+  'shopping',
+  'travel',
+  'application',
+  'topic',
+  'general',
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -210,6 +220,51 @@ function validateAction(value: unknown): value is RecallActionRecord {
   return value.id === `${value.screenshotId}:${value.itemIndex}:${value.type}`;
 }
 
+function validateBundle(value: unknown): value is RecallBundle {
+  if (
+    !isRecord(value) ||
+    !isValidId(value.id) ||
+    !isString(value.title) ||
+    !value.title.trim() ||
+    !isString(value.type) ||
+    !BUNDLE_TYPES.has(value.type as BundleType) ||
+    !Array.isArray(value.screenshotIds) ||
+    !value.screenshotIds.every(isValidId) ||
+    !Array.isArray(value.itemRefs) ||
+    !isTimestamp(value.createdAt) ||
+    !isTimestamp(value.updatedAt) ||
+    (value.confidence !== undefined &&
+      (!isFiniteNumber(value.confidence) || value.confidence < 0 || value.confidence > 1)) ||
+    !isOptionalString(value.reason) ||
+    (value.status !== 'active' && value.status !== 'archived')
+  ) {
+    return false;
+  }
+  const screenshotIds = value.screenshotIds as unknown[];
+  const itemRefs = value.itemRefs as unknown[];
+  const refKeys = new Set<string>();
+  if (
+    !itemRefs.every((ref) => {
+      if (!isRecord(ref) || !isValidId(ref.screenshotId)) return false;
+      if (
+        ref.itemIndex !== undefined &&
+        (typeof ref.itemIndex !== 'number' || !Number.isInteger(ref.itemIndex) || ref.itemIndex < 0)
+      ) {
+        return false;
+      }
+      const key = `${ref.screenshotId}:${ref.itemIndex ?? ''}`;
+      if (refKeys.has(key)) return false;
+      refKeys.add(key);
+      return true;
+    })
+  ) {
+    return false;
+  }
+  return screenshotIds.every(
+    (id) => isValidId(id) && itemRefs.some((ref) => isRecord(ref) && ref.screenshotId === id),
+  );
+}
+
 function validUniqueItems<T extends { id: string }>(
   value: unknown,
   validator: (item: unknown) => item is T,
@@ -276,12 +331,14 @@ export function migratePersistedState(raw: unknown): PersistedRecallStateV1 {
     semanticFingerprint: createUpcomingFingerprint(item),
   }));
   const actions = validUniqueItems(raw.actions, validateAction);
+  const bundles = validUniqueItems(raw.bundles, validateBundle);
   return {
     version: PERSISTED_STATE_VERSION,
     screenshots: validateScreenshots(raw.screenshots),
     library,
     upcoming,
     actions: reconcileActions(actions, library, upcoming),
+    bundles,
     semanticAnalysisAcknowledged: raw.semanticAnalysisAcknowledged === true,
     onboardingCompleted: raw.onboardingCompleted === true,
   };

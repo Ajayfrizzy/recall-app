@@ -7,18 +7,21 @@ import { useLibrary } from '@/features/library/context';
 import type { LibraryItem } from '@/features/library/types';
 import { useScreenshots } from '@/features/screenshots/context';
 import { ScreenshotHistoryCard } from '@/features/screenshots/components/history-card';
+import { BundleCard } from '@/features/bundles/components/bundle-card';
+import { useBundles } from '@/features/bundles/context';
 import {
   filterScreenshotHistory,
   type ScreenshotHistoryFilter,
 } from '@/features/screenshots/history';
 
-type Filter = 'all' | LibraryItem['type'] | 'screenshots';
+type Filter = 'all' | LibraryItem['type'] | 'screenshots' | 'bundles';
 const filters: Array<{ value: Filter; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'product', label: 'Products' },
   { value: 'place', label: 'Places' },
   { value: 'content', label: 'Read Later' },
   { value: 'screenshots', label: 'Screenshots' },
+  { value: 'bundles', label: 'Bundles' },
 ];
 
 const screenshotFilters: Array<{ value: ScreenshotHistoryFilter; label: string }> = [
@@ -30,12 +33,13 @@ const screenshotFilters: Array<{ value: ScreenshotHistoryFilter; label: string }
 export default function LibraryScreen() {
   const { items } = useLibrary();
   const { screenshots } = useScreenshots();
+  const { bundles, refreshBundles } = useBundles();
   const [filter, setFilter] = useState<Filter>('all');
   const [screenshotFilter, setScreenshotFilter] = useState<ScreenshotHistoryFilter>('all');
   const visible =
     filter === 'all'
       ? items
-      : filter === 'screenshots'
+      : filter === 'screenshots' || filter === 'bundles'
         ? []
         : items.filter((item) => item.type === filter);
   const history = filterScreenshotHistory(screenshots, screenshotFilter);
@@ -63,6 +67,12 @@ export default function LibraryScreen() {
             filter={screenshotFilter}
             onFilter={setScreenshotFilter}
           />
+        ) : filter === 'bundles' ? (
+          <BundlesList
+            bundles={bundles.filter((bundle) => bundle.status === 'active')}
+            screenshots={screenshots}
+            onRefresh={() => void refreshBundles()}
+          />
         ) : visible.length === 0 ? (
           <ThemedText themeColor="textSecondary" style={styles.empty}>
             {items.length === 0
@@ -74,6 +84,38 @@ export default function LibraryScreen() {
         )}
       </ScrollView>
     </ThemedView>
+  );
+}
+
+function BundlesList({
+  bundles,
+  screenshots,
+  onRefresh,
+}: {
+  bundles: ReturnType<typeof useBundles>['bundles'];
+  screenshots: ReturnType<typeof useScreenshots>['screenshots'];
+  onRefresh: () => void;
+}) {
+  return (
+    <>
+      <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.refreshButton}>
+        <ThemedText type="smallBold">Refresh bundles</ThemedText>
+      </Pressable>
+      {bundles.length === 0 ? (
+        <ThemedText themeColor="textSecondary" style={styles.empty}>
+          Related analyzed screenshots will appear here as bundles.
+        </ThemedText>
+      ) : (
+        bundles.map((bundle) => (
+          <BundleCard
+            key={bundle.id}
+            bundle={bundle}
+            screenshots={screenshots}
+            onPress={() => router.push(`/bundle/${encodeURIComponent(bundle.id)}`)}
+          />
+        ))
+      )}
+    </>
   );
 }
 
@@ -168,4 +210,12 @@ const styles = StyleSheet.create({
   filterSelected: { backgroundColor: '#dbeafe' },
   empty: { paddingTop: 20 },
   card: { padding: 16, borderRadius: 8, gap: 5 },
+  refreshButton: {
+    alignSelf: 'flex-start',
+    minHeight: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#dbeafe',
+  },
 });

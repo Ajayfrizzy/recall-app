@@ -1,4 +1,5 @@
 import type { RecallActionRecord } from '@/features/actions/types';
+import type { RecallBundle } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
@@ -18,6 +19,7 @@ export interface PersistedRecallStateV1 {
   library: LibraryItem[];
   upcoming: UpcomingItem[];
   actions: RecallActionRecord[];
+  bundles: RecallBundle[];
   semanticAnalysisAcknowledged: boolean;
   onboardingCompleted: boolean;
 }
@@ -29,6 +31,7 @@ export function createEmptyPersistedState(): PersistedRecallStateV1 {
     library: [],
     upcoming: [],
     actions: [],
+    bundles: [],
     semanticAnalysisAcknowledged: false,
     onboardingCompleted: false,
   };

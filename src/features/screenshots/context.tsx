@@ -51,9 +51,30 @@ function reducer(state: State, action: Action): State {
   }
   if (action.type === 'analysis') {
     if (!state[action.id]) return state;
-    return { ...state, [action.id]: { ...state[action.id], analysis: action.analysis } };
+    const screenshot = state[action.id];
+    const nextScreenshot = { ...screenshot, analysis: action.analysis };
+    if (__DEV__ && nextScreenshot.status !== screenshot.status) {
+      console.error('Recall invariant failed: analysis changed screenshot status', {
+        id: action.id,
+        beforeStatus: screenshot.status,
+        afterStatus: nextScreenshot.status,
+      });
+    }
+    return { ...state, [action.id]: nextScreenshot };
   }
   if (!state[action.id]) return state;
+  if (__DEV__) {
+    const screenshot = state[action.id];
+    console.debug('Recall screenshot status changed:', {
+      id: screenshot.id,
+      filename: screenshot.filename,
+      creationTime: screenshot.creationTime,
+      width: screenshot.width,
+      height: screenshot.height,
+      beforeStatus: screenshot.status,
+      afterStatus: action.status,
+    });
+  }
   return { ...state, [action.id]: { ...state[action.id], status: action.status } };
 }
 
@@ -73,6 +94,39 @@ type ContextValue = {
 };
 
 const ScreenshotContext = createContext<ContextValue | null>(null);
+
+function logScreenshotIdentity(
+  screenshot: RecallScreenshot,
+  restored: { status: ScreenshotStatus } | undefined,
+) {
+  if (!__DEV__) return;
+  console.debug('Recall screenshot identity:', {
+    id: screenshot.id,
+    filename: screenshot.filename,
+    creationTime: screenshot.creationTime,
+    width: screenshot.width,
+    height: screenshot.height,
+    persistedStatus: restored?.status,
+    persistedIdentityMetadata: restored
+      ? 'unavailable in persisted state v1'
+      : 'no persisted record',
+  });
+}
+
+function logAnalysisIdentity(
+  phase: 'before analysis' | 'after analysis',
+  screenshot: RecallScreenshot,
+) {
+  if (!__DEV__) return;
+  console.debug(`Recall screenshot ${phase}:`, {
+    id: screenshot.id,
+    filename: screenshot.filename,
+    creationTime: screenshot.creationTime,
+    width: screenshot.width,
+    height: screenshot.height,
+    status: screenshot.status,
+  });
+}
 
 export function ScreenshotProvider({ children }: PropsWithChildren) {
   const { state: persistedState, updateState } = usePersistence();
@@ -96,6 +150,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       type: 'replace',
       screenshots: screenshots.map((screenshot) => {
         const restored = persistedScreenshotsRef.current[screenshot.id];
+        logScreenshotIdentity(screenshot, restored);
         return restored
           ? {
               ...screenshot,
@@ -153,6 +208,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      logAnalysisIdentity('before analysis', screenshot);
       analysesInFlight.current.add(id);
       dispatch({
         type: 'analysis',
@@ -189,8 +245,21 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           analysis: finalAnalysis,
         });
         await updateState((current) => {
+          const persistedStatus = current.screenshots[id]?.status;
+          if (__DEV__ && persistedStatus && persistedStatus !== screenshot.status) {
+            console.warn('Recall screenshot status identity mismatch during analysis:', {
+              id: screenshot.id,
+              filename: screenshot.filename,
+              creationTime: screenshot.creationTime,
+              width: screenshot.width,
+              height: screenshot.height,
+              inMemoryStatus: screenshot.status,
+              persistedStatus,
+              persistedIdentityMetadata: 'unavailable in persisted state v1',
+            });
+          }
           const saved = {
-            status: current.screenshots[id]?.status ?? screenshot.status,
+            status: persistedStatus ?? screenshot.status,
             analysis: finalAnalysis,
           };
           persistedScreenshotsRef.current = { ...current.screenshots, [id]: saved };
@@ -213,6 +282,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           analysis: { ...createIdleScreenshotAnalysis(), status: 'failed', error: message },
         });
       } finally {
+        logAnalysisIdentity('after analysis', screenshot);
         analysesInFlight.current.delete(id);
       }
     },

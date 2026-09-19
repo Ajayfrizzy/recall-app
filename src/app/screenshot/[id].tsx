@@ -94,6 +94,11 @@ export default function ScreenshotRoute() {
             {date ? ` · ${date}` : ''}
           </ThemedText>
           <ThemedText themeColor="textSecondary">Status: {screenshot.status}</ThemedText>
+          {__DEV__ ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Asset ID: {screenshot.id}
+            </ThemedText>
+          ) : null}
         </View>
         <View style={styles.actions}>
           {(['kept', 'ignored', 'processed'] as ScreenshotStatus[]).map((status) => (

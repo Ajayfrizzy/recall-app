@@ -1,32 +1,72 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { z } from 'zod';
+import {
+  AnalysisNotConfiguredError,
+  InvalidJsonError,
+  PayloadTooLargeError,
+  ProviderUnavailableError,
+} from '../errors.js';
 import { AnalyzeRequestSchema } from '../schemas/recall-analysis.js';
 import { analyzeWithOpenAI } from '../services/openai.js';
 
+const MAX_BODY_BYTES = 13_000_000;
+
+function sendJson(response: ServerResponse, status: number, body: object): void {
+  response.writeHead(status, { 'content-type': 'application/json' });
+  response.end(JSON.stringify(body));
+}
+
+function hasJsonContentType(request: IncomingMessage): boolean {
+  const header = request.headers['content-type'];
+  const value = Array.isArray(header) ? header[0] : header;
+  return value?.split(';', 1)[0].trim().toLowerCase() === 'application/json';
+}
+
 async function readBody(request: IncomingMessage): Promise<unknown> {
-  let body = '';
+  const chunks: Buffer[] = [];
+  let byteLength = 0;
+
   for await (const chunk of request) {
-    body += chunk;
-    if (body.length > 13_000_000) throw new Error('payload_too_large');
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    byteLength += buffer.byteLength;
+    if (byteLength > MAX_BODY_BYTES) throw new PayloadTooLargeError();
+    chunks.push(buffer);
   }
-  return JSON.parse(body);
+
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch (error) {
+    throw new InvalidJsonError({ cause: error });
+  }
 }
 
 export async function analyzeRoute(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
+  if (!hasJsonContentType(request)) {
+    sendJson(response, 415, { error: 'invalid_content_type' });
+    return;
+  }
+
   try {
     const body = AnalyzeRequestSchema.parse(await readBody(request));
     const imageDataUrl = body.imageDataUrl ?? `data:image/jpeg;base64,${body.imageBase64}`;
     const analysis = await analyzeWithOpenAI({ imageDataUrl, ocrText: body.ocrText });
-    response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify(analysis));
+    sendJson(response, 200, analysis);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'analysis_failed';
-    const status = message === 'payload_too_large' ? 413 : 502;
-    response.writeHead(status, { 'content-type': 'application/json' });
-    response.end(
-      JSON.stringify({ error: status === 413 ? 'payload_too_large' : 'analysis_failed' }),
-    );
+    if (error instanceof InvalidJsonError) {
+      sendJson(response, 400, { error: 'invalid_json' });
+    } else if (error instanceof z.ZodError) {
+      sendJson(response, 400, { error: 'invalid_request' });
+    } else if (error instanceof PayloadTooLargeError) {
+      sendJson(response, 413, { error: 'payload_too_large' });
+    } else if (error instanceof AnalysisNotConfiguredError) {
+      sendJson(response, 503, { error: 'analysis_not_configured' });
+    } else if (error instanceof ProviderUnavailableError) {
+      sendJson(response, 502, { error: 'analysis_provider_unavailable' });
+    } else {
+      sendJson(response, 500, { error: 'internal_error' });
+    }
   }
 }

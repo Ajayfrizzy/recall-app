@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
 import { analyzeRoute } from './routes/analyze.js';
+import { isAnalysisConfigured } from './services/openai.js';
 
 const port = Number(process.env.PORT ?? 8787);
 const origin = process.env.ALLOWED_ORIGIN ?? '*';
@@ -16,10 +17,15 @@ const server = createServer(async (request, response) => {
   }
   if (request.method === 'GET' && request.url === '/health') {
     response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ ok: true }));
+    response.end(JSON.stringify({ ok: true, analysisConfigured: isAnalysisConfigured() }));
     return;
   }
-  if (request.method === 'POST' && request.url === '/analyze') {
+  if (request.url === '/analyze') {
+    if (request.method !== 'POST') {
+      response.writeHead(405, { 'content-type': 'application/json', allow: 'POST' });
+      response.end(JSON.stringify({ error: 'method_not_allowed' }));
+      return;
+    }
     await analyzeRoute(request, response);
     return;
   }

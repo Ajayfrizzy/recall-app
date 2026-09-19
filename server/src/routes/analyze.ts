@@ -7,6 +7,7 @@ import {
   ProviderUnavailableError,
 } from '../errors.js';
 import { AnalyzeRequestSchema } from '../schemas/recall-analysis.js';
+import { analyzeWithMock, isMockAnalysisEnabled } from '../services/mock-analysis.js';
 import { analyzeWithOpenAI } from '../services/openai.js';
 
 const MAX_BODY_BYTES = 13_000_000;
@@ -52,7 +53,9 @@ export async function analyzeRoute(
   try {
     const body = AnalyzeRequestSchema.parse(await readBody(request));
     const imageDataUrl = body.imageDataUrl ?? `data:image/jpeg;base64,${body.imageBase64}`;
-    const analysis = await analyzeWithOpenAI({ imageDataUrl, ocrText: body.ocrText });
+    const analysis = isMockAnalysisEnabled()
+      ? analyzeWithMock(body.ocrText)
+      : await analyzeWithOpenAI({ imageDataUrl, ocrText: body.ocrText });
     sendJson(response, 200, analysis);
   } catch (error) {
     if (error instanceof InvalidJsonError) {

@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
 import { analyzeRoute } from './routes/analyze.js';
+import { isMockAnalysisEnabled } from './services/mock-analysis.js';
 import { isAnalysisConfigured } from './services/openai.js';
 
 const port = Number(process.env.PORT ?? 8787);
@@ -16,8 +17,15 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (request.method === 'GET' && request.url === '/health') {
+    const mockAnalysis = isMockAnalysisEnabled();
     response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(JSON.stringify({ ok: true, analysisConfigured: isAnalysisConfigured() }));
+    response.end(
+      JSON.stringify({
+        ok: true,
+        analysisConfigured: mockAnalysis ? false : isAnalysisConfigured(),
+        mockAnalysis,
+      }),
+    );
     return;
   }
   if (request.url === '/analyze') {

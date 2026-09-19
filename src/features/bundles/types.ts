@@ -6,6 +6,13 @@ export interface BundleItemRef {
   itemIndex?: number;
 }
 
+export interface BundleItemMembershipOverride {
+  screenshotId: string;
+  itemIndex: number;
+  excluded: boolean;
+  updatedAt: number;
+}
+
 export interface RecallBundle {
   id: string;
   title: string;

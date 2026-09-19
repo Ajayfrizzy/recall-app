@@ -1,5 +1,5 @@
 import type { RecallActionRecord } from '@/features/actions/types';
-import type { RecallBundle } from '@/features/bundles/types';
+import type { BundleItemMembershipOverride, RecallBundle } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
@@ -20,6 +20,7 @@ export interface PersistedRecallStateV1 {
   upcoming: UpcomingItem[];
   actions: RecallActionRecord[];
   bundles: RecallBundle[];
+  bundleItemOverrides: BundleItemMembershipOverride[];
   semanticAnalysisAcknowledged: boolean;
   onboardingCompleted: boolean;
 }
@@ -32,6 +33,7 @@ export function createEmptyPersistedState(): PersistedRecallStateV1 {
     upcoming: [],
     actions: [],
     bundles: [],
+    bundleItemOverrides: [],
     semanticAnalysisAcknowledged: false,
     onboardingCompleted: false,
   };

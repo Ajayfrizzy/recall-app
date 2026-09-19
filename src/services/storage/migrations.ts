@@ -1,5 +1,10 @@
 import type { RecallActionRecord, RecallActionType } from '@/features/actions/types';
-import type { BundleType, RecallBundle } from '@/features/bundles/types';
+import { bundleItemKey } from '@/features/bundles/membership';
+import type {
+  BundleItemMembershipOverride,
+  BundleType,
+  RecallBundle,
+} from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
@@ -265,6 +270,32 @@ function validateBundle(value: unknown): value is RecallBundle {
   );
 }
 
+function validateBundleItemOverride(value: unknown): value is BundleItemMembershipOverride {
+  return (
+    isRecord(value) &&
+    isValidId(value.screenshotId) &&
+    typeof value.itemIndex === 'number' &&
+    Number.isInteger(value.itemIndex) &&
+    value.itemIndex >= 0 &&
+    typeof value.excluded === 'boolean' &&
+    isTimestamp(value.updatedAt)
+  );
+}
+
+function validateBundleItemOverrides(value: unknown): BundleItemMembershipOverride[] {
+  if (!Array.isArray(value)) return [];
+  const latest = new Map<string, BundleItemMembershipOverride>();
+  for (const candidate of value) {
+    if (!validateBundleItemOverride(candidate)) continue;
+    const key = bundleItemKey(candidate.screenshotId, candidate.itemIndex);
+    const current = latest.get(key);
+    if (!current || candidate.updatedAt >= current.updatedAt) latest.set(key, candidate);
+  }
+  return [...latest.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, override]) => override);
+}
+
 function validUniqueItems<T extends { id: string }>(
   value: unknown,
   validator: (item: unknown) => item is T,
@@ -332,6 +363,7 @@ export function migratePersistedState(raw: unknown): PersistedRecallStateV1 {
   }));
   const actions = validUniqueItems(raw.actions, validateAction);
   const bundles = validUniqueItems(raw.bundles, validateBundle);
+  const bundleItemOverrides = validateBundleItemOverrides(raw.bundleItemOverrides);
   return {
     version: PERSISTED_STATE_VERSION,
     screenshots: validateScreenshots(raw.screenshots),
@@ -339,6 +371,7 @@ export function migratePersistedState(raw: unknown): PersistedRecallStateV1 {
     upcoming,
     actions: reconcileActions(actions, library, upcoming),
     bundles,
+    bundleItemOverrides,
     semanticAnalysisAcknowledged: raw.semanticAnalysisAcknowledged === true,
     onboardingCompleted: raw.onboardingCompleted === true,
   };

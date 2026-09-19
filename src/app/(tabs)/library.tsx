@@ -33,7 +33,7 @@ const screenshotFilters: Array<{ value: ScreenshotHistoryFilter; label: string }
 export default function LibraryScreen() {
   const { items } = useLibrary();
   const { screenshots } = useScreenshots();
-  const { bundles, refreshBundles } = useBundles();
+  const { bundles, refreshBundles, getExcludedItemsForBundle } = useBundles();
   const [filter, setFilter] = useState<Filter>('all');
   const [screenshotFilter, setScreenshotFilter] = useState<ScreenshotHistoryFilter>('all');
   const visible =
@@ -72,6 +72,7 @@ export default function LibraryScreen() {
             bundles={bundles.filter((bundle) => bundle.status === 'active')}
             screenshots={screenshots}
             onRefresh={() => void refreshBundles()}
+            getExcludedCount={(bundleId) => getExcludedItemsForBundle(bundleId).length}
           />
         ) : visible.length === 0 ? (
           <ThemedText themeColor="textSecondary" style={styles.empty}>
@@ -91,22 +92,28 @@ function BundlesList({
   bundles,
   screenshots,
   onRefresh,
+  getExcludedCount,
 }: {
   bundles: ReturnType<typeof useBundles>['bundles'];
   screenshots: ReturnType<typeof useScreenshots>['screenshots'];
   onRefresh: () => void;
+  getExcludedCount: (bundleId: string) => number;
 }) {
+  const visible = bundles.filter((bundle) => bundle.itemRefs.length > 0);
+  const excluded = bundles.filter(
+    (bundle) => bundle.itemRefs.length === 0 && getExcludedCount(bundle.id) > 0,
+  );
   return (
     <>
       <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.refreshButton}>
         <ThemedText type="smallBold">Refresh bundles</ThemedText>
       </Pressable>
-      {bundles.length === 0 ? (
+      {visible.length === 0 && excluded.length === 0 ? (
         <ThemedText themeColor="textSecondary" style={styles.empty}>
           Related analyzed screenshots will appear here as bundles.
         </ThemedText>
       ) : (
-        bundles.map((bundle) => (
+        visible.map((bundle) => (
           <BundleCard
             key={bundle.id}
             bundle={bundle}
@@ -115,6 +122,22 @@ function BundlesList({
           />
         ))
       )}
+      {excluded.length ? (
+        <>
+          <ThemedText type="smallBold" style={styles.sectionLabel}>
+            EXCLUDED BUNDLES
+          </ThemedText>
+          {excluded.map((bundle) => (
+            <BundleCard
+              key={bundle.id}
+              bundle={bundle}
+              screenshots={screenshots}
+              excludedCount={getExcludedCount(bundle.id)}
+              onPress={() => router.push(`/bundle/${encodeURIComponent(bundle.id)}`)}
+            />
+          ))}
+        </>
+      ) : null}
     </>
   );
 }
@@ -210,6 +233,7 @@ const styles = StyleSheet.create({
   filterSelected: { backgroundColor: '#dbeafe' },
   empty: { paddingTop: 20 },
   card: { padding: 16, borderRadius: 8, gap: 5 },
+  sectionLabel: { marginTop: 12 },
   refreshButton: {
     alignSelf: 'flex-start',
     minHeight: 40,

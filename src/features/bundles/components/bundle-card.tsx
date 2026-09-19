@@ -19,10 +19,12 @@ export function BundleCard({
   bundle,
   screenshots,
   onPress,
+  excludedCount,
 }: {
   bundle: RecallBundle;
   screenshots: RecallScreenshot[];
   onPress: () => void;
+  excludedCount?: number;
 }) {
   const representative = bundle.screenshotIds
     .map((id) => screenshots.find((screenshot) => screenshot.id === id))
@@ -55,7 +57,9 @@ export function BundleCard({
           </ThemedText>
           <ThemedText numberOfLines={2}>{bundle.title}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-            {summarizeBundle(bundle)}
+            {excludedCount
+              ? `${excludedCount} ${excludedCount === 1 ? 'item' : 'items'} excluded.`
+              : summarizeBundle(bundle)}
           </ThemedText>
           {__DEV__ && bundle.reason ? (
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>

@@ -1,5 +1,6 @@
 import type { PersistedScreenshotState } from '@/services/storage/types';
-import type { RecallBundle } from './types';
+import { applyBundleItemOverrides } from './membership';
+import type { BundleItemMembershipOverride, RecallBundle } from './types';
 
 function refsEqual(left: RecallBundle, right: RecallBundle): boolean {
   return JSON.stringify(left.itemRefs) === JSON.stringify(right.itemRefs);
@@ -42,6 +43,19 @@ export function reconcileBundles(
     });
   }
   return reconciled.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+export function reconcileBundleMembership(
+  logicalBundles: RecallBundle[],
+  existing: RecallBundle[],
+  screenshots: Record<string, PersistedScreenshotState>,
+  overrides: BundleItemMembershipOverride[],
+  now = Date.now(),
+): RecallBundle[] {
+  const activeMembership = logicalBundles.map((bundle) =>
+    applyBundleItemOverrides(bundle, overrides),
+  );
+  return reconcileBundles(activeMembership, existing, screenshots, now);
 }
 
 function currentBundleExists(bundles: RecallBundle[], id: string): boolean {

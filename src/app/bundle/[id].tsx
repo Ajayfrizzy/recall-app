@@ -24,7 +24,8 @@ const TYPE_LABELS: Record<RecallBundle['type'], string> = {
 
 export default function BundleRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getBundle, archiveBundle } = useBundles();
+  const { getBundle, archiveBundle, excludeItem, restoreItem, getExcludedItemsForBundle } =
+    useBundles();
   const { screenshots } = useScreenshots();
   const { state } = usePersistence();
   const { items: libraryItems } = useLibrary();
@@ -43,14 +44,18 @@ export default function BundleRoute() {
     );
   }
 
-  const linkedLibrary = libraryItems.filter((item) =>
-    bundle.screenshotIds.includes(item.screenshotId),
-  );
-  const linkedUpcoming = upcomingItems.filter((item) =>
-    bundle.screenshotIds.includes(item.screenshotId),
-  );
+  const excludedRefs = getExcludedItemsForBundle(bundle.id);
+  const logicalRefs = [...bundle.itemRefs, ...excludedRefs];
+  const matchesLogicalRef = (candidate: { screenshotId: string; itemIndex: number }) =>
+    logicalRefs.some(
+      (ref) =>
+        ref.screenshotId === candidate.screenshotId && (ref.itemIndex ?? 0) === candidate.itemIndex,
+    );
+
+  const linkedLibrary = libraryItems.filter(matchesLogicalRef);
+  const linkedUpcoming = upcomingItems.filter(matchesLogicalRef);
   const linkedActions = actionRecords.filter(
-    (record) => record.status === 'completed' && bundle.screenshotIds.includes(record.screenshotId),
+    (record) => record.status === 'completed' && matchesLogicalRef(record),
   );
 
   return (
@@ -64,6 +69,7 @@ export default function BundleRoute() {
         <View style={styles.stats}>
           <Stat label="Screenshots" value={bundle.screenshotIds.length} />
           <Stat label="Items" value={bundle.itemRefs.length} />
+          {excludedRefs.length ? <Stat label="Excluded" value={excludedRefs.length} /> : null}
           {linkedLibrary.length ? <Stat label="Saved" value={linkedLibrary.length} /> : null}
           {linkedUpcoming.length ? <Stat label="Upcoming" value={linkedUpcoming.length} /> : null}
           {linkedActions.length ? <Stat label="Actions" value={linkedActions.length} /> : null}
@@ -81,26 +87,39 @@ export default function BundleRoute() {
         <ThemedText type="smallBold" style={styles.sectionLabel}>
           RELATED ITEMS
         </ThemedText>
-        {bundle.itemRefs.map((ref) => {
-          const screenshot = screenshots.find((candidate) => candidate.id === ref.screenshotId);
-          const analysis = state.screenshots[ref.screenshotId]?.analysis;
-          const item =
-            ref.itemIndex === undefined ? undefined : analysis?.semantic?.items[ref.itemIndex];
-          return (
-            <BundleItemRow
+        {bundle.itemRefs.length ? (
+          bundle.itemRefs.map((ref) => (
+            <BundleItem
               key={`${ref.screenshotId}:${ref.itemIndex ?? ''}`}
               refItem={ref}
-              item={item}
-              summary={analysis?.summary}
-              uri={screenshot?.uri}
-              onPress={
-                screenshot
-                  ? () => router.push(`/screenshot/${encodeURIComponent(screenshot.id)}`)
-                  : undefined
-              }
+              screenshots={screenshots}
+              analysis={state.screenshots[ref.screenshotId]?.analysis}
+              membership="active"
+              actionLabel="Remove from bundle"
+              onAction={() => void excludeItem(ref.screenshotId, ref.itemIndex ?? 0)}
             />
-          );
-        })}
+          ))
+        ) : (
+          <ThemedText themeColor="textSecondary">All bundle items are excluded.</ThemedText>
+        )}
+        {excludedRefs.length ? (
+          <>
+            <ThemedText type="smallBold" style={styles.sectionLabel}>
+              EXCLUDED ITEMS
+            </ThemedText>
+            {excludedRefs.map((ref) => (
+              <BundleItem
+                key={`${ref.screenshotId}:${ref.itemIndex ?? ''}`}
+                refItem={ref}
+                screenshots={screenshots}
+                analysis={state.screenshots[ref.screenshotId]?.analysis}
+                membership="excluded"
+                actionLabel="Restore to bundle"
+                onAction={() => void restoreItem(ref.screenshotId, ref.itemIndex ?? 0)}
+              />
+            ))}
+          </>
+        ) : null}
         {bundle.status === 'active' ? (
           <Pressable
             accessibilityRole="button"
@@ -114,6 +133,42 @@ export default function BundleRoute() {
         )}
       </ScrollView>
     </ThemedView>
+  );
+}
+
+function BundleItem({
+  refItem,
+  screenshots,
+  analysis,
+  membership,
+  actionLabel,
+  onAction,
+}: {
+  refItem: BundleItemRef;
+  screenshots: ReturnType<typeof useScreenshots>['screenshots'];
+  analysis: ReturnType<typeof usePersistence>['state']['screenshots'][string]['analysis'];
+  membership: 'active' | 'excluded';
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  const screenshot = screenshots.find((candidate) => candidate.id === refItem.screenshotId);
+  const item =
+    refItem.itemIndex === undefined ? undefined : analysis?.semantic?.items[refItem.itemIndex];
+  return (
+    <BundleItemRow
+      refItem={refItem}
+      item={item}
+      summary={analysis?.summary}
+      uri={screenshot?.uri}
+      membership={membership}
+      actionLabel={actionLabel}
+      onAction={onAction}
+      onPress={
+        screenshot
+          ? () => router.push(`/screenshot/${encodeURIComponent(screenshot.id)}`)
+          : undefined
+      }
+    />
   );
 }
 
@@ -140,12 +195,18 @@ function BundleItemRow({
   summary,
   uri,
   onPress,
+  membership,
+  actionLabel,
+  onAction,
 }: {
   refItem: BundleItemRef;
   item?: RecallItem;
   summary?: string;
   uri?: string;
   onPress?: () => void;
+  membership: 'active' | 'excluded';
+  actionLabel: string;
+  onAction: () => void;
 }) {
   return (
     <ThemedView type="backgroundElement" style={styles.itemRow}>
@@ -171,11 +232,19 @@ function BundleItemRow({
             {!uri ? ' · Gallery asset missing' : ''}
           </ThemedText>
           {__DEV__ ? (
-            <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-              {refItem.screenshotId}:{refItem.itemIndex ?? '-'}
-            </ThemedText>
+            <View>
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
+                Item ref: {refItem.screenshotId}:{refItem.itemIndex ?? 0}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                Membership: {membership}
+              </ThemedText>
+            </View>
           ) : null}
         </View>
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={onAction} style={styles.membershipButton}>
+        <ThemedText type="smallBold">{actionLabel}</ThemedText>
       </Pressable>
     </ThemedView>
   );
@@ -199,6 +268,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#d9d9de',
   },
   itemDetails: { flex: 1, justifyContent: 'center', padding: 12, gap: 4 },
+  membershipButton: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#c7c9cf',
+  },
   archiveButton: {
     alignSelf: 'flex-start',
     minHeight: 44,

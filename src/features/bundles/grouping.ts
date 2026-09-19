@@ -6,11 +6,21 @@ import {
   slugifyBundleText,
   type BundleSignals,
 } from './normalization';
-import type { BundleItemRef, BundleType, RecallBundle } from './types';
+import type {
+  BundleItemMembershipOverride,
+  BundleItemRef,
+  BundleType,
+  RecallBundle,
+} from './types';
+import { isBundleItemExcluded } from './membership';
 
 export const BUNDLE_COMPATIBILITY_THRESHOLD = 0.78;
 
-type ScreenshotInput = { id: string; state: PersistedScreenshotState };
+type ScreenshotInput = {
+  id: string;
+  state: PersistedScreenshotState;
+  overrides: BundleItemMembershipOverride[];
+};
 
 export interface BundleCandidate extends BundleItemRef {
   signals: BundleSignals;
@@ -125,8 +135,13 @@ function candidatesForScreenshot(input: ScreenshotInput): BundleCandidate[] {
         itemIndex,
         signals: extractBundleSignals(analysis, item),
       }))
-      .filter((candidate) => candidate.signals.type !== 'general');
+      .filter(
+        (candidate) =>
+          candidate.signals.type !== 'general' &&
+          !isBundleItemExcluded(input.overrides, candidate.screenshotId, candidate.itemIndex),
+      );
   }
+  if (isBundleItemExcluded(input.overrides, input.id, 0)) return [];
   return [{ screenshotId: input.id, itemIndex: 0, signals: extractBundleSignals(analysis) }];
 }
 
@@ -241,9 +256,10 @@ function buildMerchantBundles(
 export function buildBundles(
   screenshots: Record<string, PersistedScreenshotState>,
   now = Date.now(),
+  overrides: BundleItemMembershipOverride[] = [],
 ): RecallBundle[] {
   const candidates = Object.entries(screenshots)
-    .flatMap(([id, state]) => candidatesForScreenshot({ id, state }))
+    .flatMap(([id, state]) => candidatesForScreenshot({ id, state, overrides }))
     .sort((left, right) => refKey(left).localeCompare(refKey(right)));
   const merchant = buildMerchantBundles(candidates, now);
   const remaining = candidates.filter((candidate) => !merchant.used.has(refKey(candidate)));
@@ -292,7 +308,8 @@ export function suggestBundleTitle(bundle: Pick<RecallBundle, 'title'>): string 
 
 export function summarizeBundle(bundle: RecallBundle): string {
   if (bundle.type === 'shopping') {
-    return `${bundle.itemRefs.length} products from ${bundle.title.replace(/ Products$/i, '')}.`;
+    const noun = bundle.itemRefs.length === 1 ? 'product' : 'products';
+    return `${bundle.itemRefs.length} ${noun} from ${bundle.title.replace(/ Products$/i, '')}.`;
   }
   const noun = bundle.screenshotIds.length === 1 ? 'screenshot' : 'screenshots';
   return `${bundle.screenshotIds.length} ${noun} related to ${bundle.title}.`;

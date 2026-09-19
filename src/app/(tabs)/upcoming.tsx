@@ -1,16 +1,60 @@
-import { StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useUpcoming } from '@/features/upcoming/context';
+
 export default function UpcomingScreen() {
+  const { items } = useUpcoming();
+  const sorted = [...items].sort((a, b) => {
+    if (a.date && b.date) return a.date - b.date;
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return b.createdAt - a.createdAt;
+  });
+
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="subtitle">Upcoming</ThemedText>
-      <ThemedText themeColor="textSecondary">
-        Things Recall will bring back when they matter.
-      </ThemedText>
+      <ScrollView contentContainerStyle={styles.content}>
+        <ThemedText type="subtitle">Upcoming</ThemedText>
+        {sorted.length === 0 ? (
+          <ThemedText themeColor="textSecondary" style={styles.empty}>
+            Events and deadlines you act on will appear here.
+          </ThemedText>
+        ) : (
+          sorted.map((item) => (
+            <ThemedView key={item.id} type="backgroundElement" style={styles.card}>
+              <ThemedText type="smallBold">
+                {item.type === 'event' ? 'Event' : 'Deadline'}
+              </ThemedText>
+              <ThemedText>{item.title}</ThemedText>
+              {item.date ? (
+                <ThemedText themeColor="textSecondary">
+                  {new Date(item.date).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </ThemedText>
+              ) : null}
+              {item.location ? (
+                <ThemedText themeColor="textSecondary">{item.location}</ThemedText>
+              ) : null}
+              <ThemedText type="small" themeColor="textSecondary">
+                {item.type === 'event' ? 'Calendar added' : 'Reminder scheduled'}
+              </ThemedText>
+            </ThemedView>
+          ))
+        )}
+      </ScrollView>
     </ThemedView>
   );
 }
+
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, gap: 12, paddingBottom: 110 },
+  container: { flex: 1 },
+  content: { padding: 24, gap: 12, paddingBottom: 110 },
+  empty: { paddingTop: 20 },
+  card: { padding: 16, borderRadius: 8, gap: 5 },
 });

@@ -56,6 +56,10 @@ function matchesXPost(text: string): boolean {
   return semanticSignals === 3 || (semanticSignals >= 2 && hasPublishedDate);
 }
 
+function matchesScholarshipDeadline(text: string): boolean {
+  return countSignals(text, ['scholarship', 'application', 'deadline', 'september', '30']) >= 3;
+}
+
 export function isMockAnalysisEnabled(): boolean {
   return (
     process.env.NODE_ENV !== 'production' &&
@@ -190,6 +194,35 @@ Reply  Repost  Like
         },
       ],
       suggestedActions: ['read_later'],
+    },
+  },
+  {
+    name: 'Scholarship deadline',
+    ocrText: `Scholarship application deadline
+September 30, 2026 at 5:00 PM`,
+    matches: matchesScholarshipDeadline,
+    analysis: {
+      category: 'deadline',
+      confidence: 0.91,
+      summary: 'Scholarship application deadline on September 30, 2026.',
+      cardinality: 'single',
+      items: [
+        {
+          type: 'deadline',
+          title: 'Scholarship application deadline',
+          dates: [
+            {
+              type: 'deadline',
+              raw: 'September 30, 2026 at 5:00 PM',
+              normalized: '2026-09-30T17:00',
+              precision: 'exact',
+              confidence: 0.95,
+            },
+          ],
+          confidence: 0.91,
+        },
+      ],
+      suggestedActions: ['create_reminder'],
     },
   },
 ];

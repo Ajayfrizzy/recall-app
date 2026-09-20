@@ -10,6 +10,7 @@ type Props = {
   cancelLabel?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  destructive?: boolean;
 };
 
 export function ConfirmationModal({
@@ -20,6 +21,7 @@ export function ConfirmationModal({
   cancelLabel = 'Cancel',
   onConfirm,
   onCancel,
+  destructive = false,
 }: Props) {
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
@@ -31,7 +33,11 @@ export function ConfirmationModal({
             <Pressable accessibilityRole="button" onPress={onCancel} style={styles.cancelButton}>
               <ThemedText type="smallBold">{cancelLabel}</ThemedText>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={onConfirm} style={styles.confirmButton}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={onConfirm}
+              style={[styles.confirmButton, destructive && styles.destructiveButton]}
+            >
               <ThemedText style={styles.confirmText}>{confirmLabel}</ThemedText>
             </Pressable>
           </View>
@@ -65,5 +71,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#208AEF',
   },
+  destructiveButton: { backgroundColor: '#c53030' },
   confirmText: { color: '#fff', fontWeight: '700' },
 });

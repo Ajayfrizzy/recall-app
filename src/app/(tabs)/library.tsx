@@ -219,6 +219,14 @@ function ScreenshotHistory({
             <ThemedText type="smallBold">{option.label}</ThemedText>
           </Pressable>
         ))}
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityState={{ selected: false }}
+          onPress={() => router.push('/cleanup')}
+          style={styles.filter}
+        >
+          <ThemedText type="smallBold">Cleanup</ThemedText>
+        </Pressable>
       </View>
       {screenshots.length === 0 ? (
         <ThemedText themeColor="textSecondary" style={styles.empty}>

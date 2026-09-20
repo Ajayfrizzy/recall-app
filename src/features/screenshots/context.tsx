@@ -85,7 +85,7 @@ type ContextValue = {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<RecallScreenshot[] | null>;
   requestAccess: () => Promise<void>;
   setStatus: (id: string, status: ScreenshotStatus) => void;
   analyzeScreenshot: (id: string) => Promise<void>;
@@ -144,34 +144,37 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
   const analysesInFlight = useRef(new Set<string>());
 
   const loadForPermission = useCallback(async (nextPermission: ScreenshotPermission) => {
-    if (nextPermission !== 'granted' && nextPermission !== 'limited') return;
+    if (nextPermission !== 'granted' && nextPermission !== 'limited') return null;
     const screenshots = await loadDeviceScreenshots(nextPermission);
+    const restoredScreenshots = screenshots.map((screenshot) => {
+      const restored = persistedScreenshotsRef.current[screenshot.id];
+      logScreenshotIdentity(screenshot, restored);
+      return restored
+        ? {
+            ...screenshot,
+            status: restored.status,
+            analysis: restored.analysis ?? screenshot.analysis,
+          }
+        : screenshot;
+    });
     dispatch({
       type: 'replace',
-      screenshots: screenshots.map((screenshot) => {
-        const restored = persistedScreenshotsRef.current[screenshot.id];
-        logScreenshotIdentity(screenshot, restored);
-        return restored
-          ? {
-              ...screenshot,
-              status: restored.status,
-              analysis: restored.analysis ?? screenshot.analysis,
-            }
-          : screenshot;
-      }),
+      screenshots: restoredScreenshots,
     });
+    return restoredScreenshots;
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<RecallScreenshot[] | null> => {
     setRefreshing(true);
     setError(null);
     try {
       const current = await getScreenshotPermissionState();
       setPermission(current.permission);
       setCanAskAgain(current.canAskAgain);
-      await loadForPermission(current.permission);
+      return await loadForPermission(current.permission);
     } catch {
       setError('We could not load your screenshots. Try again.');
+      return null;
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -77,3 +77,8 @@ export async function loadDeviceScreenshots(
     analysis: createIdleScreenshotAnalysis(),
   }));
 }
+
+export async function deleteScreenshotAssets(assetIds: string[]): Promise<boolean> {
+  if (Platform.OS === 'web' || assetIds.length === 0) return false;
+  return MediaLibrary.deleteAssetsAsync(assetIds);
+}

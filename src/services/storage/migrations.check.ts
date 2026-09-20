@@ -45,6 +45,10 @@ assert(
   restored.bundleItemOverrides.length === 0,
   'legacy state did not default bundle item overrides to empty',
 );
+assert(
+  restored.resurfacingPreferences.length === 0,
+  'legacy state did not default resurfacing preferences to empty',
+);
 assert(restored.semanticAnalysisAcknowledged, 'semantic acknowledgement was dropped');
 assert(restored.onboardingCompleted, 'onboarding state was dropped');
 assert(

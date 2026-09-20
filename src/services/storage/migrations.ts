@@ -6,6 +6,8 @@ import type {
   RecallBundle,
 } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
+import { pruneResurfacingPreferences } from '@/features/resurfacing/preferences';
+import type { ResurfacingPreference } from '@/features/resurfacing/types';
 import type { ScreenshotStatus } from '@/features/screenshots/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
 import { createUpcomingFingerprint } from '@/features/upcoming/duplicates';
@@ -296,6 +298,21 @@ function validateBundleItemOverrides(value: unknown): BundleItemMembershipOverri
     .map(([, override]) => override);
 }
 
+function validateResurfacingPreference(value: unknown): value is ResurfacingPreference {
+  return (
+    isRecord(value) &&
+    isValidId(value.id) &&
+    (value.dismissedAt === undefined || isTimestamp(value.dismissedAt)) &&
+    (value.snoozedUntil === undefined || isTimestamp(value.snoozedUntil)) &&
+    (value.dismissedAt !== undefined || value.snoozedUntil !== undefined)
+  );
+}
+
+function validateResurfacingPreferences(value: unknown): ResurfacingPreference[] {
+  if (!Array.isArray(value)) return [];
+  return pruneResurfacingPreferences(value.filter(validateResurfacingPreference));
+}
+
 function validUniqueItems<T extends { id: string }>(
   value: unknown,
   validator: (item: unknown) => item is T,
@@ -372,6 +389,7 @@ export function migratePersistedState(raw: unknown): PersistedRecallStateV1 {
     actions: reconcileActions(actions, library, upcoming),
     bundles,
     bundleItemOverrides,
+    resurfacingPreferences: validateResurfacingPreferences(raw.resurfacingPreferences),
     semanticAnalysisAcknowledged: raw.semanticAnalysisAcknowledged === true,
     onboardingCompleted: raw.onboardingCompleted === true,
   };

@@ -4,8 +4,11 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ScreenshotCard } from '@/features/screenshots/components/screenshot-card';
 import { useScreenshots } from '@/features/screenshots/context';
+import { ResurfacingCard } from '@/features/resurfacing/components/resurfacing-card';
+import { useResurfacing } from '@/features/resurfacing/context';
 
 export default function InboxScreen() {
+  const { cards, dismissCard, snoozeCard } = useResurfacing();
   const {
     screenshots,
     permission,
@@ -29,9 +32,26 @@ export default function InboxScreen() {
         refreshing={refreshing}
         onRefresh={() => void refresh()}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <ThemedText type="title">Recall</ThemedText>
-            <ThemedText style={styles.tagline}>Turn screenshots into actions.</ThemedText>
+          <View>
+            <View style={styles.header}>
+              <ThemedText type="title">Recall</ThemedText>
+              <ThemedText style={styles.tagline}>Turn screenshots into actions.</ThemedText>
+            </View>
+            {cards.length ? (
+              <View style={styles.relevant}>
+                <ThemedText type="smallBold" style={styles.sectionLabel}>
+                  RELEVANT NOW
+                </ThemedText>
+                {cards.map((card) => (
+                  <ResurfacingCard
+                    key={card.id}
+                    card={card}
+                    onDismiss={() => void dismissCard(card.id)}
+                    onSnooze={() => void snoozeCard(card.id)}
+                  />
+                ))}
+              </View>
+            ) : null}
           </View>
         }
         ListEmptyComponent={
@@ -145,6 +165,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingBottom: 90 },
   content: { padding: 24 },
   header: { marginBottom: 24 },
+  relevant: { gap: 12, marginBottom: 24 },
+  sectionLabel: { letterSpacing: 0.8 },
   tagline: { fontSize: 18, marginTop: 8 },
   count: { marginTop: 8, textAlign: 'center' },
   state: { alignItems: 'center', gap: 12, paddingVertical: 56 },

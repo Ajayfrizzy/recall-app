@@ -16,6 +16,11 @@ import {
   upsertBundleItemOverride,
 } from './membership';
 import type { BundleItemRef, RecallBundle } from './types';
+import {
+  getBundleLifecycleCounts,
+  restoreArchivedBundle,
+  type BundleLifecycleCounts,
+} from './lifecycle';
 
 type ContextValue = {
   bundles: RecallBundle[];
@@ -23,10 +28,12 @@ type ContextValue = {
   getBundlesForScreenshot: (screenshotId: string) => RecallBundle[];
   refreshBundles: () => Promise<void>;
   archiveBundle: (id: string) => Promise<void>;
+  restoreBundle: (id: string) => Promise<void>;
   isItemExcluded: (screenshotId: string, itemIndex: number) => boolean;
   excludeItem: (screenshotId: string, itemIndex: number) => Promise<void>;
   restoreItem: (screenshotId: string, itemIndex: number) => Promise<void>;
   getExcludedItemsForBundle: (bundleId: string) => BundleItemRef[];
+  getBundleLifecycleCounts: (bundleId: string) => BundleLifecycleCounts;
 };
 
 const BundleContext = createContext<ContextValue | null>(null);
@@ -91,6 +98,31 @@ export function BundleProvider({ children }: PropsWithChildren) {
     [updateState],
   );
 
+  const restoreBundle = useCallback(
+    async (id: string) => {
+      await updateState((current) => {
+        const bundles = restoreArchivedBundle(current.bundles, id);
+        return bundles.some((bundle, index) => bundle !== current.bundles[index])
+          ? { ...current, bundles }
+          : current;
+      });
+    },
+    [updateState],
+  );
+
+  const getExcludedItemsForBundle = useCallback(
+    (bundleId: string) => {
+      const logical = logicalBundles.find((bundle) => bundle.id === bundleId);
+      return logical
+        ? getExcludedBundleItemRefs(logical, state.bundleItemOverrides).map((ref) => ({
+            ...ref,
+            itemIndex: bundleItemRefIndex(ref),
+          }))
+        : [];
+    },
+    [logicalBundles, state.bundleItemOverrides],
+  );
+
   const value = useMemo<ContextValue>(
     () => ({
       bundles: state.bundles,
@@ -99,18 +131,17 @@ export function BundleProvider({ children }: PropsWithChildren) {
         state.bundles.filter((bundle) => bundle.screenshotIds.includes(screenshotId)),
       refreshBundles,
       archiveBundle,
+      restoreBundle,
       isItemExcluded: (screenshotId, itemIndex) =>
         isBundleItemExcluded(state.bundleItemOverrides, screenshotId, itemIndex),
       excludeItem: (screenshotId, itemIndex) => setItemExcluded(screenshotId, itemIndex, true),
       restoreItem: (screenshotId, itemIndex) => setItemExcluded(screenshotId, itemIndex, false),
-      getExcludedItemsForBundle: (bundleId) => {
-        const logical = logicalBundles.find((bundle) => bundle.id === bundleId);
-        return logical
-          ? getExcludedBundleItemRefs(logical, state.bundleItemOverrides).map((ref) => ({
-              ...ref,
-              itemIndex: bundleItemRefIndex(ref),
-            }))
-          : [];
+      getExcludedItemsForBundle,
+      getBundleLifecycleCounts: (bundleId) => {
+        const bundle = state.bundles.find((candidate) => candidate.id === bundleId);
+        return bundle
+          ? getBundleLifecycleCounts(bundle, getExcludedItemsForBundle(bundleId))
+          : { active: 0, removed: 0, total: 0 };
       },
     }),
     [
@@ -119,7 +150,9 @@ export function BundleProvider({ children }: PropsWithChildren) {
       logicalBundles,
       refreshBundles,
       archiveBundle,
+      restoreBundle,
       setItemExcluded,
+      getExcludedItemsForBundle,
     ],
   );
   return <BundleContext.Provider value={value}>{children}</BundleContext.Provider>;

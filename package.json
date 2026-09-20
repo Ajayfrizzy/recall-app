@@ -47,7 +47,7 @@
     "lint": "expo lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "bundles:check": "server/node_modules/.bin/tsx src/features/bundles/grouping.check.ts && server/node_modules/.bin/tsx src/features/bundles/membership.check.ts",
+    "bundles:check": "server/node_modules/.bin/tsx src/features/bundles/grouping.check.ts && server/node_modules/.bin/tsx src/features/bundles/membership.check.ts && server/node_modules/.bin/tsx src/features/bundles/lifecycle.check.ts",
     "persistence:check": "server/node_modules/.bin/tsx src/services/storage/migrations.check.ts",
     "resurfacing:check": "server/node_modules/.bin/tsx src/features/resurfacing/resurfacing.check.ts"
   },

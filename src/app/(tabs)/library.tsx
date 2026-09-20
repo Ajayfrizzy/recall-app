@@ -10,6 +10,10 @@ import { ScreenshotHistoryCard } from '@/features/screenshots/components/history
 import { BundleCard } from '@/features/bundles/components/bundle-card';
 import { useBundles } from '@/features/bundles/context';
 import {
+  isBundleInLifecycleSection,
+  type BundleLifecycleSection,
+} from '@/features/bundles/lifecycle';
+import {
   filterScreenshotHistory,
   type ScreenshotHistoryFilter,
 } from '@/features/screenshots/history';
@@ -30,12 +34,25 @@ const screenshotFilters: Array<{ value: ScreenshotHistoryFilter; label: string }
   { value: 'processed', label: 'Processed' },
 ];
 
+const bundleSections: Array<{ value: BundleLifecycleSection; label: string }> = [
+  { value: 'active', label: 'Active' },
+  { value: 'removed', label: 'Removed' },
+  { value: 'archived', label: 'Archived' },
+];
+
 export default function LibraryScreen() {
   const { items } = useLibrary();
   const { screenshots } = useScreenshots();
-  const { bundles, refreshBundles, getExcludedItemsForBundle } = useBundles();
+  const {
+    bundles,
+    refreshBundles,
+    restoreBundle,
+    getExcludedItemsForBundle,
+    getBundleLifecycleCounts,
+  } = useBundles();
   const [filter, setFilter] = useState<Filter>('all');
   const [screenshotFilter, setScreenshotFilter] = useState<ScreenshotHistoryFilter>('all');
+  const [bundleSection, setBundleSection] = useState<BundleLifecycleSection>('active');
   const visible =
     filter === 'all'
       ? items
@@ -69,10 +86,14 @@ export default function LibraryScreen() {
           />
         ) : filter === 'bundles' ? (
           <BundlesList
-            bundles={bundles.filter((bundle) => bundle.status === 'active')}
+            bundles={bundles}
             screenshots={screenshots}
+            section={bundleSection}
+            onSection={setBundleSection}
             onRefresh={() => void refreshBundles()}
-            getExcludedCount={(bundleId) => getExcludedItemsForBundle(bundleId).length}
+            onRestore={(bundleId) => void restoreBundle(bundleId)}
+            getRemovedItems={getExcludedItemsForBundle}
+            getCounts={getBundleLifecycleCounts}
           />
         ) : visible.length === 0 ? (
           <ThemedText themeColor="textSecondary" style={styles.empty}>
@@ -91,53 +112,80 @@ export default function LibraryScreen() {
 function BundlesList({
   bundles,
   screenshots,
+  section,
+  onSection,
   onRefresh,
-  getExcludedCount,
+  onRestore,
+  getRemovedItems,
+  getCounts,
 }: {
   bundles: ReturnType<typeof useBundles>['bundles'];
   screenshots: ReturnType<typeof useScreenshots>['screenshots'];
+  section: BundleLifecycleSection;
+  onSection: (section: BundleLifecycleSection) => void;
   onRefresh: () => void;
-  getExcludedCount: (bundleId: string) => number;
+  onRestore: (bundleId: string) => void;
+  getRemovedItems: ReturnType<typeof useBundles>['getExcludedItemsForBundle'];
+  getCounts: ReturnType<typeof useBundles>['getBundleLifecycleCounts'];
 }) {
-  const visible = bundles.filter((bundle) => bundle.itemRefs.length > 0);
-  const excluded = bundles.filter(
-    (bundle) => bundle.itemRefs.length === 0 && getExcludedCount(bundle.id) > 0,
+  const visible = bundles.filter((bundle) =>
+    isBundleInLifecycleSection(bundle, getCounts(bundle.id), section),
   );
+  const emptyMessage =
+    section === 'removed'
+      ? 'Items you remove from bundles will appear here.'
+      : section === 'archived'
+        ? 'No archived bundles.'
+        : 'Related analyzed screenshots will appear here as bundles.';
   return (
     <>
+      <View accessibilityRole="tablist" style={styles.filters}>
+        {bundleSections.map((option) => (
+          <Pressable
+            key={option.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: section === option.value }}
+            onPress={() => onSection(option.value)}
+            style={[styles.filter, section === option.value && styles.filterSelected]}
+          >
+            <ThemedText type="smallBold">{option.label}</ThemedText>
+          </Pressable>
+        ))}
+      </View>
       <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.refreshButton}>
         <ThemedText type="smallBold">Refresh bundles</ThemedText>
       </Pressable>
-      {visible.length === 0 && excluded.length === 0 ? (
+      {visible.length === 0 ? (
         <ThemedText themeColor="textSecondary" style={styles.empty}>
-          Related analyzed screenshots will appear here as bundles.
+          {emptyMessage}
         </ThemedText>
       ) : (
-        visible.map((bundle) => (
-          <BundleCard
-            key={bundle.id}
-            bundle={bundle}
-            screenshots={screenshots}
-            onPress={() => router.push(`/bundle/${encodeURIComponent(bundle.id)}`)}
-          />
-        ))
-      )}
-      {excluded.length ? (
-        <>
-          <ThemedText type="smallBold" style={styles.sectionLabel}>
-            EXCLUDED BUNDLES
-          </ThemedText>
-          {excluded.map((bundle) => (
+        visible.map((bundle) => {
+          const removedItems = getRemovedItems(bundle.id);
+          const removedRoute = `/bundle/${encodeURIComponent(bundle.id)}/removed` as const;
+          return (
             <BundleCard
               key={bundle.id}
               bundle={bundle}
               screenshots={screenshots}
-              excludedCount={getExcludedCount(bundle.id)}
-              onPress={() => router.push(`/bundle/${encodeURIComponent(bundle.id)}`)}
+              counts={getCounts(bundle.id)}
+              removedItems={removedItems}
+              onPress={() =>
+                router.push(
+                  section === 'removed' ? removedRoute : `/bundle/${encodeURIComponent(bundle.id)}`,
+                )
+              }
+              action={
+                section === 'removed'
+                  ? { label: 'Manage removed', onPress: () => router.push(removedRoute) }
+                  : section === 'archived'
+                    ? { label: 'Restore bundle', onPress: () => onRestore(bundle.id) }
+                    : undefined
+              }
             />
-          ))}
-        </>
-      ) : null}
+          );
+        })
+      )}
     </>
   );
 }
@@ -233,7 +281,6 @@ const styles = StyleSheet.create({
   filterSelected: { backgroundColor: '#dbeafe' },
   empty: { paddingTop: 20 },
   card: { padding: 16, borderRadius: 8, gap: 5 },
-  sectionLabel: { marginTop: 12 },
   refreshButton: {
     alignSelf: 'flex-start',
     minHeight: 40,

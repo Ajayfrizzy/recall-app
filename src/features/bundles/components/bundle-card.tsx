@@ -2,8 +2,8 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import type { RecallScreenshot } from '@/features/screenshots/types';
-import { summarizeBundle } from '../grouping';
-import type { RecallBundle } from '../types';
+import type { BundleLifecycleCounts } from '../lifecycle';
+import type { BundleItemRef, RecallBundle } from '../types';
 
 const TYPE_LABELS: Record<RecallBundle['type'], string> = {
   event: 'Event',
@@ -19,14 +19,18 @@ export function BundleCard({
   bundle,
   screenshots,
   onPress,
-  excludedCount,
+  counts,
+  removedItems = [],
+  action,
 }: {
   bundle: RecallBundle;
   screenshots: RecallScreenshot[];
   onPress: () => void;
-  excludedCount?: number;
+  counts: BundleLifecycleCounts;
+  removedItems?: BundleItemRef[];
+  action?: { label: string; onPress: () => void };
 }) {
-  const representative = bundle.screenshotIds
+  const representative = [...bundle.screenshotIds, ...removedItems.map((item) => item.screenshotId)]
     .map((id) => screenshots.find((screenshot) => screenshot.id === id))
     .find(Boolean);
   return (
@@ -57,9 +61,7 @@ export function BundleCard({
           </ThemedText>
           <ThemedText numberOfLines={2}>{bundle.title}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-            {excludedCount
-              ? `${excludedCount} ${excludedCount === 1 ? 'item' : 'items'} excluded.`
-              : summarizeBundle(bundle)}
+            {lifecycleSummary(counts)}
           </ThemedText>
           {__DEV__ && bundle.reason ? (
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
@@ -68,8 +70,19 @@ export function BundleCard({
           ) : null}
         </View>
       </Pressable>
+      {action ? (
+        <Pressable accessibilityRole="button" onPress={action.onPress} style={styles.action}>
+          <ThemedText type="smallBold">{action.label}</ThemedText>
+        </Pressable>
+      ) : null}
     </ThemedView>
   );
+}
+
+function lifecycleSummary(counts: BundleLifecycleCounts): string {
+  const active = `${counts.active} active`;
+  if (!counts.removed) return active;
+  return `${active} · ${counts.removed} removed`;
 }
 
 const styles = StyleSheet.create({
@@ -84,4 +97,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#d9d9de',
   },
   details: { flex: 1, justifyContent: 'center', padding: 12, gap: 3 },
+  action: {
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#c7c9cf',
+  },
 });

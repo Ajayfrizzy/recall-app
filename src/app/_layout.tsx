@@ -27,6 +27,10 @@ export default function RootLayout() {
                       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
                       <Stack.Screen name="screenshot/[id]" options={{ title: 'Screenshot' }} />
                       <Stack.Screen name="bundle/[id]" options={{ title: 'Bundle' }} />
+                      <Stack.Screen
+                        name="bundle/[id]/removed"
+                        options={{ title: 'Removed Items' }}
+                      />
                     </Stack>
                   </ActionProvider>
                 </ResurfacingProvider>

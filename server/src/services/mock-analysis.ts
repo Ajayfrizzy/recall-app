@@ -11,6 +11,21 @@ function countSignals(text: string, signals: string[]): number {
   return signals.filter((signal) => text.includes(signal)).length;
 }
 
+type IngremMatchEvidence = {
+  productSignals: number;
+  knownPrices: number;
+  currencyMarkers: number;
+};
+
+const INGREM_PRODUCT_SIGNAL_GROUPS = [
+  ['fat cat', 'power recliner'],
+  ['floating table'],
+  ['tilt adjustable', 'standing desk'],
+  ['fat bat'],
+];
+
+const INGREM_PRICE_PATTERNS = [/\b1\s*288\b/, /\b750\b/, /\b700\b/, /\b849\b/];
+
 export function normalizeMockOcr(text: string): string {
   return text
     .normalize('NFKD')
@@ -21,24 +36,23 @@ export function normalizeMockOcr(text: string): string {
     .trim();
 }
 
-function matchesIngrem(text: string): boolean {
-  const productSignals = [
-    'fat cat',
-    'power recliner',
-    'floating table',
-    'tilt',
-    'adjustable',
-    'standing desk',
-    'fat bat recliner',
-  ];
-  const dollarPrices = text.match(/\$/g)?.length ?? 0;
-  const usdPrices = text.match(/\busd\b/g)?.length ?? 0;
+function getIngremMatchEvidence(text: string): IngremMatchEvidence {
+  return {
+    productSignals: INGREM_PRODUCT_SIGNAL_GROUPS.filter((signals) =>
+      signals.some((signal) => text.includes(signal)),
+    ).length,
+    knownPrices: INGREM_PRICE_PATTERNS.filter((pattern) => pattern.test(text)).length,
+    currencyMarkers: (text.match(/\$/g)?.length ?? 0) + (text.match(/\busd\b/g)?.length ?? 0),
+  };
+}
 
+function matchesIngrem(text: string): boolean {
+  if (!text.includes('ingrem')) return false;
+  const evidence = getIngremMatchEvidence(text);
   return (
-    text.includes('ingrem') &&
-    countSignals(text, productSignals) >= 3 &&
-    dollarPrices >= 4 &&
-    usdPrices >= 4
+    evidence.productSignals >= 3 ||
+    (evidence.productSignals >= 2 && evidence.knownPrices >= 2) ||
+    (evidence.productSignals >= 2 && evidence.currencyMarkers >= 3)
   );
 }
 
@@ -246,5 +260,14 @@ const generalAnalysis: RecallAnalysis = {
 export function analyzeWithMock(ocrText: string): RecallAnalysis {
   const normalizedOcrText = normalizeMockOcr(ocrText);
   const fixture = mockAnalysisFixtures.find((candidate) => candidate.matches(normalizedOcrText));
+  if (isMockAnalysisEnabled()) {
+    const evidence = getIngremMatchEvidence(normalizedOcrText);
+    const ingremDebug = normalizedOcrText.includes('ingrem')
+      ? ` (INGREM product signals=${evidence.productSignals}, known prices=${evidence.knownPrices}, currency markers=${evidence.currencyMarkers})`
+      : '';
+    console.info(
+      `[mock-analysis] selected fixture: ${fixture?.name ?? 'general fallback'}${ingremDebug}`,
+    );
+  }
   return RecallAnalysisSchema.parse(fixture?.analysis ?? generalAnalysis);
 }

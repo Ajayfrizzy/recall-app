@@ -28,6 +28,8 @@
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-purchases": "^10.10.0",
+    "react-native-purchases-ui": "^10.10.0",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -50,7 +52,8 @@
     "bundles:check": "server/node_modules/.bin/tsx src/features/bundles/grouping.check.ts && server/node_modules/.bin/tsx src/features/bundles/membership.check.ts && server/node_modules/.bin/tsx src/features/bundles/lifecycle.check.ts",
     "persistence:check": "server/node_modules/.bin/tsx src/services/storage/migrations.check.ts",
     "resurfacing:check": "server/node_modules/.bin/tsx src/features/resurfacing/resurfacing.check.ts",
-    "cleanup:check": "server/node_modules/.bin/tsx src/features/cleanup/cleanup.check.ts"
+    "cleanup:check": "server/node_modules/.bin/tsx src/features/cleanup/cleanup.check.ts",
+    "subscription:check": "server/node_modules/.bin/tsx src/features/subscription/subscription.check.ts"
   },
   "private": true
 }

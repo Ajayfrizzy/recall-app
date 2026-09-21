@@ -11,6 +11,8 @@ import {
 import { useActions } from '@/features/actions/context';
 import { useBundles } from '@/features/bundles/context';
 import { useScreenshots } from '@/features/screenshots/context';
+import { useSubscription } from '@/features/subscription/context';
+import { canUseCleanupBatch, getSubscriptionLimits } from '@/features/subscription/features';
 import { deleteScreenshotAssets } from '@/features/screenshots/media-library';
 import { reconcileCleanupDeleteResult } from './deletion';
 import { getCleanupCandidates, selectSafeCandidateIds } from './eligibility';
@@ -25,6 +27,8 @@ interface CleanupContextValue {
   deleteSelected: () => Promise<CleanupDeleteResult | undefined>;
   deleting: boolean;
   lastResult?: CleanupDeleteResult;
+  selectionLimit: number;
+  selectionLimitExceeded: boolean;
 }
 
 const CleanupContext = createContext<CleanupContextValue | null>(null);
@@ -33,6 +37,7 @@ export function CleanupProvider({ children }: PropsWithChildren) {
   const { records } = useActions();
   const { bundles } = useBundles();
   const { screenshots, refresh } = useScreenshots();
+  const { isPro } = useSubscription();
   const candidates = useMemo(
     () => getCleanupCandidates(screenshots, records, bundles),
     [screenshots, records, bundles],
@@ -40,6 +45,8 @@ export function CleanupProvider({ children }: PropsWithChildren) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
   const [lastResult, setLastResult] = useState<CleanupDeleteResult>();
+  const selectionLimit = getSubscriptionLimits(isPro).cleanupBatchSize;
+  const selectionLimitExceeded = !canUseCleanupBatch(selectedIds.length, isPro);
   const previousConfidence = useRef(new Map<string, ScreenshotCleanupCandidate['confidence']>());
 
   useEffect(() => {
@@ -81,7 +88,9 @@ export function CleanupProvider({ children }: PropsWithChildren) {
     const requestedIds = selectedIds.filter((id) =>
       candidates.some((candidate) => candidate.screenshotId === id),
     );
-    if (!requestedIds.length || deleting) return undefined;
+    if (!requestedIds.length || deleting || !canUseCleanupBatch(requestedIds.length, isPro)) {
+      return undefined;
+    }
     setDeleting(true);
     setLastResult(undefined);
     let batchReportedSuccess = false;
@@ -102,7 +111,7 @@ export function CleanupProvider({ children }: PropsWithChildren) {
     } finally {
       setDeleting(false);
     }
-  }, [candidates, deleting, refresh, selectedIds]);
+  }, [candidates, deleting, isPro, refresh, selectedIds]);
 
   const value = useMemo<CleanupContextValue>(
     () => ({
@@ -114,6 +123,8 @@ export function CleanupProvider({ children }: PropsWithChildren) {
       deleteSelected,
       deleting,
       lastResult,
+      selectionLimit,
+      selectionLimitExceeded,
     }),
     [
       candidates,
@@ -124,6 +135,8 @@ export function CleanupProvider({ children }: PropsWithChildren) {
       deleteSelected,
       deleting,
       lastResult,
+      selectionLimit,
+      selectionLimitExceeded,
     ],
   );
   return <CleanupContext.Provider value={value}>{children}</CleanupContext.Provider>;

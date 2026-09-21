@@ -12,6 +12,8 @@ import { useBundles } from '@/features/bundles/context';
 import { useLibrary } from '@/features/library/context';
 import { usePersistence } from '@/features/persistence/context';
 import { useUpcoming } from '@/features/upcoming/context';
+import { getSubscriptionLimits } from '@/features/subscription/features';
+import { useSubscription } from '@/features/subscription/context';
 import { generateResurfacingCards } from './generate';
 import { upsertResurfacingPreference } from './preferences';
 import { nextLocalMidnight } from './time';
@@ -31,6 +33,7 @@ export function ResurfacingProvider({ children }: PropsWithChildren) {
   const { items: library } = useLibrary();
   const { bundles } = useBundles();
   const { state, updateState } = usePersistence();
+  const { isPro } = useSubscription();
   const [now, setNow] = useState(Date.now);
 
   const refreshResurfacing = useCallback(() => setNow(Date.now()), []);
@@ -49,8 +52,13 @@ export function ResurfacingProvider({ children }: PropsWithChildren) {
 
   const cards = useMemo(
     () =>
-      generateResurfacingCards({ upcoming, library, bundles }, state.resurfacingPreferences, now),
-    [upcoming, library, bundles, state.resurfacingPreferences, now],
+      generateResurfacingCards(
+        { upcoming, library, bundles },
+        state.resurfacingPreferences,
+        now,
+        getSubscriptionLimits(isPro).resurfacingCards,
+      ),
+    [upcoming, library, bundles, state.resurfacingPreferences, now, isPro],
   );
 
   const dismissCard = useCallback(

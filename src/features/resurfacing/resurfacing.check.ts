@@ -1,6 +1,7 @@
 import type { RecallBundle } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
 import { migratePersistedState } from '@/services/storage/migrations';
+import { getSubscriptionLimits } from '@/features/subscription/features';
 import {
   generateBundleCards,
   generateContentCards,
@@ -98,6 +99,32 @@ assert(
     (card, index) => index === 0 || priorityCards[index - 1].priority >= card.priority,
   ),
   'cards are not priority sorted',
+);
+
+const fiveUpcoming = [
+  overdueDeadline,
+  deadlineToday,
+  deadlineTomorrow,
+  eventInThreeDays,
+  { ...eventInThreeDays, id: 'second-event', title: 'Second event' },
+];
+assert(
+  generateResurfacingCards(
+    { upcoming: fiveUpcoming, library: [], bundles: [] },
+    [],
+    now,
+    getSubscriptionLimits(false).resurfacingCards,
+  ).length === 3,
+  'free resurfacing exceeded three cards',
+);
+assert(
+  generateResurfacingCards(
+    { upcoming: fiveUpcoming, library: [], bundles: [] },
+    [],
+    now,
+    getSubscriptionLimits(true).resurfacingCards,
+  ).length === 5,
+  'Pro resurfacing did not expose five cards',
 );
 
 const dismissed: ResurfacingPreference = { id: tomorrowCard.id, dismissedAt: now };

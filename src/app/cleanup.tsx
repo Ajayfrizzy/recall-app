@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useCleanup } from '@/features/cleanup/context';
 import type { CleanupDeleteResult, ScreenshotCleanupCandidate } from '@/features/cleanup/types';
 import { useScreenshots } from '@/features/screenshots/context';
+import { useSubscription } from '@/features/subscription/context';
 import type { RecallScreenshot } from '@/features/screenshots/types';
 
 export default function CleanupRoute() {
@@ -19,7 +20,9 @@ export default function CleanupRoute() {
     deleteSelected,
     deleting,
     lastResult,
+    selectionLimitExceeded,
   } = useCleanup();
+  const { presentPaywall, loading: subscriptionLoading } = useSubscription();
   const { screenshots } = useScreenshots();
   const [confirming, setConfirming] = useState(false);
   const selectedCount = selectedIds.length;
@@ -41,6 +44,24 @@ export default function CleanupRoute() {
           </Pressable>
         </View>
         <ThemedText type="smallBold">{selectedCount} selected</ThemedText>
+        {selectionLimitExceeded ? (
+          <ThemedView type="backgroundElement" style={styles.limitNotice}>
+            <ThemedText type="smallBold">
+              Free cleanup supports up to 3 screenshots at once.
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              Deselect screenshots to continue, or upgrade for larger cleanup batches.
+            </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              disabled={subscriptionLoading}
+              onPress={() => void presentPaywall()}
+              style={styles.upgradeButton}
+            >
+              <ThemedText style={styles.upgradeText}>Upgrade to Pro</ThemedText>
+            </Pressable>
+          </ThemedView>
+        ) : null}
         {lastResult ? <ResultMessage result={lastResult} /> : null}
         {candidates.length ? (
           candidates.map((candidate) => {
@@ -68,12 +89,15 @@ export default function CleanupRoute() {
         )}
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: selectedCount === 0 || deleting }}
-          disabled={selectedCount === 0 || deleting}
+          accessibilityState={{
+            disabled: selectedCount === 0 || deleting || selectionLimitExceeded,
+          }}
+          disabled={selectedCount === 0 || deleting || selectionLimitExceeded}
           onPress={() => setConfirming(true)}
           style={[
             styles.deleteButton,
-            (selectedCount === 0 || deleting) && styles.deleteButtonDisabled,
+            (selectedCount === 0 || deleting || selectionLimitExceeded) &&
+              styles.deleteButtonDisabled,
           ]}
         >
           <ThemedText style={styles.deleteText}>
@@ -225,4 +249,15 @@ const styles = StyleSheet.create({
   deleteButtonDisabled: { opacity: 0.45 },
   deleteText: { color: '#fff', fontWeight: '700' },
   result: { padding: 12, borderRadius: 8, gap: 4 },
+  limitNotice: { padding: 14, borderRadius: 8, gap: 8 },
+  upgradeButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#208AEF',
+  },
+  upgradeText: { color: '#fff', fontWeight: '700' },
 });

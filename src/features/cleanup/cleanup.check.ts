@@ -6,6 +6,7 @@ import type { RecallScreenshot, ScreenshotStatus } from '@/features/screenshots/
 import type { UpcomingItem } from '@/features/upcoming/types';
 import type { RecallItem } from '@/services/ai/types';
 import { migratePersistedState } from '@/services/storage/migrations';
+import { canUseCleanupBatch } from '@/features/subscription/features';
 import { reconcileCleanupDeleteResult } from './deletion';
 import {
   getCleanupCandidate,
@@ -194,6 +195,9 @@ assert(
   'safe items were not selected',
 );
 assert(!defaults.includes('ignored'), 'review item was selected by default');
+assert(canUseCleanupBatch(3, false), 'free cleanup rejected a batch of three');
+assert(!canUseCleanupBatch(4, false), 'free cleanup accepted a batch larger than three');
+assert(canUseCleanupBatch(4, true), 'Pro cleanup rejected a batch larger than three');
 
 const partialDelete = reconcileCleanupDeleteResult(
   ['one', 'two', 'three', 'four'],

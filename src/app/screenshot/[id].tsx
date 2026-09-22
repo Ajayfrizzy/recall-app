@@ -159,7 +159,8 @@ function AnalysisSection({
             <>
               <ThemedText themeColor="textSecondary">
                 To understand layout and relationships, Recall securely sends a compressed version
-                of this screenshot to its analysis service.
+                of this screenshot and its extracted text to its AI analysis service. Recall will
+                not act on the result without your choice.
               </ThemedText>
               <PrimaryButton
                 label="Continue with Secure Analysis"
@@ -168,19 +169,19 @@ function AnalysisSection({
                   onAnalyze();
                 }}
               />
-              <Pressable onPress={onAnalyze} style={styles.textToggle}>
+              <Pressable accessibilityRole="button" onPress={onAnalyze} style={styles.textToggle}>
                 <ThemedText type="linkPrimary">Use on-device analysis only</ThemedText>
               </Pressable>
             </>
           ) : (
-            <PrimaryButton label="Analyze Screenshot" onPress={onAnalyze} />
+            <PrimaryButton label="Analyze screenshot" onPress={onAnalyze} />
           )}
         </>
       ) : null}
       {analysis.status === 'processing' ? (
         <View style={styles.processing}>
           <ActivityIndicator />
-          <ThemedText>Understanding screenshot...</ThemedText>
+          <ThemedText>Analyzing screenshot…</ThemedText>
         </View>
       ) : null}
       {analysis.status === 'failed' ? (
@@ -339,7 +340,10 @@ function SemanticItem({
   item: RecallItem;
 }) {
   return (
-    <View style={styles.item}>
+    <ThemedView type="backgroundElement" style={styles.item}>
+      <ThemedText type="smallBold" themeColor="textSecondary">
+        ITEM {itemIndex + 1}
+      </ThemedText>
       {item.type === 'product' ? (
         <>
           <Detail label="Product" value={item.title} />
@@ -362,6 +366,7 @@ function SemanticItem({
       {item.type === 'deadline' ? (
         <>
           <Detail label="Deadline" value={item.title} />
+          <Detail label="Organization" value={item.organization} />
           <Detail label="Date" value={formatRecallDates(item.dates)} />
         </>
       ) : null}
@@ -375,7 +380,9 @@ function SemanticItem({
         <>
           <Detail label="Content" value={item.title} />
           <Detail label="Author" value={item.author} />
+          <Detail label="Source" value={item.source} />
           <Detail label="Summary" value={item.summary} />
+          <Detail label="Published" value={formatRecallDates(item.dates)} />
         </>
       ) : null}
       {item.type === 'general' ? <Detail label="Summary" value={item.summary} /> : null}
@@ -385,7 +392,7 @@ function SemanticItem({
         itemIndex={itemIndex}
         item={item}
       />
-    </View>
+    </ThemedView>
   );
 }
 
@@ -821,9 +828,8 @@ const styles = StyleSheet.create({
   extractedText: { padding: 14, borderRadius: 8 },
   item: {
     gap: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#c7c7cc',
-    paddingTop: 12,
+    borderRadius: 10,
+    padding: 14,
   },
   errorText: { color: '#b42318' },
   modalBackdrop: {

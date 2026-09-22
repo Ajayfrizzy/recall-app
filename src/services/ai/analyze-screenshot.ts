@@ -16,6 +16,7 @@ function apiUrl(): string | undefined {
 function backendErrorMessage(status: number): string {
   if (status === 400) return 'Semantic analysis request was rejected.';
   if (status === 413) return 'Prepared screenshot is too large for semantic analysis.';
+  if (status === 429) return 'Semantic analysis is busy. Try again shortly.';
   if (status === 503) return 'Semantic analysis is not configured.';
   if (status === 502) return 'Semantic analysis provider is unavailable.';
   return 'Semantic analysis is unavailable.';
@@ -40,6 +41,7 @@ export async function analyzeScreenshotSemantically(input: {
       body: JSON.stringify({
         imageDataUrl: prepared.imageDataUrl,
         ocrText: input.ocrText,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         screenshotMetadata: {
           filename: input.metadata.filename ?? undefined,
           width: input.metadata.width,

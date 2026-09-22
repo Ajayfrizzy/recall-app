@@ -25,3 +25,10 @@ export class PayloadTooLargeError extends Error {
     this.name = 'PayloadTooLargeError';
   }
 }
+
+export class RateLimitExceededError extends Error {
+  constructor() {
+    super('Too many analysis requests.');
+    this.name = 'RateLimitExceededError';
+  }
+}

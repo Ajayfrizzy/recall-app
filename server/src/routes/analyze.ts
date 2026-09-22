@@ -5,7 +5,9 @@ import {
   InvalidJsonError,
   PayloadTooLargeError,
   ProviderUnavailableError,
+  RateLimitExceededError,
 } from '../errors.js';
+import { checkAnalysisRateLimit } from '../rate-limit.js';
 import { AnalyzeRequestSchema } from '../schemas/recall-analysis.js';
 import { analyzeWithMock, isMockAnalysisEnabled } from '../services/mock-analysis.js';
 import { analyzeWithOpenAI } from '../services/openai.js';
@@ -51,11 +53,17 @@ export async function analyzeRoute(
   }
 
   try {
+    checkAnalysisRateLimit(request.socket.remoteAddress);
     const body = AnalyzeRequestSchema.parse(await readBody(request));
     const imageDataUrl = body.imageDataUrl ?? `data:image/jpeg;base64,${body.imageBase64}`;
     const analysis = isMockAnalysisEnabled()
       ? analyzeWithMock(body.ocrText)
-      : await analyzeWithOpenAI({ imageDataUrl, ocrText: body.ocrText });
+      : await analyzeWithOpenAI({
+          imageDataUrl,
+          ocrText: body.ocrText,
+          currentTimestamp: new Date().toISOString(),
+          timezone: body.timezone,
+        });
     sendJson(response, 200, analysis);
   } catch (error) {
     if (error instanceof InvalidJsonError) {
@@ -64,6 +72,8 @@ export async function analyzeRoute(
       sendJson(response, 400, { error: 'invalid_request' });
     } else if (error instanceof PayloadTooLargeError) {
       sendJson(response, 413, { error: 'payload_too_large' });
+    } else if (error instanceof RateLimitExceededError) {
+      sendJson(response, 429, { error: 'rate_limit_exceeded' });
     } else if (error instanceof AnalysisNotConfiguredError) {
       sendJson(response, 503, { error: 'analysis_not_configured' });
     } else if (error instanceof ProviderUnavailableError) {

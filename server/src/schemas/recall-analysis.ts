@@ -1,37 +1,49 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
+const OptionalString = z
+  .string()
+  .nullish()
+  .transform((value) => value ?? undefined);
+const OptionalStringArray = z
+  .array(z.string())
+  .nullish()
+  .transform((value) => value ?? undefined);
+
 const RecallDate = z.object({
   type: z.enum(['event', 'deadline', 'published', 'expires', 'purchase', 'travel', 'other']),
   raw: z.string(),
-  normalized: z.string().optional(),
+  normalized: OptionalString,
   precision: z.enum(['exact', 'month', 'year', 'unknown']),
   confidence: z.number().min(0).max(1),
 });
 
+const Price = z.object({ amount: z.number(), currency: z.string(), raw: z.string() });
+const OptionalPrice = Price.nullish().transform((value) => value ?? undefined);
+
 const ProductItem = z.object({
   type: z.literal('product'),
   title: z.string(),
-  currentPrice: z.object({ amount: z.number(), currency: z.string(), raw: z.string() }).optional(),
-  originalPrice: z.object({ amount: z.number(), currency: z.string(), raw: z.string() }).optional(),
-  discount: z.string().optional(),
-  source: z.string().optional(),
+  currentPrice: OptionalPrice,
+  originalPrice: OptionalPrice,
+  discount: OptionalString,
+  source: OptionalString,
   confidence: z.number().min(0).max(1),
 });
 
 const EventItem = z.object({
   type: z.literal('event'),
   title: z.string(),
-  location: z.string().optional(),
+  location: OptionalString,
   dates: z.array(RecallDate),
   confidence: z.number().min(0).max(1),
-  missingDetails: z.array(z.string()).optional(),
+  missingDetails: OptionalStringArray,
 });
 
 const DeadlineItem = z.object({
   type: z.literal('deadline'),
   title: z.string(),
-  organization: z.string().optional(),
+  organization: OptionalString,
   dates: z.array(RecallDate),
   confidence: z.number().min(0).max(1),
 });
@@ -39,16 +51,16 @@ const DeadlineItem = z.object({
 const PlaceItem = z.object({
   type: z.literal('place'),
   title: z.string(),
-  address: z.string().optional(),
-  source: z.string().optional(),
+  address: OptionalString,
+  source: OptionalString,
   confidence: z.number().min(0).max(1),
 });
 
 const ContentItem = z.object({
   type: z.literal('content'),
-  title: z.string().optional(),
-  author: z.string().optional(),
-  source: z.string().optional(),
+  title: OptionalString,
+  author: OptionalString,
+  source: OptionalString,
   summary: z.string(),
   dates: z.array(RecallDate),
   confidence: z.number().min(0).max(1),
@@ -73,7 +85,7 @@ export const RecallAnalysisSchema = z.object({
   confidence: z.number().min(0).max(1),
   summary: z.string(),
   cardinality: z.enum(['single', 'multiple']),
-  sourceApp: z.string().optional(),
+  sourceApp: OptionalString,
   items: z.array(RecallItem),
   suggestedActions: z.array(
     z.enum([
@@ -85,16 +97,25 @@ export const RecallAnalysisSchema = z.object({
       'keep',
     ]),
   ),
-  warnings: z.array(z.string()).optional(),
+  warnings: OptionalStringArray,
 });
 
 export type RecallAnalysis = z.infer<typeof RecallAnalysisSchema>;
 
 export const AnalyzeRequestSchema = z
   .object({
-    imageBase64: z.string().max(12_000_000).optional(),
-    imageDataUrl: z.string().max(12_000_000).optional(),
+    imageBase64: z
+      .string()
+      .max(12_000_000)
+      .regex(/^[A-Za-z0-9+/=]+$/)
+      .optional(),
+    imageDataUrl: z
+      .string()
+      .max(12_000_000)
+      .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/)
+      .optional(),
     ocrText: z.string().max(100_000).default(''),
+    timezone: z.string().min(1).max(100).optional(),
     screenshotMetadata: z
       .object({
         filename: z.string().optional(),

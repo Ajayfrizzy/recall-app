@@ -5,7 +5,7 @@ import { isMockAnalysisEnabled } from './services/mock-analysis.js';
 import { isAnalysisConfigured } from './services/openai.js';
 
 const port = Number(process.env.PORT ?? 8787);
-const origin = process.env.ALLOWED_ORIGIN ?? '*';
+const origin = process.env.ALLOWED_ORIGIN ?? 'http://localhost:8081';
 
 const server = createServer(async (request, response) => {
   response.setHeader('access-control-allow-origin', origin);

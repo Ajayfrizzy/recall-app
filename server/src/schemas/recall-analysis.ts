@@ -102,6 +102,94 @@ export const RecallAnalysisSchema = z.object({
 
 export type RecallAnalysis = z.infer<typeof RecallAnalysisSchema>;
 
+// OpenAI Structured Outputs require every property to be present. Nullable fields in this
+// model-facing schema are normalized back to optional fields by RecallAnalysisSchema.
+const ModelRecallDate = z.object({
+  type: z.enum(['event', 'deadline', 'published', 'expires', 'purchase', 'travel', 'other']),
+  raw: z.string(),
+  normalized: z.string().nullable(),
+  precision: z.enum(['exact', 'month', 'year', 'unknown']),
+  confidence: z.number().min(0).max(1),
+});
+
+const ModelPrice = z.object({
+  amount: z.number(),
+  currency: z.string(),
+  raw: z.string(),
+});
+
+const ModelRecallItem = z.union([
+  z.object({
+    type: z.enum(['product']),
+    title: z.string(),
+    currentPrice: ModelPrice.nullable(),
+    originalPrice: ModelPrice.nullable(),
+    discount: z.string().nullable(),
+    source: z.string().nullable(),
+    confidence: z.number().min(0).max(1),
+  }),
+  z.object({
+    type: z.enum(['event']),
+    title: z.string(),
+    location: z.string().nullable(),
+    dates: z.array(ModelRecallDate),
+    confidence: z.number().min(0).max(1),
+    missingDetails: z.array(z.string()).nullable(),
+  }),
+  z.object({
+    type: z.enum(['deadline']),
+    title: z.string(),
+    organization: z.string().nullable(),
+    dates: z.array(ModelRecallDate),
+    confidence: z.number().min(0).max(1),
+  }),
+  z.object({
+    type: z.enum(['place']),
+    title: z.string(),
+    address: z.string().nullable(),
+    source: z.string().nullable(),
+    confidence: z.number().min(0).max(1),
+  }),
+  z.object({
+    type: z.enum(['content']),
+    title: z.string().nullable(),
+    author: z.string().nullable(),
+    source: z.string().nullable(),
+    summary: z.string(),
+    dates: z.array(ModelRecallDate),
+    confidence: z.number().min(0).max(1),
+  }),
+  z.object({
+    type: z.enum(['general']),
+    summary: z.string(),
+    confidence: z.number().min(0).max(1),
+  }),
+]);
+
+export const ModelRecallAnalysisSchema = z.object({
+  category: z.enum(['event', 'deadline', 'product', 'place', 'content', 'general', 'mixed']),
+  confidence: z.number().min(0).max(1),
+  summary: z.string(),
+  cardinality: z.enum(['single', 'multiple']),
+  sourceApp: z.string().nullable(),
+  items: z.array(ModelRecallItem),
+  suggestedActions: z.array(
+    z.enum([
+      'add_to_calendar',
+      'create_reminder',
+      'save_product',
+      'save_place',
+      'read_later',
+      'keep',
+    ]),
+  ),
+  warnings: z.array(z.string()).nullable(),
+});
+
+export function parseModelRecallAnalysis(value: unknown): RecallAnalysis {
+  return RecallAnalysisSchema.parse(ModelRecallAnalysisSchema.parse(value));
+}
+
 export const AnalyzeRequestSchema = z
   .object({
     imageBase64: z
@@ -131,7 +219,14 @@ export const AnalyzeRequestSchema = z
     message: 'imageBase64 or imageDataUrl is required',
   });
 
-export const RecallAnalysisJsonSchema = zodToJsonSchema(RecallAnalysisSchema, {
-  name: 'RecallAnalysis',
+const generatedModelSchema = zodToJsonSchema(ModelRecallAnalysisSchema, {
   target: 'openAi',
+  $refStrategy: 'none',
 });
+
+// `$schema` is metadata for validators, not part of OpenAI's supported strict subset.
+const { $schema: _schemaDeclaration, ...modelSchema } = generatedModelSchema as Record<
+  string,
+  unknown
+>;
+export const RecallAnalysisJsonSchema: Record<string, unknown> = modelSchema;

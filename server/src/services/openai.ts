@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { AnalysisNotConfiguredError, ProviderUnavailableError } from '../errors.js';
 import {
   RecallAnalysisJsonSchema,
-  RecallAnalysisSchema,
+  parseModelRecallAnalysis,
   type RecallAnalysis,
 } from '../schemas/recall-analysis.js';
 
@@ -10,6 +10,44 @@ const DEFAULT_MODEL = 'gpt-5-mini';
 const REQUEST_TIMEOUT_MS = 25_000;
 const MAX_OUTPUT_TOKENS = 4_000;
 let cachedClient: { apiKey: string; client: OpenAI } | undefined;
+
+function conciseProviderMessage(message: string, sensitiveValues: string[] = []): string {
+  let redacted = message;
+  for (const value of sensitiveValues) {
+    if (value && redacted.includes(value)) redacted = redacted.replaceAll(value, '[redacted]');
+  }
+  return redacted
+    .replace(/data:image\/[^;\s]+;base64,[A-Za-z0-9+/=]+/g, '[redacted-image]')
+    .replace(/sk-[A-Za-z0-9_-]+/g, '[redacted-key]')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 700);
+}
+
+export function getOpenAIErrorDetails(
+  error: unknown,
+  sensitiveValues: string[] = [],
+): {
+  status?: number;
+  code?: string;
+  param?: string;
+  message: string;
+} {
+  if (error instanceof OpenAI.APIError) {
+    return {
+      status: error.status,
+      code: typeof error.code === 'string' ? error.code : undefined,
+      param: typeof error.param === 'string' ? error.param : undefined,
+      message: conciseProviderMessage(error.message, sensitiveValues),
+    };
+  }
+  return {
+    message: conciseProviderMessage(
+      error instanceof Error ? error.message : 'Unknown error',
+      sensitiveValues,
+    ),
+  };
+}
 
 export function getAnalysisModel(): string {
   return process.env.OPENAI_MODEL?.trim() || DEFAULT_MODEL;
@@ -74,7 +112,7 @@ export async function analyzeWithOpenAI(input: {
       },
     });
     const parsed: unknown = JSON.parse(response.output_text);
-    const analysis = RecallAnalysisSchema.parse(parsed);
+    const analysis = parseModelRecallAnalysis(parsed);
     console.info('[openai-analysis]', {
       model,
       status: 'ok',
@@ -84,11 +122,16 @@ export async function analyzeWithOpenAI(input: {
     });
     return analysis;
   } catch (error) {
+    const details = getOpenAIErrorDetails(error, [input.ocrText]);
+    const includeMessage = process.env.OPENAI_ERROR_DETAILS?.trim().toLowerCase() === 'true';
     console.warn('[openai-analysis]', {
       model,
       status: 'failed',
       durationMs: Date.now() - startedAt,
-      providerStatus: error instanceof OpenAI.APIError ? error.status : undefined,
+      providerStatus: details.status,
+      providerCode: details.code,
+      providerParam: details.param,
+      ...(includeMessage ? { providerMessage: details.message } : {}),
       errorType: error instanceof Error ? error.name : 'UnknownError',
     });
     throw new ProviderUnavailableError({ cause: error });

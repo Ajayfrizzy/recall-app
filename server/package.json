@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "fixtures:check": "tsx src/schemas/check-fixtures.ts",
+    "fixtures:check": "tsx src/schemas/check-fixtures.ts && tsx src/schemas/check-openai-schema.ts",
+    "openai:schema-check": "tsx src/schemas/check-openai-schema.ts",
     "format:check": "prettier --check ."
   },
   "dependencies": {

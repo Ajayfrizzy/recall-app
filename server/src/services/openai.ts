@@ -10,6 +10,7 @@ import {
   parseModelRecallAnalysis,
   type RecallAnalysis,
 } from '../schemas/recall-analysis.js';
+import type { ProviderUsage } from './access-control.js';
 
 const DEFAULT_MODEL = 'gpt-5-mini';
 export const DEFAULT_REQUEST_TIMEOUT_MS = 45_000;
@@ -165,7 +166,7 @@ export async function analyzeWithOpenAI(input: {
   ocrText: string;
   currentTimestamp: string;
   timezone?: string;
-}): Promise<RecallAnalysis> {
+}): Promise<{ analysis: RecallAnalysis; usage?: ProviderUsage }> {
   const model = getAnalysisModel();
   const startedAt = Date.now();
   try {
@@ -207,7 +208,14 @@ export async function analyzeWithOpenAI(input: {
       category: analysis.category,
       itemCount: analysis.items.length,
     });
-    return analysis;
+    const usage = response.usage
+      ? {
+          inputTokens: response.usage.input_tokens,
+          cachedInputTokens: response.usage.input_tokens_details?.cached_tokens ?? 0,
+          outputTokens: response.usage.output_tokens,
+        }
+      : undefined;
+    return { analysis, usage };
   } catch (error) {
     const failureCategory = classifyOpenAIError(error);
     const details = getOpenAIErrorDetails(error, [input.ocrText]);

@@ -43,3 +43,29 @@ export class RateLimitExceededError extends Error {
     this.name = 'RateLimitExceededError';
   }
 }
+
+export type AccessErrorCode =
+  | 'missing_access_token'
+  | 'invalid_access_token'
+  | 'access_token_revoked'
+  | 'access_token_expired'
+  | 'installation_allowance_exhausted'
+  | 'global_allowance_exhausted'
+  | 'analysis_busy'
+  | 'analysis_disabled'
+  | 'estimated_spending_limit_exhausted'
+  | 'duplicate_analysis_in_progress'
+  | 'invalid_invitation'
+  | 'redemption_rate_limited';
+
+export class AccessControlError extends Error {
+  readonly code: AccessErrorCode;
+  readonly status: number;
+
+  constructor(code: AccessErrorCode, status: number) {
+    super(code);
+    this.name = 'AccessControlError';
+    this.code = code;
+    this.status = status;
+  }
+}

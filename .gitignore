@@ -149,6 +149,7 @@ expo-env.d.ts
 # @end expo-cli
 
 .expo/
+server/data/
 .DS_Store
 .vscode/*
 !.vscode/settings.json

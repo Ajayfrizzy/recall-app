@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import {
+  AccessControlError,
   AnalysisNotConfiguredError,
   InvalidJsonError,
   PayloadTooLargeError,
@@ -11,6 +12,7 @@ import { checkAnalysisRateLimit } from '../rate-limit.js';
 import { AnalyzeRequestSchema } from '../schemas/recall-analysis.js';
 import { analyzeWithMock, isMockAnalysisEnabled } from '../services/mock-analysis.js';
 import { analyzeWithOpenAI } from '../services/openai.js';
+import { bearerToken, getAnalysisAccessStore } from '../services/access-control.js';
 
 const MAX_BODY_BYTES = 13_000_000;
 
@@ -56,17 +58,44 @@ export async function analyzeRoute(
     checkAnalysisRateLimit(request.socket.remoteAddress);
     const body = AnalyzeRequestSchema.parse(await readBody(request));
     const imageDataUrl = body.imageDataUrl ?? `data:image/jpeg;base64,${body.imageBase64}`;
-    const analysis = isMockAnalysisEnabled()
-      ? analyzeWithMock(body.ocrText)
-      : await analyzeWithOpenAI({
-          imageDataUrl,
-          ocrText: body.ocrText,
-          currentTimestamp: new Date().toISOString(),
-          timezone: body.timezone,
-        });
-    sendJson(response, 200, analysis);
+    if (isMockAnalysisEnabled()) {
+      sendJson(response, 200, analyzeWithMock(body.ocrText));
+      return;
+    }
+
+    const access = getAnalysisAccessStore();
+    const fingerprint = access.fingerprint([
+      imageDataUrl,
+      body.ocrText,
+      JSON.stringify(body.screenshotMetadata ?? {}),
+    ]);
+    const reservation = access.reserveAnalysis(
+      bearerToken(request.headers.authorization),
+      fingerprint,
+      body.reanalyze,
+    );
+    if (reservation.kind === 'cached') {
+      sendJson(response, 200, reservation.analysis);
+      return;
+    }
+
+    try {
+      const result = await analyzeWithOpenAI({
+        imageDataUrl,
+        ocrText: body.ocrText,
+        currentTimestamp: new Date().toISOString(),
+        timezone: body.timezone,
+      });
+      access.completeAnalysis(reservation.id, result.analysis, result.usage);
+      sendJson(response, 200, result.analysis);
+    } catch (error) {
+      access.completeAnalysis(reservation.id, undefined, undefined);
+      throw error;
+    }
   } catch (error) {
-    if (error instanceof InvalidJsonError) {
+    if (error instanceof AccessControlError) {
+      sendJson(response, error.status, { error: error.code });
+    } else if (error instanceof InvalidJsonError) {
       sendJson(response, 400, { error: 'invalid_json' });
     } else if (error instanceof z.ZodError) {
       sendJson(response, 400, { error: 'invalid_request' });

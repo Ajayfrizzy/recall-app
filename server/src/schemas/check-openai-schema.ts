@@ -67,7 +67,7 @@ console.log('OpenAI Structured Output schema checks passed');
 
 if (process.env.RUN_OPENAI_LIVE_TEST === 'true') {
   assert(process.env.OPENAI_API_KEY?.trim(), 'OPENAI_API_KEY is required for the live check');
-  const analysis = await analyzeWithOpenAI({
+  const { analysis } = await analyzeWithOpenAI({
     imageDataUrl:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
     ocrText: 'A simple note with no actionable structure.',

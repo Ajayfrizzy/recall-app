@@ -1,15 +1,14 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
+import { redeemAccessRoute } from './routes/access.js';
 import { analyzeRoute } from './routes/analyze.js';
-import { isMockAnalysisEnabled } from './services/mock-analysis.js';
-import { isAnalysisConfigured } from './services/openai.js';
 
 const port = Number(process.env.PORT ?? 8787);
 const origin = process.env.ALLOWED_ORIGIN ?? 'http://localhost:8081';
 
 const server = createServer(async (request, response) => {
   response.setHeader('access-control-allow-origin', origin);
-  response.setHeader('access-control-allow-headers', 'content-type');
+  response.setHeader('access-control-allow-headers', 'authorization,content-type');
   response.setHeader('access-control-allow-methods', 'POST,GET,OPTIONS');
   if (request.method === 'OPTIONS') {
     response.writeHead(204);
@@ -17,15 +16,17 @@ const server = createServer(async (request, response) => {
     return;
   }
   if (request.method === 'GET' && request.url === '/health') {
-    const mockAnalysis = isMockAnalysisEnabled();
     response.writeHead(200, { 'content-type': 'application/json' });
-    response.end(
-      JSON.stringify({
-        ok: true,
-        analysisConfigured: mockAnalysis ? false : isAnalysisConfigured(),
-        mockAnalysis,
-      }),
-    );
+    response.end(JSON.stringify({ ok: true }));
+    return;
+  }
+  if (request.url === '/access/redeem') {
+    if (request.method !== 'POST') {
+      response.writeHead(405, { 'content-type': 'application/json', allow: 'POST' });
+      response.end(JSON.stringify({ error: 'method_not_allowed' }));
+      return;
+    }
+    await redeemAccessRoute(request, response);
     return;
   }
   if (request.url === '/analyze') {

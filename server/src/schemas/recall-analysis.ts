@@ -210,6 +210,7 @@ export const AnalyzeRequestSchema = z
       .optional(),
     ocrText: z.string().max(100_000).default(''),
     timezone: z.string().min(1).max(100).optional(),
+    reanalyze: z.boolean().optional().default(false),
     screenshotMetadata: z
       .object({
         filename: z.string().optional(),

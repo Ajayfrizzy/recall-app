@@ -1,5 +1,8 @@
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
+import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { usePersistence } from '@/features/persistence/context';
@@ -16,8 +19,9 @@ export function BundleItemRow({
   refItem: BundleItemRef;
   membership: 'active' | 'removed';
   actionLabel: string;
-  onAction: () => void;
+  onAction: () => void | Promise<void>;
 }) {
+  const [updating, setUpdating] = useState(false);
   const { screenshots } = useScreenshots();
   const { state } = usePersistence();
   const screenshot = screenshots.find((candidate) => candidate.id === refItem.screenshotId);
@@ -64,9 +68,18 @@ export function BundleItemRow({
           ) : null}
         </View>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={onAction} style={styles.membershipButton}>
-        <ThemedText type="smallBold">{actionLabel}</ThemedText>
-      </Pressable>
+      <ActionButton
+        label={actionLabel}
+        loadingLabel={membership === 'active' ? 'Removing...' : 'Restoring...'}
+        state={updating ? 'loading' : 'idle'}
+        variant="ghost"
+        compact
+        onPress={() => {
+          setUpdating(true);
+          void Promise.resolve(onAction()).finally(() => setUpdating(false));
+        }}
+        style={styles.membershipButton}
+      />
     </ThemedView>
   );
 }
@@ -80,21 +93,19 @@ function itemLabel(item: RecallItem | undefined, summary: string | undefined): s
 const styles = StyleSheet.create({
   itemRow: { overflow: 'hidden', borderRadius: 8 },
   itemContent: { flexDirection: 'row', minHeight: 104 },
-  thumbnail: { width: 104, height: 104, backgroundColor: '#d9d9de' },
+  thumbnail: { width: 104, height: 104, backgroundColor: Colors.dark.backgroundSelected },
   thumbnailPlaceholder: {
     width: 104,
     height: 104,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#d9d9de',
+    backgroundColor: Colors.dark.backgroundSelected,
   },
   itemDetails: { flex: 1, justifyContent: 'center', padding: 12, gap: 4 },
   membershipButton: {
-    minHeight: 44,
-    justifyContent: 'center',
     alignItems: 'flex-start',
-    paddingHorizontal: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#c7c9cf',
+    borderTopColor: Colors.dark.border,
+    borderRadius: 0,
   },
 });

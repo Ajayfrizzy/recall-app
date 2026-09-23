@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from 'react';
@@ -56,6 +57,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const [offering, setOffering] = useState<PurchasesOffering>();
   const [error, setError] = useState<string>();
   const [statusMessage, setStatusMessage] = useState<string>();
+  const actionInFlight = useRef(false);
   const forcePro = shouldForceProInDevelopment(__DEV__, process.env.EXPO_PUBLIC_DEV_FORCE_PRO);
 
   const refreshCustomerInfo = useCallback(async () => {
@@ -114,10 +116,12 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
 
   const purchasePackage = useCallback(
     async (aPackage: PurchasesPackage): Promise<SubscriptionActionResult> => {
+      if (actionInFlight.current) return 'error';
       if (!available) {
         setError('Subscriptions are not configured in this build.');
         return 'unavailable';
       }
+      actionInFlight.current = true;
       setLoading(true);
       setError(undefined);
       setStatusMessage(undefined);
@@ -130,6 +134,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setError(TEMPORARILY_UNAVAILABLE);
         return 'error';
       } finally {
+        actionInFlight.current = false;
         setLoading(false);
       }
     },
@@ -137,10 +142,12 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   );
 
   const restorePurchases = useCallback(async (): Promise<SubscriptionActionResult> => {
+    if (actionInFlight.current) return 'error';
     if (!available) {
       setError('Subscriptions are not configured in this build.');
       return 'unavailable';
     }
+    actionInFlight.current = true;
     setLoading(true);
     setError(undefined);
     setStatusMessage(undefined);
@@ -157,11 +164,13 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setError('Purchases could not be restored. Please try again.');
       return 'error';
     } finally {
+      actionInFlight.current = false;
       setLoading(false);
     }
   }, [available]);
 
   const presentPaywall = useCallback(async (): Promise<SubscriptionActionResult> => {
+    if (actionInFlight.current) return 'error';
     if (!available || !offering) {
       setError(
         available
@@ -170,6 +179,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       );
       return 'unavailable';
     }
+    actionInFlight.current = true;
     setLoading(true);
     setError(undefined);
     setStatusMessage(undefined);
@@ -187,6 +197,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setError(TEMPORARILY_UNAVAILABLE);
       return 'error';
     } finally {
+      actionInFlight.current = false;
       setLoading(false);
     }
   }, [available, offering, refreshCustomerInfo]);

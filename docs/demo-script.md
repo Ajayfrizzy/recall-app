@@ -12,9 +12,12 @@ Show the Inbox and briefly point out that screenshots remain local unless the us
 
 Open the INGREM product-grid screenshot. Start analysis and mention that Recall combines on-device OCR with a compressed screenshot sent securely to the backend. The user still controls every resulting action.
 
+Let the compact preview scan treatment show briefly, then point out the `AI analysis complete` result state. The preview can be tapped to inspect the full screenshot if needed.
+
 ## 0:35–1:00 — Multi-product result
 
 Show the four distinct products and their paired prices. Tap **Save All Products** and show the completed states.
+Pause long enough to capture the button's loading state before the saved confirmation appears.
 
 ## 1:00–1:20 — Smart Bundle
 

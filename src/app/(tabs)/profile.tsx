@@ -1,4 +1,6 @@
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSubscription } from '@/features/subscription/context';
@@ -14,6 +16,7 @@ const PACKAGE_PERIOD_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const [activeAction, setActiveAction] = useState<'upgrade' | 'restore' | 'retry'>();
   const {
     initialized,
     loading,
@@ -59,39 +62,60 @@ export default function ProfileScreen() {
           ) : null}
 
           {!isPro ? (
-            <PrimaryButton
-              label={loading ? 'Opening…' : 'Upgrade to Pro'}
-              disabled={loading}
-              onPress={() => void presentPaywall()}
+            <ActionButton
+              label="Upgrade to Pro"
+              loadingLabel="Opening paywall..."
+              state={
+                loading && activeAction === 'upgrade' ? 'loading' : loading ? 'disabled' : 'idle'
+              }
+              onPress={() => {
+                setActiveAction('upgrade');
+                void presentPaywall().finally(() => setActiveAction(undefined));
+              }}
             />
           ) : null}
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ disabled: loading }}
-            disabled={loading}
-            onPress={() => void restorePurchases()}
-            style={styles.secondaryButton}
-          >
-            <ThemedText type="smallBold">
-              {loading ? 'Please wait…' : 'Restore Purchases'}
-            </ThemedText>
-          </Pressable>
+          <ActionButton
+            label="Restore Purchases"
+            loadingLabel="Restoring purchases..."
+            variant="secondary"
+            state={
+              loading && activeAction === 'restore' ? 'loading' : loading ? 'disabled' : 'idle'
+            }
+            onPress={() => {
+              setActiveAction('restore');
+              void restorePurchases().finally(() => setActiveAction(undefined));
+            }}
+          />
 
           {!initialized ? (
             <ThemedText type="small" themeColor="textSecondary">
               Checking subscription…
             </ThemedText>
           ) : null}
-          {statusMessage ? <ThemedText type="small">{statusMessage}</ThemedText> : null}
+          {statusMessage ? (
+            <ThemedText type="small" accessibilityLiveRegion="polite">
+              {statusMessage}
+            </ThemedText>
+          ) : null}
           {error ? (
             <View style={styles.errorBlock}>
               <ThemedText type="small" themeColor="textSecondary">
                 {error}
               </ThemedText>
-              <Pressable accessibilityRole="button" disabled={loading} onPress={() => void retry()}>
-                <ThemedText type="linkPrimary">Retry</ThemedText>
-              </Pressable>
+              <ActionButton
+                label="Retry"
+                loadingLabel="Checking..."
+                variant="ghost"
+                compact
+                state={
+                  loading && activeAction === 'retry' ? 'loading' : loading ? 'disabled' : 'idle'
+                }
+                onPress={() => {
+                  setActiveAction('retry');
+                  void retry().finally(() => setActiveAction(undefined));
+                }}
+              />
             </View>
           ) : null}
         </ThemedView>
@@ -100,49 +124,10 @@ export default function ProfileScreen() {
   );
 }
 
-function PrimaryButton({
-  label,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.primaryButton, disabled && styles.disabled]}
-    >
-      <ThemedText style={styles.primaryButtonText}>{label}</ThemedText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 24, gap: 12, paddingBottom: 110 },
-  card: { marginTop: 8, padding: 18, borderRadius: 12, gap: 12 },
+  card: { marginTop: 8, padding: 18, borderRadius: 8, gap: 12 },
   benefits: { gap: 4 },
-  primaryButton: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#208AEF',
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-  secondaryButton: {
-    minHeight: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#8b8d98',
-    borderRadius: 8,
-  },
-  disabled: { opacity: 0.5 },
   errorBlock: { gap: 2 },
 });

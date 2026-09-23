@@ -7,18 +7,30 @@ import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: '#F7FAFF',
+    background: '#080B10',
+    backgroundElement: '#121821',
+    backgroundSelected: '#18283B',
+    textSecondary: '#AAB4C2',
+    accent: '#3C8DFF',
+    accentMuted: '#17345A',
+    border: '#263241',
+    success: '#42C987',
+    danger: '#FF6B72',
+    overlay: 'rgba(2, 5, 9, 0.88)',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#F7FAFF',
+    background: '#080B10',
+    backgroundElement: '#121821',
+    backgroundSelected: '#18283B',
+    textSecondary: '#AAB4C2',
+    accent: '#3C8DFF',
+    accentMuted: '#17345A',
+    border: '#263241',
+    success: '#42C987',
+    danger: '#FF6B72',
+    overlay: 'rgba(2, 5, 9, 0.88)',
   },
 } as const;
 
@@ -57,6 +69,31 @@ export const Spacing = {
   four: 24,
   five: 32,
   six: 64,
+} as const;
+
+export const Radius = {
+  small: 6,
+  medium: 8,
+  large: 8,
+} as const;
+
+export const Layout = {
+  screenPadding: 20,
+  sectionGap: 16,
+  minimumTouchTarget: 48,
+} as const;
+
+export const Shadows = {
+  card: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOpacity: 0.24,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    android: { elevation: 2 },
+    default: {},
+  }),
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

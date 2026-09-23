@@ -1,6 +1,6 @@
 import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { Fonts, type ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type ThemedTextProps = TextProps & {
@@ -8,7 +8,13 @@ export type ThemedTextProps = TextProps & {
   themeColor?: ThemeColor;
 };
 
-export function ThemedText({ style, type = 'default', themeColor, ...rest }: ThemedTextProps) {
+export function ThemedText({
+  style,
+  type = 'default',
+  themeColor,
+  maxFontSizeMultiplier = 1.8,
+  ...rest
+}: ThemedTextProps) {
   const theme = useTheme();
 
   return (
@@ -25,6 +31,7 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
         type === 'code' && styles.code,
         style,
       ]}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       {...rest}
     />
   );
@@ -47,14 +54,14 @@ const styles = StyleSheet.create({
     fontWeight: 500,
   },
   title: {
-    fontSize: 48,
-    fontWeight: 600,
-    lineHeight: 52,
+    fontSize: 40,
+    fontWeight: '700',
+    lineHeight: 46,
   },
   subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 600,
+    fontSize: 28,
+    lineHeight: 36,
+    fontWeight: '700',
   },
   link: {
     lineHeight: 30,

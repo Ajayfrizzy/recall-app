@@ -1,6 +1,5 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'react-native';
 import { ScreenshotProvider } from '@/features/screenshots/context';
 import { LibraryProvider } from '@/features/library/context';
 import { UpcomingProvider } from '@/features/upcoming/context';
@@ -12,9 +11,8 @@ import { CleanupProvider } from '@/features/cleanup/context';
 import { SubscriptionProvider } from '@/features/subscription/context';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DarkTheme}>
       <PersistenceProvider>
         <ScreenshotProvider>
           <BundleProvider>
@@ -26,12 +24,18 @@ export default function RootLayout() {
                     <ActionProvider>
                       {/* Cleanup derives candidates and applies the subscription batch limit. */}
                       <CleanupProvider>
-                        <StatusBar style="auto" />
+                        <StatusBar style="light" />
                         <Stack>
                           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                           <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-                          <Stack.Screen name="screenshot/[id]" options={{ title: 'Screenshot' }} />
-                          <Stack.Screen name="bundle/[id]" options={{ title: 'Bundle' }} />
+                          <Stack.Screen
+                            name="screenshot/[id]"
+                            options={{ title: 'Screenshot', animation: 'fade_from_bottom' }}
+                          />
+                          <Stack.Screen
+                            name="bundle/[id]"
+                            options={{ title: 'Bundle', animation: 'slide_from_right' }}
+                          />
                           <Stack.Screen
                             name="bundle/[id]/removed"
                             options={{ title: 'Removed Items' }}

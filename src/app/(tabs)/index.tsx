@@ -1,11 +1,15 @@
-import { ActivityIndicator, FlatList, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, FlatList, Linking, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
+import { ActionButton } from '@/components/action-button';
+import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ScreenshotCard } from '@/features/screenshots/components/screenshot-card';
 import { useScreenshots } from '@/features/screenshots/context';
 import { ResurfacingCard } from '@/features/resurfacing/components/resurfacing-card';
 import { useResurfacing } from '@/features/resurfacing/context';
+import { Colors, Layout } from '@/constants/theme';
 
 export default function InboxScreen() {
   const { cards, dismissCard, snoozeCard } = useResurfacing();
@@ -46,8 +50,8 @@ export default function InboxScreen() {
                   <ResurfacingCard
                     key={card.id}
                     card={card}
-                    onDismiss={() => void dismissCard(card.id)}
-                    onSnooze={() => void snoozeCard(card.id)}
+                    onDismiss={() => dismissCard(card.id)}
+                    onSnooze={() => snoozeCard(card.id)}
                   />
                 ))}
               </View>
@@ -63,7 +67,9 @@ export default function InboxScreen() {
             canAskAgain={canAskAgain}
             onRequest={requestAccess}
             onOpenSettings={() => void Linking.openSettings()}
-            onRetry={() => void refresh()}
+            onRetry={async () => {
+              await refresh();
+            }}
           />
         }
         renderItem={({ item }) => (
@@ -99,12 +105,13 @@ function StateView({
   canAskAgain: boolean;
   onRequest: () => Promise<void>;
   onOpenSettings: () => void;
-  onRetry: () => void;
+  onRetry: () => Promise<void>;
 }) {
+  const [activeAction, setActiveAction] = useState<'permission' | 'settings' | 'retry'>();
   if (loading)
     return (
       <View style={styles.state}>
-        <ActivityIndicator />
+        <ActivityIndicator color={Colors.dark.accent} />
         <ThemedText themeColor="textSecondary">Loading screenshots...</ThemedText>
       </View>
     );
@@ -120,20 +127,26 @@ function StateView({
           Your screenshots stay on your device during this milestone.
         </ThemedText>
         {permission !== 'denied' || canAskAgain ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void onRequest()}
-            style={styles.button}
-          >
-            <ThemedText style={styles.buttonText}>
-              {permission === 'denied' ? 'Try Again' : 'Allow Screenshot Access'}
-            </ThemedText>
-          </Pressable>
+          <ActionButton
+            label={permission === 'denied' ? 'Try Again' : 'Allow Screenshot Access'}
+            loadingLabel="Requesting access..."
+            state={activeAction === 'permission' ? 'loading' : 'idle'}
+            onPress={() => {
+              setActiveAction('permission');
+              void onRequest().finally(() => setActiveAction(undefined));
+            }}
+          />
         ) : null}
         {permission === 'denied' && !canAskAgain ? (
-          <Pressable accessibilityRole="button" onPress={onOpenSettings} style={styles.button}>
-            <ThemedText style={styles.buttonText}>Open Settings</ThemedText>
-          </Pressable>
+          <ActionButton
+            label="Open Settings"
+            state={activeAction === 'settings' ? 'loading' : 'idle'}
+            onPress={() => {
+              setActiveAction('settings');
+              onOpenSettings();
+              setActiveAction(undefined);
+            }}
+          />
         ) : null}
       </View>
     );
@@ -142,40 +155,30 @@ function StateView({
       <View style={styles.state}>
         <ThemedText type="subtitle">Could not load screenshots.</ThemedText>
         <ThemedText themeColor="textSecondary">{error}</ThemedText>
-        <Pressable accessibilityRole="button" onPress={onRetry} style={styles.button}>
-          <ThemedText style={styles.buttonText}>Try Again</ThemedText>
-        </Pressable>
+        <ActionButton
+          label="Try Again"
+          loadingLabel="Refreshing..."
+          state={activeAction === 'retry' ? 'loading' : 'idle'}
+          onPress={() => {
+            setActiveAction('retry');
+            void onRetry().finally(() => setActiveAction(undefined));
+          }}
+        />
       </View>
     );
   if (hasScreenshots)
-    return (
-      <View style={styles.state}>
-        <ThemedText type="subtitle">You're caught up.</ThemedText>
-        <ThemedText themeColor="textSecondary">No screenshots are waiting for you.</ThemedText>
-      </View>
-    );
+    return <EmptyState title="You're caught up" message="No screenshots are waiting for you." />;
   return (
-    <View style={styles.state}>
-      <ThemedText type="subtitle">No screenshots found.</ThemedText>
-      <ThemedText themeColor="textSecondary">Take a screenshot, then refresh Recall.</ThemedText>
-    </View>
+    <EmptyState title="No screenshots found" message="Take a screenshot, then refresh Recall." />
   );
 }
 const styles = StyleSheet.create({
   container: { flex: 1, paddingBottom: 90 },
-  content: { padding: 24 },
+  content: { padding: Layout.screenPadding },
   header: { marginBottom: 24 },
   relevant: { gap: 12, marginBottom: 24 },
   sectionLabel: { letterSpacing: 0.8 },
   tagline: { fontSize: 18, marginTop: 8 },
   count: { marginTop: 8, textAlign: 'center' },
   state: { alignItems: 'center', gap: 12, paddingVertical: 56 },
-  button: {
-    backgroundColor: '#208AEF',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  buttonText: { color: '#fff', fontWeight: '700' },
 });

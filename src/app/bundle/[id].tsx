@@ -1,7 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
 import { useActions } from '@/features/actions/context';
 import { BundleItemRow } from '@/features/bundles/components/bundle-item-row';
 import { useBundles } from '@/features/bundles/context';
@@ -22,6 +25,7 @@ const TYPE_LABELS: Record<RecallBundle['type'], string> = {
 
 export default function BundleRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [lifecycleAction, setLifecycleAction] = useState<'archive' | 'restore'>();
   const {
     getBundle,
     archiveBundle,
@@ -97,7 +101,7 @@ export default function BundleRoute() {
             <BundleItem
               key={`${ref.screenshotId}:${ref.itemIndex ?? ''}`}
               refItem={ref}
-              onRemove={() => void excludeItem(ref.screenshotId, ref.itemIndex ?? 0)}
+              onRemove={() => excludeItem(ref.screenshotId, ref.itemIndex ?? 0)}
             />
           ))
         ) : (
@@ -113,21 +117,31 @@ export default function BundleRoute() {
           </Pressable>
         ) : null}
         {bundle.status === 'active' ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void archiveBundle(bundle.id).then(() => router.back())}
+          <ActionButton
+            label="Archive bundle"
+            loadingLabel="Archiving..."
+            state={lifecycleAction === 'archive' ? 'loading' : 'idle'}
+            variant="secondary"
+            onPress={() => {
+              setLifecycleAction('archive');
+              void archiveBundle(bundle.id)
+                .then(() => router.back())
+                .finally(() => setLifecycleAction(undefined));
+            }}
             style={styles.archiveButton}
-          >
-            <ThemedText type="smallBold">Archive bundle</ThemedText>
-          </Pressable>
+          />
         ) : (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void restoreBundle(bundle.id)}
+          <ActionButton
+            label="Restore bundle"
+            loadingLabel="Restoring..."
+            successLabel="Bundle restored"
+            state={lifecycleAction === 'restore' ? 'loading' : 'idle'}
+            onPress={() => {
+              setLifecycleAction('restore');
+              void restoreBundle(bundle.id).finally(() => setLifecycleAction(undefined));
+            }}
             style={styles.restoreButton}
-          >
-            <ThemedText type="smallBold">Restore bundle</ThemedText>
-          </Pressable>
+          />
         )}
       </ScrollView>
     </ThemedView>
@@ -139,7 +153,7 @@ function BundleItem({
   onRemove,
 }: {
   refItem: RecallBundle['itemRefs'][number];
-  onRemove: () => void;
+  onRemove: () => Promise<void>;
 }) {
   return (
     <BundleItemRow
@@ -171,11 +185,6 @@ const styles = StyleSheet.create({
   debugDetails: { gap: 2 },
   archiveButton: {
     alignSelf: 'flex-start',
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#dbeafe',
     marginTop: 12,
   },
   manageButton: {
@@ -184,15 +193,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 14,
     borderRadius: 8,
-    backgroundColor: '#f0f0f3',
+    backgroundColor: Colors.dark.backgroundElement,
   },
   restoreButton: {
     alignSelf: 'flex-start',
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#dbeafe',
     marginTop: 12,
   },
 });

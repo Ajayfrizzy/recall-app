@@ -4,6 +4,52 @@ import { analyzeWithMock, mockAnalysisFixtures } from '../services/mock-analysis
 import { RecallAnalysisSchema } from './recall-analysis.js';
 
 validateSchemaFixtures();
+
+function schemaFixture(name: string) {
+  const fixture = schemaFixtures.find((candidate) => candidate.name === name);
+  assert(fixture, `Missing schema fixture: ${name}`);
+  return fixture;
+}
+
+const musicFixture = schemaFixture('music playback without a content date or action');
+assert.match(musicFixture.ocrText ?? '', /01:46 \/ 04:25/);
+const music = musicFixture.value;
+assert.equal(music.items[0]?.type, 'content');
+assert.deepEqual(music.items[0]?.type === 'content' ? music.items[0].dates : undefined, []);
+assert.equal(music.items[0]?.suggestedAction, null);
+assert(!music.suggestedActions.includes('read_later'));
+
+const charging = schemaFixture('temporary charging notification without an action').value;
+assert.equal(charging.items[0]?.type, 'general');
+assert.equal(charging.items[0]?.suggestedAction, null);
+assert.deepEqual(charging.suggestedActions, []);
+
+const socialFixture = schemaFixture('truncated social notification without a publication date');
+assert.match(socialFixture.ocrText ?? '', /09:04/);
+const social = socialFixture.value;
+assert.match(social.summary, /truncated/i);
+assert.deepEqual(social.items[0]?.type === 'content' ? social.items[0].dates : undefined, []);
+assert.equal(social.items[0]?.suggestedAction, null);
+
+const mixedNotifications = schemaFixture('three independent media and notification items').value;
+assert.equal(mixedNotifications.items.length, 3);
+assert.deepEqual(mixedNotifications.suggestedActions, []);
+
+const genuineEvent = schemaFixture('genuine event keeps calendar action').value;
+assert.equal(genuineEvent.items[0]?.suggestedAction, 'add_to_calendar');
+assert(genuineEvent.suggestedActions.includes('add_to_calendar'));
+
+const genuineDeadline = schemaFixture('genuine deadline keeps reminder action').value;
+assert.equal(genuineDeadline.items[0]?.suggestedAction, 'create_reminder');
+assert(genuineDeadline.suggestedActions.includes('create_reminder'));
+
+const products = schemaFixture(
+  'multi-product screenshot keeps products distinct and saveable',
+).value;
+assert.equal(products.items.length, 4);
+assert(products.items.every((item) => item.suggestedAction === 'save_product'));
+assert(products.suggestedActions.includes('save_product'));
+
 for (const fixture of mockAnalysisFixtures) {
   assert.deepEqual(analyzeWithMock(fixture.ocrText), RecallAnalysisSchema.parse(fixture.analysis));
 }

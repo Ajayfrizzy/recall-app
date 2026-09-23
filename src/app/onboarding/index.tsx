@@ -1,10 +1,14 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
+import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { usePersistence } from '@/features/persistence/context';
 export default function OnboardingScreen() {
   const persistence = usePersistence();
+  const [starting, setStarting] = useState(false);
   return (
     <ThemedView style={styles.container}>
       <View style={styles.intro}>
@@ -18,17 +22,20 @@ export default function OnboardingScreen() {
         <Point text="AI analysis may securely process a compressed screenshot and extracted text." />
         <Point text="Recall never takes an action or deletes a screenshot without your choice." />
       </View>
-      <Pressable
-        accessibilityRole="button"
+      <ActionButton
+        label="Get Started"
+        loadingLabel="Setting up Recall..."
+        state={starting ? 'loading' : 'idle'}
         accessibilityLabel="Get started with Recall"
-        onPress={async () => {
-          await persistence.updateState((current) => ({ ...current, onboardingCompleted: true }));
-          router.replace('/(tabs)');
+        onPress={() => {
+          setStarting(true);
+          void persistence
+            .updateState((current) => ({ ...current, onboardingCompleted: true }))
+            .then(() => router.replace('/(tabs)'))
+            .finally(() => setStarting(false));
         }}
         style={styles.button}
-      >
-        <ThemedText style={styles.buttonText}>Get Started</ThemedText>
-      </Pressable>
+      />
     </ThemedView>
   );
 }
@@ -37,15 +44,11 @@ const styles = StyleSheet.create({
   intro: { gap: 10 },
   points: { gap: 14 },
   point: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  bullet: { color: '#208AEF', fontWeight: '700' },
+  bullet: { color: Colors.dark.accent, fontWeight: '700' },
   button: {
-    backgroundColor: '#208AEF',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
     alignSelf: 'flex-start',
+    minWidth: 160,
   },
-  buttonText: { color: '#fff', fontWeight: '600' },
 });
 
 function Point({ text }: { text: string }) {

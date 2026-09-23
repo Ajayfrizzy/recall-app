@@ -10,6 +10,16 @@ const OptionalStringArray = z
   .nullish()
   .transform((value) => value ?? undefined);
 
+const SuggestedAction = z.enum([
+  'add_to_calendar',
+  'create_reminder',
+  'save_product',
+  'save_place',
+  'read_later',
+  'keep',
+]);
+const OptionalSuggestedAction = SuggestedAction.nullable().optional();
+
 const RecallDate = z.object({
   type: z.enum(['event', 'deadline', 'published', 'expires', 'purchase', 'travel', 'other']),
   raw: z.string(),
@@ -23,6 +33,7 @@ const OptionalPrice = Price.nullish().transform((value) => value ?? undefined);
 
 const ProductItem = z.object({
   type: z.literal('product'),
+  suggestedAction: OptionalSuggestedAction,
   title: z.string(),
   currentPrice: OptionalPrice,
   originalPrice: OptionalPrice,
@@ -33,6 +44,7 @@ const ProductItem = z.object({
 
 const EventItem = z.object({
   type: z.literal('event'),
+  suggestedAction: OptionalSuggestedAction,
   title: z.string(),
   location: OptionalString,
   dates: z.array(RecallDate),
@@ -42,6 +54,7 @@ const EventItem = z.object({
 
 const DeadlineItem = z.object({
   type: z.literal('deadline'),
+  suggestedAction: OptionalSuggestedAction,
   title: z.string(),
   organization: OptionalString,
   dates: z.array(RecallDate),
@@ -50,6 +63,7 @@ const DeadlineItem = z.object({
 
 const PlaceItem = z.object({
   type: z.literal('place'),
+  suggestedAction: OptionalSuggestedAction,
   title: z.string(),
   address: OptionalString,
   source: OptionalString,
@@ -58,6 +72,7 @@ const PlaceItem = z.object({
 
 const ContentItem = z.object({
   type: z.literal('content'),
+  suggestedAction: OptionalSuggestedAction,
   title: OptionalString,
   author: OptionalString,
   source: OptionalString,
@@ -68,6 +83,7 @@ const ContentItem = z.object({
 
 const GeneralItem = z.object({
   type: z.literal('general'),
+  suggestedAction: OptionalSuggestedAction,
   summary: z.string(),
   confidence: z.number().min(0).max(1),
 });
@@ -87,16 +103,7 @@ export const RecallAnalysisSchema = z.object({
   cardinality: z.enum(['single', 'multiple']),
   sourceApp: OptionalString,
   items: z.array(RecallItem),
-  suggestedActions: z.array(
-    z.enum([
-      'add_to_calendar',
-      'create_reminder',
-      'save_product',
-      'save_place',
-      'read_later',
-      'keep',
-    ]),
-  ),
+  suggestedActions: z.array(SuggestedAction),
   warnings: OptionalStringArray,
 });
 
@@ -118,9 +125,12 @@ const ModelPrice = z.object({
   raw: z.string(),
 });
 
+const ModelSuggestedAction = SuggestedAction.nullable();
+
 const ModelRecallItem = z.union([
   z.object({
     type: z.enum(['product']),
+    suggestedAction: ModelSuggestedAction,
     title: z.string(),
     currentPrice: ModelPrice.nullable(),
     originalPrice: ModelPrice.nullable(),
@@ -130,6 +140,7 @@ const ModelRecallItem = z.union([
   }),
   z.object({
     type: z.enum(['event']),
+    suggestedAction: ModelSuggestedAction,
     title: z.string(),
     location: z.string().nullable(),
     dates: z.array(ModelRecallDate),
@@ -138,6 +149,7 @@ const ModelRecallItem = z.union([
   }),
   z.object({
     type: z.enum(['deadline']),
+    suggestedAction: ModelSuggestedAction,
     title: z.string(),
     organization: z.string().nullable(),
     dates: z.array(ModelRecallDate),
@@ -145,6 +157,7 @@ const ModelRecallItem = z.union([
   }),
   z.object({
     type: z.enum(['place']),
+    suggestedAction: ModelSuggestedAction,
     title: z.string(),
     address: z.string().nullable(),
     source: z.string().nullable(),
@@ -152,6 +165,7 @@ const ModelRecallItem = z.union([
   }),
   z.object({
     type: z.enum(['content']),
+    suggestedAction: ModelSuggestedAction,
     title: z.string().nullable(),
     author: z.string().nullable(),
     source: z.string().nullable(),
@@ -161,6 +175,7 @@ const ModelRecallItem = z.union([
   }),
   z.object({
     type: z.enum(['general']),
+    suggestedAction: ModelSuggestedAction,
     summary: z.string(),
     confidence: z.number().min(0).max(1),
   }),
@@ -173,16 +188,7 @@ export const ModelRecallAnalysisSchema = z.object({
   cardinality: z.enum(['single', 'multiple']),
   sourceApp: z.string().nullable(),
   items: z.array(ModelRecallItem),
-  suggestedActions: z.array(
-    z.enum([
-      'add_to_calendar',
-      'create_reminder',
-      'save_product',
-      'save_place',
-      'read_later',
-      'keep',
-    ]),
-  ),
+  suggestedActions: z.array(SuggestedAction),
   warnings: z.array(z.string()).nullable(),
 });
 

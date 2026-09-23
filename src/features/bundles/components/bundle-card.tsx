@@ -1,4 +1,8 @@
+import { useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
+import { FadeInView } from '@/components/motion';
+import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import type { RecallScreenshot } from '@/features/screenshots/types';
@@ -28,54 +32,66 @@ export function BundleCard({
   onPress: () => void;
   counts: BundleLifecycleCounts;
   removedItems?: BundleItemRef[];
-  action?: { label: string; onPress: () => void };
+  action?: { label: string; onPress: () => void | Promise<void> };
 }) {
+  const [acting, setActing] = useState(false);
   const representative = [...bundle.screenshotIds, ...removedItems.map((item) => item.screenshotId)]
     .map((id) => screenshots.find((screenshot) => screenshot.id === id))
     .find(Boolean);
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Open ${bundle.title}`}
-        onPress={onPress}
-        style={styles.content}
-      >
-        {representative ? (
-          <Image
-            source={{ uri: representative.uri }}
-            style={styles.image}
-            resizeMode="cover"
-            accessibilityLabel={`Preview for ${bundle.title}`}
-          />
-        ) : (
-          <View style={styles.placeholder} accessibilityLabel="Preview unavailable">
-            <ThemedText type="small" themeColor="textSecondary">
-              No preview
+    <FadeInView>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${bundle.title}`}
+          onPress={onPress}
+          style={styles.content}
+        >
+          {representative ? (
+            <Image
+              source={{ uri: representative.uri }}
+              style={styles.image}
+              resizeMode="cover"
+              accessibilityLabel={`Preview for ${bundle.title}`}
+            />
+          ) : (
+            <View style={styles.placeholder} accessibilityLabel="Preview unavailable">
+              <ThemedText type="small" themeColor="textSecondary">
+                No preview
+              </ThemedText>
+            </View>
+          )}
+          <View style={styles.details}>
+            <ThemedText type="smallBold" themeColor="textSecondary">
+              {TYPE_LABELS[bundle.type]}
             </ThemedText>
-          </View>
-        )}
-        <View style={styles.details}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {TYPE_LABELS[bundle.type]}
-          </ThemedText>
-          <ThemedText numberOfLines={2}>{bundle.title}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-            {lifecycleSummary(counts)}
-          </ThemedText>
-          {__DEV__ && bundle.reason ? (
+            <ThemedText numberOfLines={2}>{bundle.title}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-              Bundled because: {bundle.reason}
+              {lifecycleSummary(counts)}
             </ThemedText>
-          ) : null}
-        </View>
-      </Pressable>
-      {action ? (
-        <Pressable accessibilityRole="button" onPress={action.onPress} style={styles.action}>
-          <ThemedText type="smallBold">{action.label}</ThemedText>
+            {__DEV__ && bundle.reason ? (
+              <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+                Bundled because: {bundle.reason}
+              </ThemedText>
+            ) : null}
+          </View>
         </Pressable>
-      ) : null}
-    </ThemedView>
+        {action ? (
+          <ActionButton
+            label={action.label}
+            loadingLabel="Updating bundle..."
+            state={acting ? 'loading' : 'idle'}
+            variant="ghost"
+            compact
+            onPress={() => {
+              setActing(true);
+              void Promise.resolve(action.onPress()).finally(() => setActing(false));
+            }}
+            style={styles.action}
+          />
+        ) : null}
+      </ThemedView>
+    </FadeInView>
   );
 }
 
@@ -88,21 +104,19 @@ function lifecycleSummary(counts: BundleLifecycleCounts): string {
 const styles = StyleSheet.create({
   card: { overflow: 'hidden', borderRadius: 8 },
   content: { flexDirection: 'row', minHeight: 128 },
-  image: { width: 120, minHeight: 128, backgroundColor: '#d9d9de' },
+  image: { width: 120, minHeight: 128, backgroundColor: Colors.dark.backgroundSelected },
   placeholder: {
     width: 120,
     minHeight: 128,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#d9d9de',
+    backgroundColor: Colors.dark.backgroundSelected,
   },
   details: { flex: 1, justifyContent: 'center', padding: 12, gap: 3 },
   action: {
-    minHeight: 44,
-    justifyContent: 'center',
     alignItems: 'flex-start',
-    paddingHorizontal: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#c7c9cf',
+    borderTopColor: Colors.dark.border,
+    borderRadius: 0,
   },
 });

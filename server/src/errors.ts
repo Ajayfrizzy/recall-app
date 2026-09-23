@@ -5,10 +5,21 @@ export class AnalysisNotConfiguredError extends Error {
   }
 }
 
+export type ProviderFailureCategory =
+  | 'request_timeout'
+  | 'openai_api_error'
+  | 'invalid_json_response'
+  | 'schema_validation_failure'
+  | 'network_connection_failure'
+  | 'unexpected_error';
+
 export class ProviderUnavailableError extends Error {
-  constructor(options?: ErrorOptions) {
+  readonly category: ProviderFailureCategory;
+
+  constructor(category: ProviderFailureCategory, options?: ErrorOptions) {
     super('The analysis provider is unavailable.', options);
     this.name = 'ProviderUnavailableError';
+    this.category = category;
   }
 }
 

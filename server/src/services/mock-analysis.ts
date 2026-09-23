@@ -109,6 +109,7 @@ $849.00 USD`,
       items: [
         {
           type: 'product',
+          suggestedAction: 'save_product',
           title: 'INGREM Fat Cat Power Recliner',
           originalPrice: { amount: 1450, currency: 'USD', raw: '$1,450.00 USD' },
           currentPrice: { amount: 1288, currency: 'USD', raw: '$1,288.00 USD' },
@@ -117,6 +118,7 @@ $849.00 USD`,
         },
         {
           type: 'product',
+          suggestedAction: 'save_product',
           title: 'INGREM Electric Floating Table',
           originalPrice: { amount: 899, currency: 'USD', raw: '$899.00 USD' },
           currentPrice: { amount: 750, currency: 'USD', raw: '$750.00 USD' },
@@ -125,6 +127,7 @@ $849.00 USD`,
         },
         {
           type: 'product',
+          suggestedAction: 'save_product',
           title: 'INGREM Electric Tilt-Adjustable Standing Desk',
           originalPrice: { amount: 800, currency: 'USD', raw: '$800.00 USD' },
           currentPrice: { amount: 700, currency: 'USD', raw: '$700.00 USD' },
@@ -133,6 +136,7 @@ $849.00 USD`,
         },
         {
           type: 'product',
+          suggestedAction: 'save_product',
           title: 'INGREM Fat Bat Recliner',
           originalPrice: { amount: 949, currency: 'USD', raw: '$949.00 USD' },
           currentPrice: { amount: 849, currency: 'USD', raw: '$849.00 USD' },
@@ -159,6 +163,7 @@ Coming this NOVEMBER...`,
       items: [
         {
           type: 'event',
+          suggestedAction: 'add_to_calendar',
           title: 'Startup Abuja Conference 2026',
           location: 'Abuja',
           dates: [
@@ -193,6 +198,7 @@ Reply  Repost  Like
       items: [
         {
           type: 'content',
+          suggestedAction: 'read_later',
           source: 'X',
           summary: 'Developer discussion about frontend/backend work and earning money.',
           dates: [
@@ -223,6 +229,7 @@ September 30, 2026 at 5:00 PM`,
       items: [
         {
           type: 'deadline',
+          suggestedAction: 'create_reminder',
           title: 'Scholarship application deadline',
           dates: [
             {
@@ -249,11 +256,12 @@ const generalAnalysis: RecallAnalysis = {
   items: [
     {
       type: 'general',
+      suggestedAction: null,
       summary: 'No recognized mock fixture was found in the screenshot text.',
       confidence: 0.2,
     },
   ],
-  suggestedActions: ['keep'],
+  suggestedActions: [],
   warnings: ['Mock analysis used the safe general fallback.'],
 };
 

@@ -41,6 +41,10 @@ function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string';
 }
 
+function isOptionalSuggestedAction(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === 'string' && ACTIONS.has(value));
+}
+
 function isRecallDate(value: unknown): value is RecallDate {
   if (!isRecord(value)) return false;
   return (
@@ -69,6 +73,7 @@ function isRecallItem(value: unknown): value is RecallItem {
   if (!isRecord(value) || typeof value.type !== 'string' || !ITEM_TYPES.has(value.type))
     return false;
   if (!isConfidence(value.confidence)) return false;
+  if (!isOptionalSuggestedAction(value.suggestedAction)) return false;
 
   if (value.type === 'product') {
     return (

@@ -3,18 +3,11 @@ import type { UpcomingItem } from '@/features/upcoming/types';
 import { createUpcomingFingerprint } from '@/features/upcoming/duplicates';
 import { addEventToCalendar } from './calendar';
 import { scheduleDeadlineReminder } from './reminders';
+import { defaultActionTypeForItem } from './suggestions';
 import type { ExecuteActionInput, RecallActionType } from './types';
 
 export function actionTypeForItem(input: ExecuteActionInput): RecallActionType {
-  const types: Record<ExecuteActionInput['item']['type'], RecallActionType> = {
-    event: 'add_to_calendar',
-    deadline: 'create_reminder',
-    product: 'save_product',
-    place: 'save_place',
-    content: 'read_later',
-    general: 'keep',
-  };
-  return types[input.item.type];
+  return defaultActionTypeForItem(input.item);
 }
 
 export async function executeAction(input: ExecuteActionInput): Promise<{

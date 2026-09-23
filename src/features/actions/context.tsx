@@ -94,10 +94,11 @@ export function ActionProvider({ children }: PropsWithChildren) {
       });
       try {
         const result = await runAction(input);
-        if (result.libraryItem) library.save(result.libraryItem);
-        if (result.upcomingItem) upcoming.add(result.upcomingItem);
-        if (input.item.type === 'general') screenshots.setStatus(input.screenshotId, 'kept');
-        dispatch({ type: 'complete', id, externalId: result.externalId });
+        if (result.libraryItem) await library.save(result.libraryItem);
+        if (result.upcomingItem) await upcoming.add(result.upcomingItem);
+        if (input.item.type === 'general') {
+          await screenshots.setStatus(input.screenshotId, 'kept');
+        }
         await updateState((current) => {
           const completedRecord: RecallActionRecord = {
             id,
@@ -113,6 +114,7 @@ export function ActionProvider({ children }: PropsWithChildren) {
             actions: [...current.actions.filter((record) => record.id !== id), completedRecord],
           };
         });
+        dispatch({ type: 'complete', id, externalId: result.externalId });
         return true;
       } catch (error) {
         dispatch({

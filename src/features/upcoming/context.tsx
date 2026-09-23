@@ -9,7 +9,7 @@ import {
 import { usePersistence } from '@/features/persistence/context';
 import type { UpcomingItem } from './types';
 
-type ContextValue = { items: UpcomingItem[]; add: (item: UpcomingItem) => void };
+type ContextValue = { items: UpcomingItem[]; add: (item: UpcomingItem) => Promise<void> };
 const UpcomingContext = createContext<ContextValue | null>(null);
 
 function reducer(state: UpcomingItem[], item: UpcomingItem): UpcomingItem[] {
@@ -20,13 +20,13 @@ export function UpcomingProvider({ children }: PropsWithChildren) {
   const { state: persistedState, updateState } = usePersistence();
   const [items, dispatch] = useReducer(reducer, persistedState.upcoming);
   const add = useCallback(
-    (item: UpcomingItem) => {
-      dispatch(item);
-      void updateState((current) =>
+    async (item: UpcomingItem) => {
+      await updateState((current) =>
         current.upcoming.some((saved) => saved.id === item.id)
           ? current
           : { ...current, upcoming: [...current.upcoming, item] },
       );
+      dispatch(item);
     },
     [updateState],
   );

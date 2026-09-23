@@ -3,6 +3,9 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ActionButton } from '@/components/action-button';
+import { EmptyState } from '@/components/empty-state';
+import { Colors } from '@/constants/theme';
 import { useLibrary } from '@/features/library/context';
 import type { LibraryItem } from '@/features/library/types';
 import { useScreenshots } from '@/features/screenshots/context';
@@ -90,17 +93,20 @@ export default function LibraryScreen() {
             screenshots={screenshots}
             section={bundleSection}
             onSection={setBundleSection}
-            onRefresh={() => void refreshBundles()}
-            onRestore={(bundleId) => void restoreBundle(bundleId)}
+            onRefresh={refreshBundles}
+            onRestore={restoreBundle}
             getRemovedItems={getExcludedItemsForBundle}
             getCounts={getBundleLifecycleCounts}
           />
         ) : visible.length === 0 ? (
-          <ThemedText themeColor="textSecondary" style={styles.empty}>
-            {items.length === 0
-              ? 'Items you save from screenshots will appear here.'
-              : 'No saved items match this filter.'}
-          </ThemedText>
+          <EmptyState
+            title={items.length === 0 ? 'Nothing saved yet' : 'No matches'}
+            message={
+              items.length === 0
+                ? 'Items you save from screenshots will appear here.'
+                : 'No saved items match this filter.'
+            }
+          />
         ) : (
           visible.map((item) => <LibraryCard key={item.id} item={item} />)
         )}
@@ -123,11 +129,12 @@ function BundlesList({
   screenshots: ReturnType<typeof useScreenshots>['screenshots'];
   section: BundleLifecycleSection;
   onSection: (section: BundleLifecycleSection) => void;
-  onRefresh: () => void;
-  onRestore: (bundleId: string) => void;
+  onRefresh: () => Promise<void>;
+  onRestore: (bundleId: string) => Promise<void>;
   getRemovedItems: ReturnType<typeof useBundles>['getExcludedItemsForBundle'];
   getCounts: ReturnType<typeof useBundles>['getBundleLifecycleCounts'];
 }) {
+  const [refreshing, setRefreshing] = useState(false);
   const visible = bundles.filter((bundle) =>
     isBundleInLifecycleSection(bundle, getCounts(bundle.id), section),
   );
@@ -152,13 +159,20 @@ function BundlesList({
           </Pressable>
         ))}
       </View>
-      <Pressable accessibilityRole="button" onPress={onRefresh} style={styles.refreshButton}>
-        <ThemedText type="smallBold">Refresh bundles</ThemedText>
-      </Pressable>
+      <ActionButton
+        label="Refresh bundles"
+        loadingLabel="Refreshing bundles..."
+        state={refreshing ? 'loading' : 'idle'}
+        variant="secondary"
+        compact
+        onPress={() => {
+          setRefreshing(true);
+          void onRefresh().finally(() => setRefreshing(false));
+        }}
+        style={styles.refreshButton}
+      />
       {visible.length === 0 ? (
-        <ThemedText themeColor="textSecondary" style={styles.empty}>
-          {emptyMessage}
-        </ThemedText>
+        <EmptyState title="Nothing here yet" message={emptyMessage} />
       ) : (
         visible.map((bundle) => {
           const removedItems = getRemovedItems(bundle.id);
@@ -285,16 +299,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 24, gap: 12, paddingBottom: 110 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  filter: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8 },
-  filterSelected: { backgroundColor: '#dbeafe' },
+  filter: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8 },
+  filterSelected: { backgroundColor: Colors.dark.accentMuted },
   empty: { paddingTop: 20 },
   card: { padding: 16, borderRadius: 8, gap: 5 },
   refreshButton: {
     alignSelf: 'flex-start',
-    minHeight: 40,
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#dbeafe',
   },
 });

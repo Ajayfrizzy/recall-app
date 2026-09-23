@@ -41,7 +41,7 @@ export default function RemovedBundleItemsRoute() {
               refItem={ref}
               membership="removed"
               actionLabel="Restore to bundle"
-              onAction={() => void restoreItem(ref.screenshotId, ref.itemIndex ?? 0)}
+              onAction={() => restoreItem(ref.screenshotId, ref.itemIndex ?? 0)}
             />
           ))
         ) : (

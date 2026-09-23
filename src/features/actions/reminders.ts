@@ -1,17 +1,9 @@
 import { Platform } from 'react-native';
+import { getReminderDate } from './date-safeguards';
 import type { ReminderTiming } from './types';
 
 export class ReminderActionError extends Error {}
 const CHANNEL_ID = 'recall-reminders';
-
-export function getReminderDate(deadline: Date, timing: ReminderTiming): Date {
-  const offsets: Record<ReminderTiming, number> = {
-    at_deadline: 0,
-    one_hour_before: 60 * 60 * 1000,
-    one_day_before: 24 * 60 * 60 * 1000,
-  };
-  return new Date(deadline.getTime() - offsets[timing]);
-}
 
 export async function scheduleDeadlineReminder(input: {
   title: string;

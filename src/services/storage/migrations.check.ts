@@ -119,4 +119,39 @@ assert(
   'latest bundle item override did not win',
 );
 
+const fallbackMessage = 'Semantic analysis took too long, so Recall used on-device analysis.';
+const fallbackState = migratePersistedState({
+  version: 1,
+  screenshots: {
+    fallback: {
+      status: 'pending',
+      analysis: {
+        status: 'complete',
+        analysisVersion: 1,
+        extractedText: 'Local OCR result',
+        blocks: [],
+        category: 'general',
+        confidence: 0.4,
+        summary: 'Local result',
+        suggestedAction: 'keep',
+        metadata: {},
+        analysisSource: 'local',
+        error: fallbackMessage,
+      },
+    },
+  },
+  library: [],
+  upcoming: [],
+  actions: [],
+  bundles: [],
+  bundleItemOverrides: [],
+  resurfacingPreferences: [],
+  semanticAnalysisAcknowledged: true,
+  onboardingCompleted: true,
+});
+assert(
+  fallbackState.screenshots.fallback.analysis?.error === fallbackMessage,
+  'safe semantic fallback message was dropped',
+);
+
 console.log('Persistence migration checks passed');

@@ -96,10 +96,20 @@ Backend (`server/.env`):
 ```dotenv
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5-mini
+OPENAI_REQUEST_TIMEOUT_MS=45000
+OPENAI_REASONING_EFFORT=low
+OPENAI_TEXT_VERBOSITY=low
+OPENAI_ERROR_DETAILS=false
 MOCK_ANALYSIS=false
 PORT=8787
 ALLOWED_ORIGIN=http://localhost:8081
 ```
+
+`OPENAI_REQUEST_TIMEOUT_MS` accepts 5000–120000 milliseconds and falls back to 45000
+when absent or invalid. `OPENAI_REASONING_EFFORT` accepts `minimal`, `low`, `medium`, or
+`high`; `OPENAI_TEXT_VERBOSITY` accepts `low`, `medium`, or `high`. Invalid values fall
+back to `low`. Keep `OPENAI_ERROR_DETAILS=false` unless concise provider messages are
+needed during development.
 
 Never prefix `OPENAI_API_KEY` with `EXPO_PUBLIC_` or place it in Expo configuration. In production, restrict `ALLOWED_ORIGIN` where the client environment makes that effective and keep the server behind HTTPS.
 

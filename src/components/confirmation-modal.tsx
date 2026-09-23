@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, View } from 'react-native';
+import { ActionButton } from './action-button';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -30,16 +31,18 @@ export function ConfirmationModal({
           <ThemedText type="smallBold">{title}</ThemedText>
           <ThemedText themeColor="textSecondary">{message}</ThemedText>
           <View style={styles.actions}>
-            <Pressable accessibilityRole="button" onPress={onCancel} style={styles.cancelButton}>
-              <ThemedText type="smallBold">{cancelLabel}</ThemedText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
+            <ActionButton
+              label={cancelLabel}
+              variant="ghost"
+              onPress={onCancel}
+              style={styles.cancelButton}
+            />
+            <ActionButton
+              label={confirmLabel}
+              variant={destructive ? 'danger' : 'primary'}
               onPress={onConfirm}
-              style={[styles.confirmButton, destructive && styles.destructiveButton]}
-            >
-              <ThemedText style={styles.confirmText}>{confirmLabel}</ThemedText>
-            </Pressable>
+              style={styles.confirmButton}
+            />
           </View>
         </ThemedView>
       </View>
@@ -63,14 +66,6 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   actions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
-  cancelButton: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 14 },
-  confirmButton: {
-    minHeight: 46,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#208AEF',
-  },
-  destructiveButton: { backgroundColor: '#c53030' },
-  confirmText: { color: '#fff', fontWeight: '700' },
+  cancelButton: { minWidth: 92 },
+  confirmButton: { minWidth: 120 },
 });

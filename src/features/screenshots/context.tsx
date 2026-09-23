@@ -87,7 +87,7 @@ type ContextValue = {
   error: string | null;
   refresh: () => Promise<RecallScreenshot[] | null>;
   requestAccess: () => Promise<void>;
-  setStatus: (id: string, status: ScreenshotStatus) => void;
+  setStatus: (id: string, status: ScreenshotStatus) => Promise<void>;
   analyzeScreenshot: (id: string) => Promise<void>;
   semanticAnalysisAcknowledged: boolean;
   acknowledgeSemanticAnalysis: () => void;
@@ -240,6 +240,10 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
             finalAnalysis = { ...localAnalysis, semantic, analysisSource: 'semantic' };
           } catch (semanticError) {
             if (!(semanticError instanceof SemanticAnalysisError)) throw semanticError;
+            finalAnalysis = {
+              ...localAnalysis,
+              error: semanticError.message,
+            };
           }
         }
         dispatch({
@@ -293,13 +297,13 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
   );
 
   const setStatus = useCallback(
-    (id: string, status: ScreenshotStatus) => {
-      dispatch({ type: 'status', id, status });
-      void updateState((current) => {
+    async (id: string, status: ScreenshotStatus) => {
+      await updateState((current) => {
         const saved = { ...current.screenshots[id], status };
         persistedScreenshotsRef.current = { ...current.screenshots, [id]: saved };
         return { ...current, screenshots: persistedScreenshotsRef.current };
       });
+      dispatch({ type: 'status', id, status });
     },
     [updateState],
   );

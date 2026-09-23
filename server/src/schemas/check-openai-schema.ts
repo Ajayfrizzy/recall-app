@@ -55,12 +55,13 @@ const normalized = parseModelRecallAnalysis({
   summary: 'A simple note.',
   cardinality: 'single',
   sourceApp: null,
-  items: [{ type: 'general', summary: 'A simple note.', confidence: 0.8 }],
-  suggestedActions: ['keep'],
+  items: [{ type: 'general', suggestedAction: null, summary: 'A simple note.', confidence: 0.8 }],
+  suggestedActions: [],
   warnings: null,
 });
 assert.equal(normalized.sourceApp, undefined);
 assert.equal(normalized.warnings, undefined);
+assert.equal(normalized.items[0]?.suggestedAction, null);
 
 console.log('OpenAI Structured Output schema checks passed');
 

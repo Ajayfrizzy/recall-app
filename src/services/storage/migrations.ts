@@ -104,6 +104,7 @@ function validateAnalysis(value: unknown): ScreenshotAnalysis | undefined {
     !ACTIONS.has(value.suggestedAction as SuggestedAction) ||
     !isRecord(value.metadata) ||
     (value.missingDetails !== undefined && !isStringArray(value.missingDetails)) ||
+    !isOptionalString(value.error) ||
     (value.analysisSource !== 'local' && value.analysisSource !== 'semantic')
   ) {
     return undefined;
@@ -129,6 +130,7 @@ function validateAnalysis(value: unknown): ScreenshotAnalysis | undefined {
     missingDetails: value.missingDetails as string[] | undefined,
     analysisSource: value.analysisSource,
     semantic: value.semantic as ScreenshotAnalysis['semantic'],
+    error: value.error as string | undefined,
   };
 }
 

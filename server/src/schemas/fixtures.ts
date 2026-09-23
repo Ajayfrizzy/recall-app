@@ -1,8 +1,114 @@
 import { RecallAnalysisSchema, type RecallAnalysis } from './recall-analysis.js';
 
-export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
+export const schemaFixtures: Array<{ name: string; ocrText?: string; value: RecallAnalysis }> = [
   {
-    name: 'event email',
+    name: 'music playback without a content date or action',
+    ocrText: 'Spotify\nEnd of Beginning\nDjo\n01:46 / 04:25',
+    value: {
+      category: 'content',
+      confidence: 0.94,
+      summary: 'End of Beginning by Djo is playing in Spotify.',
+      cardinality: 'single',
+      sourceApp: 'Spotify',
+      items: [
+        {
+          type: 'content',
+          suggestedAction: null,
+          title: 'End of Beginning',
+          author: 'Djo',
+          source: 'Spotify',
+          summary: 'End of Beginning by Djo is playing.',
+          dates: [],
+          confidence: 0.94,
+        },
+      ],
+      suggestedActions: [],
+    },
+  },
+  {
+    name: 'temporary charging notification without an action',
+    ocrText: 'Charging\nBattery 72%\n1 hr 12 min until full',
+    value: {
+      category: 'general',
+      confidence: 0.96,
+      summary: 'The device is charging and shows temporary battery status.',
+      cardinality: 'single',
+      items: [
+        {
+          type: 'general',
+          suggestedAction: null,
+          summary: 'Temporary charging and battery status.',
+          confidence: 0.96,
+        },
+      ],
+      suggestedActions: [],
+    },
+  },
+  {
+    name: 'truncated social notification without a publication date',
+    ocrText: 'TikTok 09:04\nSomeone shared: You need to see what happened when...',
+    value: {
+      category: 'content',
+      confidence: 0.84,
+      summary: 'A truncated TikTok notification is visible; the full post is unavailable.',
+      cardinality: 'single',
+      sourceApp: 'TikTok',
+      items: [
+        {
+          type: 'content',
+          suggestedAction: null,
+          source: 'TikTok',
+          summary: 'Truncated notification; the full underlying post is unavailable.',
+          dates: [],
+          confidence: 0.84,
+        },
+      ],
+      suggestedActions: [],
+      warnings: ['Notification content is incomplete.'],
+    },
+  },
+  {
+    name: 'three independent media and notification items',
+    ocrText:
+      'Spotify\nEnd of Beginning\nDjo\n01:46 / 04:25\nCharging 72%\nTikTok 09:04\nYou need to see...',
+    value: {
+      category: 'mixed',
+      confidence: 0.9,
+      summary: 'Music playback, charging status, and a social notification are visible.',
+      cardinality: 'multiple',
+      items: [
+        {
+          type: 'content',
+          suggestedAction: null,
+          title: 'End of Beginning',
+          author: 'Djo',
+          source: 'Spotify',
+          summary: 'End of Beginning by Djo is playing.',
+          dates: [],
+          confidence: 0.94,
+        },
+        {
+          type: 'general',
+          suggestedAction: null,
+          summary: 'Temporary charging and battery status.',
+          confidence: 0.96,
+        },
+        {
+          type: 'content',
+          suggestedAction: null,
+          source: 'TikTok',
+          summary: 'Truncated notification; the full underlying post is unavailable.',
+          dates: [],
+          confidence: 0.84,
+        },
+      ],
+      suggestedActions: [],
+      warnings: ['Notification content is incomplete.'],
+    },
+  },
+  {
+    name: 'genuine event keeps calendar action',
+    ocrText: 'Startup Abuja Conference 2026\nVenue: Abuja\nComing this November',
     value: {
       category: 'event',
       confidence: 0.86,
@@ -11,6 +117,7 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
       items: [
         {
           type: 'event',
+          suggestedAction: 'add_to_calendar',
           title: 'Startup Abuja Conference 2026',
           location: 'Abuja',
           dates: [
@@ -30,7 +137,8 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
     },
   },
   {
-    name: 'four product cards',
+    name: 'multi-product screenshot keeps products distinct and saveable',
+    ocrText: 'Product 1 $100\nProduct 2 $200\nProduct 3 $300\nProduct 4 $400',
     value: {
       category: 'product',
       confidence: 0.9,
@@ -38,6 +146,7 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
       cardinality: 'multiple',
       items: [1, 2, 3, 4].map((index) => ({
         type: 'product' as const,
+        suggestedAction: 'save_product' as const,
         title: `Product ${index}`,
         confidence: 0.8,
       })),
@@ -55,6 +164,7 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
       items: [
         {
           type: 'content',
+          suggestedAction: 'read_later',
           title: undefined,
           author: 'Crazy Codes',
           source: 'X',
@@ -75,7 +185,8 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
     },
   },
   {
-    name: 'deadline',
+    name: 'genuine deadline keeps reminder action',
+    ocrText: 'Scholarship applications close September 30 at 5:00 PM',
     value: {
       category: 'deadline',
       confidence: 0.8,
@@ -84,6 +195,7 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
       items: [
         {
           type: 'deadline',
+          suggestedAction: 'create_reminder',
           title: 'Scholarship application',
           dates: [{ type: 'deadline', raw: 'September 30', precision: 'exact', confidence: 0.8 }],
           confidence: 0.8,
@@ -99,7 +211,15 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
       confidence: 0.8,
       summary: 'Restaurant in Lagos.',
       cardinality: 'single',
-      items: [{ type: 'place', title: 'Terra Kulture', address: 'Lagos', confidence: 0.8 }],
+      items: [
+        {
+          type: 'place',
+          suggestedAction: 'save_place',
+          title: 'Terra Kulture',
+          address: 'Lagos',
+          confidence: 0.8,
+        },
+      ],
       suggestedActions: ['save_place'],
     },
   },
@@ -110,8 +230,15 @@ export const schemaFixtures: Array<{ name: string; value: RecallAnalysis }> = [
       confidence: 0.35,
       summary: 'No clear actionable text.',
       cardinality: 'single',
-      items: [{ type: 'general', summary: 'No clear actionable text.', confidence: 0.35 }],
-      suggestedActions: ['keep'],
+      items: [
+        {
+          type: 'general',
+          suggestedAction: null,
+          summary: 'No clear actionable text.',
+          confidence: 0.35,
+        },
+      ],
+      suggestedActions: [],
     },
   },
 ];

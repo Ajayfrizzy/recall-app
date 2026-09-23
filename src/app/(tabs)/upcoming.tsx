@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EmptyState } from '@/components/empty-state';
 import { useUpcoming } from '@/features/upcoming/context';
 
 export default function UpcomingScreen() {
@@ -17,9 +18,10 @@ export default function UpcomingScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <ThemedText type="subtitle">Upcoming</ThemedText>
         {sorted.length === 0 ? (
-          <ThemedText themeColor="textSecondary" style={styles.empty}>
-            Events and deadlines you act on will appear here.
-          </ThemedText>
+          <EmptyState
+            title="Nothing upcoming"
+            message="Events and deadlines you act on will appear here."
+          />
         ) : (
           sorted.map((item) => (
             <ThemedView key={item.id} type="backgroundElement" style={styles.card}>
@@ -55,6 +57,5 @@ export default function UpcomingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 24, gap: 12, paddingBottom: 110 },
-  empty: { paddingTop: 20 },
   card: { padding: 16, borderRadius: 8, gap: 5 },
 });

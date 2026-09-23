@@ -77,7 +77,11 @@ export async function analyzeRoute(
     } else if (error instanceof AnalysisNotConfiguredError) {
       sendJson(response, 503, { error: 'analysis_not_configured' });
     } else if (error instanceof ProviderUnavailableError) {
-      sendJson(response, 502, { error: 'analysis_provider_unavailable' });
+      if (error.category === 'request_timeout') {
+        sendJson(response, 504, { error: 'analysis_timeout' });
+      } else {
+        sendJson(response, 502, { error: 'analysis_provider_unavailable' });
+      }
     } else {
       sendJson(response, 500, { error: 'internal_error' });
     }

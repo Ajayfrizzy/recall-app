@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActionButton } from '@/components/action-button';
 import { ConfirmationModal } from '@/components/confirmation-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors, Radius } from '@/constants/theme';
 import { useCleanup } from '@/features/cleanup/context';
 import type { CleanupDeleteResult, ScreenshotCleanupCandidate } from '@/features/cleanup/types';
 import { useScreenshots } from '@/features/screenshots/context';
@@ -52,14 +54,13 @@ export default function CleanupRoute() {
             <ThemedText type="small" themeColor="textSecondary">
               Deselect screenshots to continue, or upgrade for larger cleanup batches.
             </ThemedText>
-            <Pressable
-              accessibilityRole="button"
-              disabled={subscriptionLoading}
+            <ActionButton
+              label="Upgrade to Pro"
+              loadingLabel="Opening paywall..."
+              state={subscriptionLoading ? 'loading' : 'idle'}
               onPress={() => void presentPaywall()}
               style={styles.upgradeButton}
-            >
-              <ThemedText style={styles.upgradeText}>Upgrade to Pro</ThemedText>
-            </Pressable>
+            />
           </ThemedView>
         ) : null}
         {lastResult ? <ResultMessage result={lastResult} /> : null}
@@ -87,25 +88,20 @@ export default function CleanupRoute() {
             </ThemedText>
           </View>
         )}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{
-            disabled: selectedCount === 0 || deleting || selectionLimitExceeded,
-          }}
-          disabled={selectedCount === 0 || deleting || selectionLimitExceeded}
+        <ActionButton
+          label={`Delete ${selectedCount} ${selectedCount === 1 ? 'screenshot' : 'screenshots'}`}
+          loadingLabel="Deleting from Gallery..."
+          variant="danger"
+          state={
+            deleting
+              ? 'loading'
+              : selectedCount === 0 || selectionLimitExceeded
+                ? 'disabled'
+                : 'idle'
+          }
           onPress={() => setConfirming(true)}
-          style={[
-            styles.deleteButton,
-            (selectedCount === 0 || deleting || selectionLimitExceeded) &&
-              styles.deleteButtonDisabled,
-          ]}
-        >
-          <ThemedText style={styles.deleteText}>
-            {deleting
-              ? 'Deleting...'
-              : `Delete ${selectedCount} ${selectedCount === 1 ? 'screenshot' : 'screenshots'}`}
-          </ThemedText>
-        </Pressable>
+          style={styles.deleteButton}
+        />
       </ScrollView>
       <ConfirmationModal
         visible={confirming}
@@ -191,7 +187,7 @@ function ResultMessage({ result }: { result: CleanupDeleteResult }) {
     ? `${result.deleted} ${result.deleted === 1 ? 'screenshot' : 'screenshots'} deleted. ${result.failed.length} could not be deleted.`
     : `${result.deleted} ${result.deleted === 1 ? 'screenshot' : 'screenshots'} deleted.`;
   return (
-    <ThemedView type="backgroundElement" style={styles.result}>
+    <ThemedView type="backgroundElement" style={styles.result} accessibilityLiveRegion="polite">
       <ThemedText>{message}</ThemedText>
       {result.refreshFailed ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -211,12 +207,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#dbeafe',
+    backgroundColor: Colors.dark.accentMuted,
   },
   empty: { paddingVertical: 40, gap: 6 },
-  card: { overflow: 'hidden', borderRadius: 8 },
+  card: { overflow: 'hidden', borderRadius: Radius.medium },
   cardContent: { flexDirection: 'row', minHeight: 112 },
-  thumbnail: { width: 112, height: 112, backgroundColor: '#d9d9de' },
+  thumbnail: { width: 112, height: 112, backgroundColor: Colors.dark.backgroundSelected },
   cardDetails: { flex: 1, justifyContent: 'center', padding: 12, gap: 3 },
   selection: {
     minHeight: 44,
@@ -225,7 +221,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#c7c9cf',
+    borderTopColor: Colors.dark.border,
   },
   checkbox: {
     width: 24,
@@ -233,21 +229,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#60646c',
+    borderColor: Colors.dark.textSecondary,
     borderRadius: 4,
   },
-  checkboxSelected: { backgroundColor: '#208AEF', borderColor: '#208AEF' },
+  checkboxSelected: { backgroundColor: Colors.dark.accent, borderColor: Colors.dark.accent },
   checkmark: { color: '#fff' },
-  deleteButton: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    backgroundColor: '#c53030',
-    marginTop: 8,
-  },
-  deleteButtonDisabled: { opacity: 0.45 },
-  deleteText: { color: '#fff', fontWeight: '700' },
+  deleteButton: { marginTop: 8 },
   result: { padding: 12, borderRadius: 8, gap: 4 },
   limitNotice: { padding: 14, borderRadius: 8, gap: 8 },
   upgradeButton: {
@@ -257,7 +244,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#208AEF',
+    backgroundColor: Colors.dark.accent,
   },
-  upgradeText: { color: '#fff', fontWeight: '700' },
 });

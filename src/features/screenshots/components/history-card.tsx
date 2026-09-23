@@ -1,6 +1,7 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
 import type { RecallScreenshot } from '../types';
 
 export function ScreenshotHistoryCard({
@@ -65,7 +66,7 @@ export function ScreenshotHistoryCard({
 const styles = StyleSheet.create({
   card: { overflow: 'hidden', borderRadius: 8 },
   content: { flexDirection: 'row', minHeight: 112 },
-  image: { width: 112, height: 112, backgroundColor: '#d9d9de' },
+  image: { width: 112, height: 112, backgroundColor: Colors.dark.backgroundSelected },
   details: { flex: 1, justifyContent: 'center', padding: 12, gap: 3 },
   heading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   filename: { flex: 1 },

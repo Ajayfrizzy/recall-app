@@ -11,7 +11,7 @@ import type { LibraryItem } from './types';
 
 type ContextValue = {
   items: LibraryItem[];
-  save: (item: LibraryItem) => void;
+  save: (item: LibraryItem) => Promise<void>;
   isSaved: (screenshotId: string, itemIndex: number) => boolean;
 };
 
@@ -25,13 +25,13 @@ export function LibraryProvider({ children }: PropsWithChildren) {
   const { state: persistedState, updateState } = usePersistence();
   const [items, dispatch] = useReducer(reducer, persistedState.library);
   const save = useCallback(
-    (item: LibraryItem) => {
-      dispatch(item);
-      void updateState((current) =>
+    async (item: LibraryItem) => {
+      await updateState((current) =>
         current.library.some((saved) => saved.id === item.id)
           ? current
           : { ...current, library: [item, ...current.library] },
       );
+      dispatch(item);
     },
     [updateState],
   );

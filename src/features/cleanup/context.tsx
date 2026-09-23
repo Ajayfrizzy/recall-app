@@ -44,6 +44,7 @@ export function CleanupProvider({ children }: PropsWithChildren) {
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleting, setDeleting] = useState(false);
+  const deletionInFlight = useRef(false);
   const [lastResult, setLastResult] = useState<CleanupDeleteResult>();
   const selectionLimit = getSubscriptionLimits(isPro).cleanupBatchSize;
   const selectionLimitExceeded = !canUseCleanupBatch(selectedIds.length, isPro);
@@ -88,9 +89,15 @@ export function CleanupProvider({ children }: PropsWithChildren) {
     const requestedIds = selectedIds.filter((id) =>
       candidates.some((candidate) => candidate.screenshotId === id),
     );
-    if (!requestedIds.length || deleting || !canUseCleanupBatch(requestedIds.length, isPro)) {
+    if (
+      !requestedIds.length ||
+      deleting ||
+      deletionInFlight.current ||
+      !canUseCleanupBatch(requestedIds.length, isPro)
+    ) {
       return undefined;
     }
+    deletionInFlight.current = true;
     setDeleting(true);
     setLastResult(undefined);
     let batchReportedSuccess = false;
@@ -109,6 +116,7 @@ export function CleanupProvider({ children }: PropsWithChildren) {
       setLastResult(result);
       return result;
     } finally {
+      deletionInFlight.current = false;
       setDeleting(false);
     }
   }, [candidates, deleting, isPro, refresh, selectedIds]);

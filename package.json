@@ -49,11 +49,13 @@
     "lint": "expo lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "actions:check": "server/node_modules/.bin/tsx src/features/actions/suggestions.check.ts && server/node_modules/.bin/tsx src/features/actions/date-safeguards.check.ts",
     "bundles:check": "server/node_modules/.bin/tsx src/features/bundles/grouping.check.ts && server/node_modules/.bin/tsx src/features/bundles/membership.check.ts && server/node_modules/.bin/tsx src/features/bundles/lifecycle.check.ts",
     "persistence:check": "server/node_modules/.bin/tsx src/services/storage/migrations.check.ts",
     "resurfacing:check": "server/node_modules/.bin/tsx src/features/resurfacing/resurfacing.check.ts",
     "cleanup:check": "server/node_modules/.bin/tsx src/features/cleanup/cleanup.check.ts",
-    "subscription:check": "server/node_modules/.bin/tsx src/features/subscription/subscription.check.ts"
+    "subscription:check": "server/node_modules/.bin/tsx src/features/subscription/subscription.check.ts",
+    "release:config-check": "node --env-file-if-exists=.env scripts/check-release-config.mjs"
   },
   "private": true
 }

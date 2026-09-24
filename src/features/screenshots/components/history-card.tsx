@@ -13,7 +13,7 @@ export function ScreenshotHistoryCard({
 }) {
   const complete = screenshot.analysis.status === 'complete';
   const date = screenshot.creationTime
-    ? new Date(screenshot.creationTime * 1000).toLocaleDateString()
+    ? new Date(screenshot.creationTime).toLocaleDateString()
     : undefined;
   return (
     <ThemedView type="backgroundElement" style={styles.card}>

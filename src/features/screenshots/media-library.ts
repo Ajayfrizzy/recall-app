@@ -5,6 +5,7 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 import type { RecallScreenshot } from './types';
 import { createIdleScreenshotAnalysis } from '@/services/understanding/types';
 import { resolveScreenshotPermission, type ScreenshotPermission } from './permission-state';
+import { normalizeScreenshotCreationTime } from './creation-time';
 
 const PAGE_SIZE = 50;
 
@@ -74,7 +75,7 @@ export async function loadDeviceScreenshots(
     filename: asset.filename,
     width: asset.width,
     height: asset.height,
-    creationTime: asset.creationTime,
+    creationTime: normalizeScreenshotCreationTime(asset.creationTime),
     status: 'pending',
     analysis: createIdleScreenshotAnalysis(),
   }));

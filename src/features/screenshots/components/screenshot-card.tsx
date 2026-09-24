@@ -11,7 +11,7 @@ type Props = {
 
 export function ScreenshotCard({ screenshot, onPress, onStatus }: Props) {
   const date = screenshot.creationTime
-    ? new Date(screenshot.creationTime * 1000).toLocaleDateString()
+    ? new Date(screenshot.creationTime).toLocaleDateString()
     : null;
   return (
     <View style={styles.card}>

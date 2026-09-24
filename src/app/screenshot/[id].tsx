@@ -99,9 +99,7 @@ export default function ScreenshotRoute() {
       </ThemedView>
     );
   }
-  const date = screenshot.creationTime
-    ? new Date(screenshot.creationTime * 1000).toLocaleString()
-    : null;
+  const date = screenshot.creationTime ? new Date(screenshot.creationTime).toLocaleString() : null;
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>

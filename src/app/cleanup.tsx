@@ -133,7 +133,7 @@ function CleanupCard({
   onOpen: () => void;
 }) {
   const date = screenshot.creationTime
-    ? new Date(screenshot.creationTime * 1000).toLocaleDateString()
+    ? new Date(screenshot.creationTime).toLocaleDateString()
     : undefined;
   return (
     <ThemedView type="backgroundElement" style={styles.card}>

@@ -1,7 +1,9 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Radius } from '@/constants/theme';
+import { formatScreenshotCreationDate } from '../creation-time';
 import type { RecallScreenshot, ScreenshotStatus } from '../types';
+import { ScreenshotImage } from './screenshot-image';
 
 type Props = {
   screenshot: RecallScreenshot;
@@ -10,9 +12,7 @@ type Props = {
 };
 
 export function ScreenshotCard({ screenshot, onPress, onStatus }: Props) {
-  const date = screenshot.creationTime
-    ? new Date(screenshot.creationTime).toLocaleDateString()
-    : null;
+  const date = formatScreenshotCreationDate(screenshot.creationTime);
   return (
     <View style={styles.card}>
       <Pressable
@@ -21,18 +21,19 @@ export function ScreenshotCard({ screenshot, onPress, onStatus }: Props) {
         onPress={onPress}
         style={styles.preview}
       >
-        <Image
-          source={{ uri: screenshot.uri }}
+        <ScreenshotImage
+          uri={screenshot.uri}
+          screenshotId={screenshot.id}
           style={styles.image}
-          resizeMode="cover"
           accessibilityLabel={date ? `Screenshot from ${date}` : 'Screenshot'}
+          compact
         />
         <View style={styles.meta}>
           <ThemedText type="smallBold" numberOfLines={1}>
             {screenshot.filename ?? 'Screenshot'}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {date ?? `${screenshot.width} x ${screenshot.height}`}
+            {date ?? `Date unavailable / ${screenshot.width} x ${screenshot.height}`}
           </ThemedText>
         </View>
       </Pressable>
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   preview: { flexDirection: 'row', minHeight: 112 },
-  image: { width: 112, height: 112, backgroundColor: Colors.dark.backgroundSelected },
+  image: { width: 112, height: 112 },
   meta: { flex: 1, justifyContent: 'center', padding: 12, gap: 4 },
   actions: {
     flexDirection: 'row',

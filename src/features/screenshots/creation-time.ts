@@ -20,3 +20,22 @@ export function normalizeScreenshotCreationTime(
 
   return Math.trunc(milliseconds);
 }
+
+export function formatScreenshotCreationDate(
+  value: number | undefined,
+  locale?: Intl.LocalesArgument,
+): string | undefined {
+  if (value === undefined) return undefined;
+  return new Intl.DateTimeFormat(locale).format(value);
+}
+
+export function formatScreenshotCreationDateTime(
+  value: number | undefined,
+  locale?: Intl.LocalesArgument,
+): string | undefined {
+  if (value === undefined) return undefined;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(value);
+}

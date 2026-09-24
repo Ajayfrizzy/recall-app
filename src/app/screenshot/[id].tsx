@@ -2,7 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -25,7 +24,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ConfirmationModal } from '@/components/confirmation-modal';
 import { FadeInView } from '@/components/motion';
-import { Colors, Layout, Radius } from '@/constants/theme';
+import { Colors, Fonts, Layout, Radius } from '@/constants/theme';
 import { useActions } from '@/features/actions/context';
 import {
   formatRecallDate,
@@ -47,6 +46,8 @@ import type {
   SuggestedAction,
 } from '@/services/understanding';
 import { useAiAccess } from '@/features/ai-access/context';
+import { ScreenshotImage } from '@/features/screenshots/components/screenshot-image';
+import { formatScreenshotCreationDateTime } from '@/features/screenshots/creation-time';
 
 const CATEGORY_LABELS: Record<ScreenshotCategory, string> = {
   event: 'Event',
@@ -92,14 +93,22 @@ export default function ScreenshotRoute() {
   if (!screenshot) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText type="subtitle">Screenshot not found.</ThemedText>
-        <ThemedText themeColor="textSecondary">
-          This screenshot is no longer available in the current session.
-        </ThemedText>
+        <View style={styles.missingContent}>
+          <ScreenshotImage
+            uri={undefined}
+            screenshotId={String(id ?? 'missing')}
+            style={styles.missingImage}
+            accessibilityLabel="Screenshot is no longer available"
+          />
+          <ThemedText type="subtitle">Screenshot not found</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            This screenshot is no longer available in your accessible Gallery items.
+          </ThemedText>
+        </View>
       </ThemedView>
     );
   }
-  const date = screenshot.creationTime ? new Date(screenshot.creationTime).toLocaleString() : null;
+  const date = formatScreenshotCreationDateTime(screenshot.creationTime);
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -109,10 +118,10 @@ export default function ScreenshotRoute() {
           onPress={() => setShowFullImage(true)}
           style={styles.preview}
         >
-          <Image
-            source={{ uri: screenshot.uri }}
+          <ScreenshotImage
+            uri={screenshot.uri}
+            screenshotId={screenshot.id}
             style={styles.image}
-            resizeMode="contain"
             accessibilityLabel={screenshot.filename ?? 'Screenshot'}
           />
           {screenshot.analysis.status === 'processing' ? <AnalysisScanOverlay /> : null}
@@ -168,10 +177,10 @@ export default function ScreenshotRoute() {
         onRequestClose={() => setShowFullImage(false)}
       >
         <View style={styles.fullImageBackdrop}>
-          <Image
-            source={{ uri: screenshot.uri }}
+          <ScreenshotImage
+            uri={screenshot.uri}
+            screenshotId={screenshot.id}
             style={styles.fullImage}
-            resizeMode="contain"
             accessibilityLabel={screenshot.filename ?? 'Screenshot'}
           />
           <ActionButton
@@ -941,6 +950,8 @@ function formatTime(value?: string): string | undefined {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { gap: 14, padding: Layout.screenPadding, paddingBottom: 48 },
+  missingContent: { padding: Layout.screenPadding, gap: 12 },
+  missingImage: { width: '100%', height: 180, borderRadius: Radius.large },
   preview: {
     width: '100%',
     height: 210,
@@ -1029,6 +1040,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     color: Colors.dark.text,
     backgroundColor: Colors.dark.backgroundElement,
+    fontFamily: Fonts.sans,
     fontSize: 16,
   },
   timingGroup: { gap: 8 },

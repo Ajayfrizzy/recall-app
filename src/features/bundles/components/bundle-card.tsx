@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { FadeInView } from '@/components/motion';
 import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import type { RecallScreenshot } from '@/features/screenshots/types';
+import { ScreenshotImage } from '@/features/screenshots/components/screenshot-image';
 import type { BundleLifecycleCounts } from '../lifecycle';
 import type { BundleItemRef, RecallBundle } from '../types';
 
@@ -48,11 +49,12 @@ export function BundleCard({
           style={styles.content}
         >
           {representative ? (
-            <Image
-              source={{ uri: representative.uri }}
+            <ScreenshotImage
+              uri={representative.uri}
+              screenshotId={representative.id}
               style={styles.image}
-              resizeMode="cover"
               accessibilityLabel={`Preview for ${bundle.title}`}
+              compact
             />
           ) : (
             <View style={styles.placeholder} accessibilityLabel="Preview unavailable">
@@ -104,7 +106,7 @@ function lifecycleSummary(counts: BundleLifecycleCounts): string {
 const styles = StyleSheet.create({
   card: { overflow: 'hidden', borderRadius: 8 },
   content: { flexDirection: 'row', minHeight: 128 },
-  image: { width: 120, minHeight: 128, backgroundColor: Colors.dark.backgroundSelected },
+  image: { width: 120, minHeight: 128 },
   placeholder: {
     width: 120,
     minHeight: 128,

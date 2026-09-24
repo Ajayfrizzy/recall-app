@@ -56,6 +56,25 @@ assert.equal(
   'denied',
   'a revoked permission was not detected',
 );
+const restrictedThenRestored = [
+  getPermissionViewState({
+    permission: 'denied',
+    canAskAgain: false,
+    loading: false,
+    error: null,
+  }),
+  getPermissionViewState({
+    permission: 'granted',
+    canAskAgain: false,
+    loading: false,
+    error: null,
+  }),
+];
+assert.deepEqual(
+  restrictedThenRestored,
+  ['blocked', 'granted'],
+  'content did not recover after restricted media permission was restored',
+);
 assert.equal(
   getPermissionViewState({
     permission: 'granted',

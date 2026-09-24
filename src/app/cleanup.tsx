@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { ConfirmationModal } from '@/components/confirmation-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -11,6 +11,8 @@ import type { CleanupDeleteResult, ScreenshotCleanupCandidate } from '@/features
 import { useScreenshots } from '@/features/screenshots/context';
 import { useSubscription } from '@/features/subscription/context';
 import type { RecallScreenshot } from '@/features/screenshots/types';
+import { ScreenshotImage } from '@/features/screenshots/components/screenshot-image';
+import { formatScreenshotCreationDate } from '@/features/screenshots/creation-time';
 
 export default function CleanupRoute() {
   const {
@@ -132,17 +134,16 @@ function CleanupCard({
   onToggle: () => void;
   onOpen: () => void;
 }) {
-  const date = screenshot.creationTime
-    ? new Date(screenshot.creationTime).toLocaleDateString()
-    : undefined;
+  const date = formatScreenshotCreationDate(screenshot.creationTime);
   return (
     <ThemedView type="backgroundElement" style={styles.card}>
       <Pressable accessibilityRole="button" onPress={onOpen} style={styles.cardContent}>
-        <Image
-          source={{ uri: screenshot.uri }}
+        <ScreenshotImage
+          uri={screenshot.uri}
+          screenshotId={screenshot.id}
           style={styles.thumbnail}
-          resizeMode="cover"
           accessibilityLabel={screenshot.filename ?? 'Screenshot'}
+          compact
         />
         <View style={styles.cardDetails}>
           <ThemedText type="smallBold" numberOfLines={1}>
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: 40, gap: 6 },
   card: { overflow: 'hidden', borderRadius: Radius.medium },
   cardContent: { flexDirection: 'row', minHeight: 112 },
-  thumbnail: { width: 112, height: 112, backgroundColor: Colors.dark.backgroundSelected },
+  thumbnail: { width: 112, height: 112 },
   cardDetails: { flex: 1, justifyContent: 'center', padding: 12, gap: 3 },
   selection: {
     minHeight: 44,

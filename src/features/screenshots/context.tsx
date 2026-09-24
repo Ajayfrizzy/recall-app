@@ -33,6 +33,7 @@ import {
 import { ANALYSIS_VERSION } from '@/services/storage/types';
 import { useAiAccess } from '@/features/ai-access/context';
 import { shouldRequestSemanticAnalysis } from '@/services/ai/analysis-policy';
+import { restorePersistedScreenshotState, sortScreenshotsNewestFirst } from './records';
 
 type State = Record<string, RecallScreenshot>;
 type Action =
@@ -155,17 +156,13 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
   const loadForPermission = useCallback(async (nextPermission: ScreenshotPermission) => {
     if (nextPermission !== 'granted' && nextPermission !== 'limited') return null;
     const screenshots = await loadDeviceScreenshots(nextPermission);
-    const restoredScreenshots = screenshots.map((screenshot) => {
-      const restored = persistedScreenshotsRef.current[screenshot.id];
-      logScreenshotIdentity(screenshot, restored);
-      return restored
-        ? {
-            ...screenshot,
-            status: restored.status,
-            analysis: restored.analysis ?? screenshot.analysis,
-          }
-        : screenshot;
-    });
+    screenshots.forEach((screenshot) =>
+      logScreenshotIdentity(screenshot, persistedScreenshotsRef.current[screenshot.id]),
+    );
+    const restoredScreenshots = restorePersistedScreenshotState(
+      screenshots,
+      persistedScreenshotsRef.current,
+    );
     dispatch({
       type: 'replace',
       screenshots: restoredScreenshots,
@@ -397,9 +394,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
 
   const value = useMemo(
     () => ({
-      screenshots: Object.values(state).sort(
-        (a, b) => (b.creationTime ?? 0) - (a.creationTime ?? 0),
-      ),
+      screenshots: sortScreenshotsNewestFirst(Object.values(state)),
       permission,
       canAskAgain,
       loading,

@@ -12,7 +12,7 @@ import { ActionButton } from '@/components/action-button';
 import { FadeInView } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Radius } from '@/constants/theme';
+import { Colors, Fonts, Radius } from '@/constants/theme';
 import { useAiAccess } from '@/features/ai-access/context';
 import { useSubscription } from '@/features/subscription/context';
 import {
@@ -249,6 +249,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: 12,
     color: Colors.dark.text,
+    fontFamily: Fonts.sans,
     fontSize: 16,
   },
   error: { color: Colors.dark.danger },

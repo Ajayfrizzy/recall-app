@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { Colors } from '@/constants/theme';
 import { ThemedText } from '@/components/themed-text';
@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { usePersistence } from '@/features/persistence/context';
 import { useScreenshots } from '@/features/screenshots/context';
 import type { RecallItem } from '@/services/ai/types';
+import { ScreenshotImage } from '@/features/screenshots/components/screenshot-image';
 import type { BundleItemRef } from '../types';
 
 export function BundleItemRow({
@@ -41,7 +42,13 @@ export function BundleItemRow({
         style={styles.itemContent}
       >
         {screenshot ? (
-          <Image source={{ uri: screenshot.uri }} style={styles.thumbnail} resizeMode="cover" />
+          <ScreenshotImage
+            uri={screenshot.uri}
+            screenshotId={screenshot.id}
+            accessibilityLabel={screenshot.filename ?? 'Screenshot'}
+            style={styles.thumbnail}
+            compact
+          />
         ) : (
           <View style={styles.thumbnailPlaceholder}>
             <ThemedText type="small" themeColor="textSecondary">
@@ -93,7 +100,7 @@ function itemLabel(item: RecallItem | undefined, summary: string | undefined): s
 const styles = StyleSheet.create({
   itemRow: { overflow: 'hidden', borderRadius: 8 },
   itemContent: { flexDirection: 'row', minHeight: 104 },
-  thumbnail: { width: 104, height: 104, backgroundColor: Colors.dark.backgroundSelected },
+  thumbnail: { width: 104, height: 104 },
   thumbnailPlaceholder: {
     width: 104,
     height: 104,

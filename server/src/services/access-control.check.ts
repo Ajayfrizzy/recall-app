@@ -53,16 +53,27 @@ try {
   const baseConfig = config();
   let store = new AnalysisAccessStore(baseConfig);
   const invitation = store.createInvitation(baseTime);
-  expectCode(() => store.redeemInvitation('not-a-real-code', '10.0.0.1', baseTime), 'invalid_invitation');
+  expectCode(
+    () => store.redeemInvitation('not-a-real-code', '10.0.0.1', baseTime),
+    'invalid_invitation',
+  );
   const redeemed = store.redeemInvitation(invitation.code, '10.0.0.1', baseTime);
   assert.match(redeemed.accessToken, /^rcl_at_[A-Za-z0-9_-]+$/);
-  expectCode(() => store.redeemInvitation(invitation.code, '10.0.0.1', baseTime), 'invalid_invitation');
+  expectCode(
+    () => store.redeemInvitation(invitation.code, '10.0.0.1', baseTime),
+    'invitation_already_redeemed',
+  );
   expectCode(() => store.reserveAnalysis(undefined, 'a', false, baseTime), 'missing_access_token');
   expectCode(() => store.reserveAnalysis('invalid', 'a', false, baseTime), 'invalid_access_token');
 
   const first = store.reserveAnalysis(redeemed.accessToken, 'first', false, baseTime);
   assert.equal(first.kind, 'reserved');
-  if (first.kind === 'reserved') store.completeAnalysis(first.id, analysis, { inputTokens: 1000, cachedInputTokens: 200, outputTokens: 100 });
+  if (first.kind === 'reserved')
+    store.completeAnalysis(first.id, analysis, {
+      inputTokens: 1000,
+      cachedInputTokens: 200,
+      outputTokens: 100,
+    });
   const cached = store.reserveAnalysis(redeemed.accessToken, 'first', false, baseTime);
   assert.equal(cached.kind, 'cached', 'a valid saved analysis should be reused');
   const reanalysis = store.reserveAnalysis(redeemed.accessToken, 'first', true, baseTime);
@@ -73,7 +84,10 @@ try {
   store.close();
   store = new AnalysisAccessStore(baseConfig);
   assert.equal(store.getUsageSnapshot(baseTime).globalDailyCount, restartSnapshot.globalDailyCount);
-  assert.equal(store.reserveAnalysis(redeemed.accessToken, 'first', false, baseTime).kind, 'cached');
+  assert.equal(
+    store.reserveAnalysis(redeemed.accessToken, 'first', false, baseTime).kind,
+    'cached',
+  );
   const tokenId = store.listTokens()[0]?.id;
   assert(tokenId && store.revokeToken(tokenId, baseTime));
   expectCode(
@@ -90,6 +104,19 @@ try {
   );
   expiryStore.close();
 
+  const expiredInvitationStore = new AnalysisAccessStore(config());
+  const expiredInvitation = expiredInvitationStore.createInvitation(baseTime, 1);
+  expectCode(
+    () =>
+      expiredInvitationStore.redeemInvitation(
+        expiredInvitation.code,
+        '10.0.0.2',
+        baseTime + 86_400_001,
+      ),
+    'invitation_expired',
+  );
+  expiredInvitationStore.close();
+
   const quotaStore = new AnalysisAccessStore(
     config({ installationDailyLimit: 2, globalDailyLimit: 3 }),
   );
@@ -97,7 +124,8 @@ try {
   for (const fingerprint of ['one', 'two']) {
     const reservation = quotaStore.reserveAnalysis(firstToken, fingerprint, true, baseTime);
     assert.equal(reservation.kind, 'reserved');
-    if (reservation.kind === 'reserved') quotaStore.completeAnalysis(reservation.id, analysis, undefined);
+    if (reservation.kind === 'reserved')
+      quotaStore.completeAnalysis(reservation.id, analysis, undefined);
   }
   expectCode(
     () => quotaStore.reserveAnalysis(firstToken, 'three', true, baseTime),
@@ -108,6 +136,27 @@ try {
   assert.equal(reset.kind, 'reserved', 'quota should reset at the next UTC date');
   if (reset.kind === 'reserved') quotaStore.completeAnalysis(reset.id, analysis, undefined);
   quotaStore.close();
+
+  const globalQuotaStore = new AnalysisAccessStore(
+    config({ installationDailyLimit: 10, globalDailyLimit: 1 }),
+  );
+  const globalFirstToken = token(globalQuotaStore, baseTime);
+  const globalSecondToken = token(globalQuotaStore, baseTime);
+  const globalReservation = globalQuotaStore.reserveAnalysis(
+    globalFirstToken,
+    'global-one',
+    true,
+    baseTime,
+  );
+  assert.equal(globalReservation.kind, 'reserved');
+  if (globalReservation.kind === 'reserved') {
+    globalQuotaStore.completeAnalysis(globalReservation.id, analysis, undefined);
+  }
+  expectCode(
+    () => globalQuotaStore.reserveAnalysis(globalSecondToken, 'global-two', true, baseTime),
+    'global_allowance_exhausted',
+  );
+  globalQuotaStore.close();
 
   const concurrencyStore = new AnalysisAccessStore(config({ globalConcurrencyLimit: 2 }));
   const concurrentToken = token(concurrencyStore, baseTime);
@@ -123,8 +172,10 @@ try {
     () => concurrencyStore.reserveAnalysis(concurrentToken, 'active-1', true, baseTime),
     'duplicate_analysis_in_progress',
   );
-  if (activeOne.kind === 'reserved') concurrencyStore.completeAnalysis(activeOne.id, undefined, undefined);
-  if (activeTwo.kind === 'reserved') concurrencyStore.completeAnalysis(activeTwo.id, undefined, undefined);
+  if (activeOne.kind === 'reserved')
+    concurrencyStore.completeAnalysis(activeOne.id, undefined, undefined);
+  if (activeTwo.kind === 'reserved')
+    concurrencyStore.completeAnalysis(activeTwo.id, undefined, undefined);
   assert.equal(concurrencyStore.getUsageSnapshot(baseTime).activeCount, 0);
   concurrencyStore.close();
 
@@ -135,7 +186,8 @@ try {
   for (const fingerprint of ['spend-1', 'spend-2']) {
     const reservation = spendingStore.reserveAnalysis(spendingToken, fingerprint, true, baseTime);
     assert.equal(reservation.kind, 'reserved');
-    if (reservation.kind === 'reserved') spendingStore.completeAnalysis(reservation.id, undefined, undefined);
+    if (reservation.kind === 'reserved')
+      spendingStore.completeAnalysis(reservation.id, undefined, undefined);
   }
   expectCode(
     () => spendingStore.reserveAnalysis(spendingToken, 'spend-3', true, baseTime),
@@ -160,15 +212,29 @@ try {
   disabledStore.close();
 
   const bruteStore = new AnalysisAccessStore(config({ redemptionMaxFailures: 2 }));
-  expectCode(() => bruteStore.redeemInvitation('bad-1', '203.0.113.1', baseTime), 'invalid_invitation');
-  expectCode(() => bruteStore.redeemInvitation('bad-2', '203.0.113.1', baseTime), 'invalid_invitation');
+  expectCode(
+    () => bruteStore.redeemInvitation('bad-1', '203.0.113.1', baseTime),
+    'invalid_invitation',
+  );
+  expectCode(
+    () => bruteStore.redeemInvitation('bad-2', '203.0.113.1', baseTime),
+    'invalid_invitation',
+  );
   expectCode(
     () => bruteStore.redeemInvitation('bad-3', '203.0.113.1', baseTime),
     'redemption_rate_limited',
   );
+  const validAfterSharedFailures = bruteStore.createInvitation(baseTime);
+  assert.match(
+    bruteStore.redeemInvitation(validAfterSharedFailures.code, '203.0.113.1', baseTime).accessToken,
+    /^rcl_at_/,
+    'a valid invitation must not be blocked by failures sharing its IP address',
+  );
   bruteStore.close();
 
-  console.log('Invitation, authorization, quota, concurrency, persistence, and spending checks passed');
+  console.log(
+    'Invitation, authorization, quota, concurrency, persistence, and spending checks passed',
+  );
 } finally {
   for (const directory of directories) rmSync(directory, { recursive: true, force: true });
 }

@@ -76,7 +76,7 @@ function matchesScholarshipDeadline(text: string): boolean {
 
 export function isMockAnalysisEnabled(): boolean {
   return (
-    process.env.NODE_ENV !== 'production' &&
+    (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') &&
     process.env.MOCK_ANALYSIS?.trim().toLowerCase() === 'true'
   );
 }

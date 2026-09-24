@@ -30,6 +30,8 @@ import {
   type ScreenshotAnalysis,
 } from '@/services/understanding';
 import { ANALYSIS_VERSION } from '@/services/storage/types';
+import { useAiAccess } from '@/features/ai-access/context';
+import { shouldRequestSemanticAnalysis } from '@/services/ai/analysis-policy';
 
 type State = Record<string, RecallScreenshot>;
 type Action =
@@ -88,7 +90,10 @@ type ContextValue = {
   refresh: () => Promise<RecallScreenshot[] | null>;
   requestAccess: () => Promise<void>;
   setStatus: (id: string, status: ScreenshotStatus) => Promise<void>;
-  analyzeScreenshot: (id: string) => Promise<void>;
+  analyzeScreenshot: (
+    id: string,
+    options?: { useAi?: boolean; reanalyze?: boolean },
+  ) => Promise<void>;
   semanticAnalysisAcknowledged: boolean;
   acknowledgeSemanticAnalysis: () => void;
 };
@@ -130,6 +135,7 @@ function logAnalysisIdentity(
 
 export function ScreenshotProvider({ children }: PropsWithChildren) {
   const { state: persistedState, updateState } = usePersistence();
+  const { getAccessToken, invalidateCredentials } = useAiAccess();
   const persistedScreenshotsRef = useRef(persistedState.screenshots);
   const [state, dispatch] = useReducer(reducer, {});
   const [permission, setPermission] = useState<ScreenshotPermission | null>(null);
@@ -201,11 +207,11 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
   }, [refresh]);
 
   const analyzeScreenshot = useCallback(
-    async (id: string) => {
+    async (id: string, options?: { useAi?: boolean; reanalyze?: boolean }) => {
       const screenshot = state[id];
       if (
         !screenshot ||
-        screenshot.analysis.status === 'complete' ||
+        (screenshot.analysis.status === 'complete' && !options?.reanalyze) ||
         analysesInFlight.current.has(id)
       ) {
         return;
@@ -230,16 +236,33 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           ...understandScreenshotText(ocr.text),
         };
         let finalAnalysis = localAnalysis;
-        if (semanticAnalysisAcknowledgedRef.current) {
+        const accessToken = getAccessToken();
+        const shouldUseAi = shouldRequestSemanticAnalysis({
+          acknowledged: semanticAnalysisAcknowledgedRef.current,
+          accessToken,
+          useAi: options?.useAi,
+        });
+        if (shouldUseAi && accessToken) {
           try {
             const semantic = await analyzeScreenshotSemantically({
               uri: screenshot.uri,
               ocrText: ocr.text,
               metadata: screenshot,
+              accessToken,
+              reanalyze: options?.reanalyze === true,
             });
             finalAnalysis = { ...localAnalysis, semantic, analysisSource: 'semantic' };
           } catch (semanticError) {
             if (!(semanticError instanceof SemanticAnalysisError)) throw semanticError;
+            if (
+              semanticError.code === 'invalid_access_token' ||
+              semanticError.code === 'access_token_expired' ||
+              semanticError.code === 'access_token_revoked'
+            ) {
+              await invalidateCredentials(
+                semanticError.code === 'access_token_expired' ? 'expired' : 'revoked',
+              );
+            }
             finalAnalysis = {
               ...localAnalysis,
               error: semanticError.message,
@@ -293,7 +316,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
         analysesInFlight.current.delete(id);
       }
     },
-    [state, updateState],
+    [state, updateState, getAccessToken, invalidateCredentials],
   );
 
   const setStatus = useCallback(

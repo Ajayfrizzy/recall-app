@@ -56,6 +56,8 @@ export type AccessErrorCode =
   | 'estimated_spending_limit_exhausted'
   | 'duplicate_analysis_in_progress'
   | 'invalid_invitation'
+  | 'invitation_already_redeemed'
+  | 'invitation_expired'
   | 'redemption_rate_limited';
 
 export class AccessControlError extends Error {

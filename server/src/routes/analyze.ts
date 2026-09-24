@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import {
@@ -55,31 +56,36 @@ export async function analyzeRoute(
   }
 
   try {
-    checkAnalysisRateLimit(request.socket.remoteAddress);
+    const rawToken = bearerToken(request.headers.authorization);
+    const limiterKey = rawToken
+      ? `token:${createHash('sha256').update(rawToken).digest('hex')}`
+      : `address:${request.socket.remoteAddress ?? 'unknown'}`;
+    checkAnalysisRateLimit(limiterKey);
     const body = AnalyzeRequestSchema.parse(await readBody(request));
     const imageDataUrl = body.imageDataUrl ?? `data:image/jpeg;base64,${body.imageBase64}`;
-    if (isMockAnalysisEnabled()) {
-      sendJson(response, 200, analyzeWithMock(body.ocrText));
-      return;
-    }
-
     const access = getAnalysisAccessStore();
     const fingerprint = access.fingerprint([
       imageDataUrl,
       body.ocrText,
       JSON.stringify(body.screenshotMetadata ?? {}),
     ]);
-    const reservation = access.reserveAnalysis(
-      bearerToken(request.headers.authorization),
-      fingerprint,
-      body.reanalyze,
-    );
+    const reservation = access.reserveAnalysis(rawToken, fingerprint, body.reanalyze);
     if (reservation.kind === 'cached') {
       sendJson(response, 200, reservation.analysis);
       return;
     }
 
     try {
+      if (isMockAnalysisEnabled()) {
+        const analysis = analyzeWithMock(body.ocrText);
+        access.completeAnalysis(reservation.id, analysis, {
+          inputTokens: 0,
+          cachedInputTokens: 0,
+          outputTokens: 0,
+        });
+        sendJson(response, 200, analysis);
+        return;
+      }
       const result = await analyzeWithOpenAI({
         imageDataUrl,
         ocrText: body.ocrText,

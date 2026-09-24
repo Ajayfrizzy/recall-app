@@ -1,9 +1,12 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSubscription } from '@/features/subscription/context';
+import { useAiAccess } from '@/features/ai-access/context';
+import { ConfirmationModal } from '@/components/confirmation-modal';
 
 const PACKAGE_PERIOD_LABELS: Record<string, string> = {
   WEEKLY: 'week',
@@ -16,7 +19,11 @@ const PACKAGE_PERIOD_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [activeAction, setActiveAction] = useState<'upgrade' | 'restore' | 'retry'>();
+  const [confirmDeactivation, setConfirmDeactivation] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+  const aiAccess = useAiAccess();
   const {
     initialized,
     loading,
@@ -38,6 +45,48 @@ export default function ProfileScreen() {
         <ThemedText themeColor="textSecondary">
           Manage your Recall preferences and subscription.
         </ThemedText>
+
+        <ThemedView type="backgroundElement" style={styles.card}>
+          <ThemedText type="smallBold">AI Access</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            {aiAccess.authorizationState === 'loading'
+              ? 'Checking secure AI access…'
+              : aiAccess.authorizationState === 'active'
+                ? 'Recall AI is active.'
+                : aiAccess.authorizationState === 'expired'
+                  ? 'Your AI access has expired.'
+                  : 'Recall AI is not activated.'}
+          </ThemedText>
+          {aiAccess.expiresAt ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              Access expires {new Date(aiAccess.expiresAt).toLocaleDateString()}.
+            </ThemedText>
+          ) : null}
+          <ThemedText type="small" themeColor="textSecondary">
+            Invitation access is separate from Recall Pro and its subscription benefits.
+          </ThemedText>
+          {aiAccess.activated ? (
+            <View style={styles.aiActions}>
+              <ActionButton
+                label="Replace Access"
+                variant="secondary"
+                onPress={() => router.push('/ai-access')}
+              />
+              <ActionButton
+                label="Deactivate"
+                variant="ghost"
+                state={deactivating ? 'loading' : 'idle'}
+                onPress={() => setConfirmDeactivation(true)}
+              />
+            </View>
+          ) : (
+            <ActionButton
+              label="Activate AI"
+              state={aiAccess.initialized ? 'idle' : 'disabled'}
+              onPress={() => router.push('/ai-access')}
+            />
+          )}
+        </ThemedView>
 
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="smallBold">{isPro ? 'Recall Pro' : 'Recall Free'}</ThemedText>
@@ -120,6 +169,19 @@ export default function ProfileScreen() {
           ) : null}
         </ThemedView>
       </ScrollView>
+      <ConfirmationModal
+        visible={confirmDeactivation}
+        title="Deactivate Recall AI?"
+        message="This removes the installation token from this device. A new invitation code will be required to activate AI again."
+        confirmLabel="Deactivate"
+        destructive
+        onCancel={() => setConfirmDeactivation(false)}
+        onConfirm={() => {
+          setConfirmDeactivation(false);
+          setDeactivating(true);
+          void aiAccess.deactivate().finally(() => setDeactivating(false));
+        }}
+      />
     </ThemedView>
   );
 }
@@ -130,4 +192,5 @@ const styles = StyleSheet.create({
   card: { marginTop: 8, padding: 18, borderRadius: 8, gap: 12 },
   benefits: { gap: 4 },
   errorBlock: { gap: 2 },
+  aiActions: { gap: 8 },
 });

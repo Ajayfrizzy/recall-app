@@ -2,6 +2,11 @@
 
 ## Implemented
 
+- Added invitation activation, SecureStore-backed installation credentials, startup expiration handling, and Profile access status/deactivation without coupling AI access to Recall Pro.
+- Added Bearer authorization for real and mock analysis, backend error-code mapping, local fallback, credential clearing on invalid/expired/revoked access, and an explicit activation path when access is missing.
+- Added mobile cache/reanalysis behavior: normal requests allow server cache reuse, while only the user-facing reanalysis action sends `reanalyze: true`.
+- Hardened mock/deployment configuration, made valid invitations resilient to unrelated shared-IP failures, and keyed the supplemental analysis limiter by hashed installation token rather than shared network address.
+- Added focused AI access checks and extended backend checks for invitation state and global quota exhaustion.
 - Consolidated the visual system around Recall's dark surfaces, blue accent, spacing, radii, borders, typography, and accessible touch targets.
 - Added a shared animated action button with idle, pressed, loading, success, and disabled presentation. Motion follows the device reduced-motion preference.
 - Compacted Screenshot Detail, added tap-to-expand image viewing, a reduced-motion-aware analysis scan, clearer long-request copy, smooth result entry, readable semantic dates, and scannable multi-item cards.

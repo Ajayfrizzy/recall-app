@@ -19,6 +19,7 @@
     "expo-notifications": "~57.0.20",
     "expo-ocr-kit": "^0.1.4",
     "expo-router": "~57.0.22",
+    "expo-secure-store": "~57.0.4",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
@@ -55,6 +56,7 @@
     "resurfacing:check": "server/node_modules/.bin/tsx src/features/resurfacing/resurfacing.check.ts",
     "cleanup:check": "server/node_modules/.bin/tsx src/features/cleanup/cleanup.check.ts",
     "subscription:check": "server/node_modules/.bin/tsx src/features/subscription/subscription.check.ts",
+    "ai-access:check": "server/node_modules/.bin/tsx src/services/ai/access-client.check.ts",
     "release:config-check": "node --env-file-if-exists=.env scripts/check-release-config.mjs"
   },
   "private": true

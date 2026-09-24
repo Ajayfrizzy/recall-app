@@ -22,6 +22,11 @@ assert.notEqual(
   'true',
   'EXPO_PUBLIC_DEV_FORCE_PRO must not be enabled in a preview build.',
 );
+assert.notEqual(
+  process.env.EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP?.trim().toLowerCase(),
+  'true',
+  'EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP must not be enabled in a preview build.',
+);
 
 const [appConfig, easConfig] = await Promise.all([
   readFile(new URL('../app.json', import.meta.url), 'utf8'),

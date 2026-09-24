@@ -6,6 +6,7 @@ Milestone 10 is not a completed release candidate until the physical Android che
 
 - Use the EAS `preview` profile to produce a standalone Android APK.
 - Configure the EAS `preview` environment with `EXPO_PUBLIC_ANALYSIS_API_URL` and `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`.
+- Do not set `EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP` in preview or production.
 - Set `EXPO_PUBLIC_ANALYSIS_API_URL` to a public HTTPS backend. Do not use localhost, `10.0.2.2`, a LAN IP, or a Metro URL.
 - Keep `EXPO_PUBLIC_DEV_FORCE_PRO` unset or `false`.
 - Keep `OPENAI_API_KEY` only on the backend. Never add it to Expo or EAS public variables.
@@ -21,6 +22,7 @@ npx tsc --noEmit
 cd server && npm run typecheck && npm run fixtures:check && npm run format:check
 cd ..
 npm run actions:check
+npm run ai-access:check
 npm run persistence:check
 npm run bundles:check
 npm run resurfacing:check
@@ -59,6 +61,23 @@ Record failures instead of describing untested behavior as passed.
 - [ ] Disable connectivity, use an unreachable backend, and simulate timeout/provider failure separately. Each must finish with an on-device result or concise retry state, with no provider internals and no automatic paid retry.
 - [ ] Confirm extracted text can still be expanded and collapsed.
 - [ ] Confirm long summaries and multiple item cards remain readable at large font scale.
+
+### AI invitation access
+
+- [ ] Fresh-install without an invitation. Skip activation; Inbox, Library, Upcoming, Profile, OCR, classification, and on-device analysis must remain usable.
+- [ ] Enter an invalid invitation. Confirm the concise error and that repeated taps create only one redemption request.
+- [ ] Redeem a fresh invitation. Confirm success, Profile shows active access and its expiration date, and no token is visible.
+- [ ] Force-stop and reopen. Confirm active access is restored from SecureStore without Metro.
+- [ ] With `MOCK_ANALYSIS=false`, analyze one prepared screenshot and confirm GPT-5 mini output. Do this once; never use live calls for quota tests.
+- [ ] Analyze the same screenshot through a normal eligible request and verify the server cache is returned without increasing the daily count.
+- [ ] Tap **Reanalyze with Recall AI** once and verify `reanalyze: true` creates one new charged reservation.
+- [ ] Revoke its token ID with `npm run access:admin -- revoke-token TOKEN_ID`; retry and confirm the token is cleared and activation becomes available. Repeat expiration with a short-lived test token or mocked response.
+- [ ] Simulate installation and global daily exhaustion with mocked responses or reduced non-production limits. Confirm on-device results remain and the token is preserved.
+- [ ] Simulate spending-ceiling, shutdown, busy, duplicate, provider failure, and timeout responses. Confirm concise messages, no automatic retry, and no credential deletion for temporary/quota failures.
+- [ ] Launch offline and analyze. Confirm OCR/local classification completes with a network fallback message and no retry loop.
+- [ ] Verify Profile states: checking, not activated, active with expiration, expired, replace, and confirmed local deactivation.
+- [ ] Purchase/restore Recall Pro independently. Confirm Pro does not activate AI or bypass invitation/quota protections.
+- [ ] Reinstall the standalone APK and launch with Metro stopped. Verify expected platform credential persistence behavior and all local-only features.
 
 ### Semantic regression cases
 

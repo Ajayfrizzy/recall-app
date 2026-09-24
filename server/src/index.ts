@@ -3,6 +3,19 @@ import { createServer } from 'node:http';
 import { redeemAccessRoute } from './routes/access.js';
 import { analyzeRoute } from './routes/analyze.js';
 
+function validateDeploymentConfiguration(): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  if (process.env.MOCK_ANALYSIS?.trim().toLowerCase() === 'true') {
+    throw new Error('MOCK_ANALYSIS cannot be enabled in production.');
+  }
+  const publicUrl = process.env.RECALL_PUBLIC_BASE_URL?.trim();
+  if (!publicUrl || new URL(publicUrl).protocol !== 'https:') {
+    throw new Error('RECALL_PUBLIC_BASE_URL must be an HTTPS URL in production.');
+  }
+}
+
+validateDeploymentConfiguration();
+
 const port = Number(process.env.PORT ?? 8787);
 const origin = process.env.ALLOWED_ORIGIN ?? 'http://localhost:8081';
 

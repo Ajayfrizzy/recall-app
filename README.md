@@ -19,6 +19,7 @@ Recall reads screenshot text on-device, optionally uses server-side vision analy
 - Reviewed Screenshot Cleanup with explicit Gallery deletion confirmation
 - Recall Pro subscriptions and a RevenueCat-managed paywall
 - Local persistence for app state and analysis results
+- Invitation-protected AI access with encrypted installation-token storage
 
 ## Architecture
 
@@ -28,7 +29,7 @@ Screenshot → on-device OCR → compressed image + OCR text → Recall backend
            → Actions / Bundles / Resurfacing / Cleanup
 ```
 
-The mobile app uses Expo SDK 57 and React Native. It integrates Media Library, OCR, AsyncStorage, Calendar, Notifications, and RevenueCat. The Node/TypeScript backend accepts one prepared screenshot per request and calls the OpenAI Responses API. Its output must conform to the shared `RecallAnalysis` shape before it reaches the app, where it is validated again.
+The mobile app uses Expo SDK 57 and React Native. It integrates Media Library, OCR, AsyncStorage, Calendar, Notifications, and RevenueCat. The Node/TypeScript backend accepts one prepared screenshot per request and calls the OpenAI Responses API. Its output must conform to the shared `RecallAnalysis` shape before it reaches the app, where it is validated again. `POST /access/redeem` exchanges a single-use invitation for an expiring installation token; `POST /analyze` requires that token as a Bearer credential.
 
 ## AI analysis
 
@@ -36,7 +37,15 @@ Real analysis uses `gpt-5-mini` by default through the OpenAI Responses API. A c
 
 OpenAI usage is server-side and pay-as-you-go. The model is configurable with `OPENAI_MODEL`; no OpenAI key belongs in the mobile bundle.
 
-`MOCK_ANALYSIS=true` keeps deterministic fixture analysis available for development. Mock mode is development-only; the final demo should use real AI with `MOCK_ANALYSIS=false`.
+`MOCK_ANALYSIS=true` keeps deterministic fixture analysis available only when `NODE_ENV` is `development` or `test`. Mock requests still require valid installation access. The final demo should use real AI with `MOCK_ANALYSIS=false`.
+
+### Invitation access and safeguards
+
+AI invitation access is not an account and is separate from Recall Pro. RevenueCat's `pro` entitlement controls product features; it does not bypass AI invitations, quotas, shutdown, or the spending ceiling. Full user authentication and cross-device identity are future work.
+
+The backend hashes tokens in SQLite, isolates cached results by installation, and persists quota/cache records across restarts. Defaults are 10 analyses per installation per UTC day, 40 globally per UTC day, two concurrent requests, and a $1.50 estimated monthly ceiling. A normal repeat can use the server cache without consuming another allowance; only the explicit **Reanalyze with Recall AI** action sends `reanalyze: true`.
+
+The mobile app stores only the access token and expiration in `expo-secure-store`, never AsyncStorage. Expired, revoked, or invalid credentials are removed locally. Invitation codes and tokens must not be placed in source, APK configuration, EAS variables, or logs.
 
 ## RevenueCat integration
 
@@ -67,7 +76,7 @@ cp .env.example .env
 npm run start
 ```
 
-Set `EXPO_PUBLIC_ANALYSIS_API_URL` to a backend URL reachable from the device, such as `http://192.168.x.x:8787`. Do not use `localhost` for a separate physical Android device.
+Set `EXPO_PUBLIC_ANALYSIS_API_URL` to a backend URL reachable from the device, such as `http://192.168.x.x:8787`. Do not use `localhost` for a separate physical Android device. Local HTTP additionally requires `EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP=true` in a development build. Preview and production builds require HTTPS.
 
 ## Backend setup
 
@@ -78,7 +87,18 @@ cp .env.example .env
 npm run dev
 ```
 
-The server exposes `GET /health` and `POST /analyze`. For a real-AI run, place the secret only in `server/.env` or the backend host's secret manager.
+The server exposes `GET /health`, `POST /access/redeem`, and protected `POST /analyze`. For a real-AI run, place secrets only in `server/.env` or the backend host's secret manager.
+
+Generate invitations and administer installation access from the server directory:
+
+```sh
+npm run access:admin -- create-invitations 3
+npm run access:admin -- list-tokens
+npm run access:admin -- revoke-token TOKEN_ID
+npm run access:admin -- usage
+```
+
+Share invitations privately. Testers open **Profile → Activate AI** and enter a code once. Revocation uses the opaque token ID shown by `list-tokens`; the raw token is never displayed by the admin command.
 
 ## Environment variables
 
@@ -86,6 +106,7 @@ Mobile (`.env`):
 
 ```dotenv
 EXPO_PUBLIC_ANALYSIS_API_URL=http://YOUR_LAN_IP:8787
+EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP=true
 EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=test_YOUR_PUBLIC_ANDROID_SDK_KEY
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=test_YOUR_PUBLIC_IOS_SDK_KEY
 EXPO_PUBLIC_DEV_FORCE_PRO=false
@@ -94,6 +115,7 @@ EXPO_PUBLIC_DEV_FORCE_PRO=false
 Backend (`server/.env`):
 
 ```dotenv
+NODE_ENV=development
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5-mini
 OPENAI_REQUEST_TIMEOUT_MS=45000
@@ -103,6 +125,7 @@ OPENAI_ERROR_DETAILS=false
 MOCK_ANALYSIS=false
 PORT=8787
 ALLOWED_ORIGIN=http://localhost:8081
+RECALL_PUBLIC_BASE_URL=http://localhost:8787
 ```
 
 `OPENAI_REQUEST_TIMEOUT_MS` accepts 5000–120000 milliseconds and falls back to 45000
@@ -111,7 +134,7 @@ when absent or invalid. `OPENAI_REASONING_EFFORT` accepts `minimal`, `low`, `med
 back to `low`. Keep `OPENAI_ERROR_DETAILS=false` unless concise provider messages are
 needed during development.
 
-Never prefix `OPENAI_API_KEY` with `EXPO_PUBLIC_` or place it in Expo configuration. In production, restrict `ALLOWED_ORIGIN` where the client environment makes that effective and keep the server behind HTTPS.
+Never prefix `OPENAI_API_KEY`, an invitation, or an installation token with `EXPO_PUBLIC_`, or place one in Expo/EAS configuration. In production, set `NODE_ENV=production`, `MOCK_ANALYSIS=false`, a high-entropy `RECALL_TOKEN_PEPPER`, `AI_ANALYSIS_ENABLED=true`, and an HTTPS `RECALL_PUBLIC_BASE_URL`; terminate TLS at the service or a trusted reverse proxy. Restrict `ALLOWED_ORIGIN` where the client environment makes that effective. Back up the SQLite database if invitation, revocation, quota, and cache continuity must survive host replacement.
 
 ## Development build
 
@@ -143,7 +166,8 @@ See [docs/demo-script.md](docs/demo-script.md) for the timed version.
 ## Known limitations
 
 - Physical-device AI quality depends on screenshot clarity, OCR quality, connectivity, and provider availability.
-- The hackathon backend uses an in-memory per-address rate limit and has no user authentication or durable distributed rate limiting.
+- The hackathon backend has installation access rather than full user authentication. Its supplemental request limiter is in-memory; durable quotas and spending state are SQLite-backed.
+- Access is installation-local and cannot sync across devices. Clearing/reinstall behavior follows platform SecureStore/Keychain behavior.
 - CORS is not an authentication boundary for native clients.
 - Exact date/time actions still require user review when the screenshot is incomplete.
 - RevenueCat offerings and products must be configured in its dashboard.

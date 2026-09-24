@@ -158,3 +158,5 @@ server/data/
 .claude/
 AGENTS.md
 CLAUDE.md
+
+call.md

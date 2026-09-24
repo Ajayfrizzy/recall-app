@@ -37,6 +37,13 @@ type TokenRow = {
   revoked_at: number | null;
 };
 
+type InvitationRow = {
+  id: string;
+  expires_at: number;
+  redeemed_at: number | null;
+  revoked_at: number | null;
+};
+
 type ReservationRow = {
   id: string;
   token_id: string;
@@ -83,10 +90,7 @@ export function getAccessConfig(env: Environment = process.env): AccessConfig {
       dollarEnv(env.AI_REQUEST_RESERVATION_USD, 0.05) * 1_000_000,
     ),
     inputPricePerMillionUsd: dollarEnv(env.OPENAI_INPUT_PRICE_PER_MILLION_USD, 0.25),
-    cachedInputPricePerMillionUsd: dollarEnv(
-      env.OPENAI_CACHED_INPUT_PRICE_PER_MILLION_USD,
-      0.025,
-    ),
+    cachedInputPricePerMillionUsd: dollarEnv(env.OPENAI_CACHED_INPUT_PRICE_PER_MILLION_USD, 0.025),
     outputPricePerMillionUsd: dollarEnv(env.OPENAI_OUTPUT_PRICE_PER_MILLION_USD, 2),
     reservationTtlMs: timeoutMs + 15_000,
   };
@@ -118,7 +122,8 @@ export class AnalysisAccessStore {
     if (!config.tokenPepper) {
       throw new Error('RECALL_TOKEN_PEPPER is required for access-token hashing.');
     }
-    if (config.databasePath !== ':memory:') mkdirSync(dirname(config.databasePath), { recursive: true });
+    if (config.databasePath !== ':memory:')
+      mkdirSync(dirname(config.databasePath), { recursive: true });
     this.database = new DatabaseSync(config.databasePath);
     this.database.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
     if (config.databasePath !== ':memory:') this.database.exec('PRAGMA journal_mode = WAL;');
@@ -217,9 +222,7 @@ export class AnalysisAccessStore {
     const code = invitationCode();
     const expiresAt = now + ttlDays * 86_400_000;
     this.database
-      .prepare(
-        'INSERT INTO invitations(id, code_hash, created_at, expires_at) VALUES (?, ?, ?, ?)',
-      )
+      .prepare('INSERT INTO invitations(id, code_hash, created_at, expires_at) VALUES (?, ?, ?, ?)')
       .run(randomUUID(), this.hash('invitation', normalizeInvitation(code)), now, expiresAt);
     return { code, expiresAt };
   }
@@ -230,37 +233,56 @@ export class AnalysisAccessStore {
     now = Date.now(),
   ): { accessToken: string; expiresAt: number } {
     const result = this.transaction<
-      { ok: true; accessToken: string; expiresAt: number } | { ok: false }
+      | { ok: true; accessToken: string; expiresAt: number }
+      | {
+          ok: false;
+          code: 'invalid_invitation' | 'invitation_already_redeemed' | 'invitation_expired';
+        }
     >(() => {
       const addressHash = this.hash('address', remoteAddress || 'unknown');
       const cutoff = now - this.config.redemptionWindowMinutes * 60_000;
       this.database.prepare('DELETE FROM redemption_failures WHERE attempted_at < ?').run(cutoff);
-      const failures = this.database
-        .prepare(
-          'SELECT COUNT(*) AS count FROM redemption_failures WHERE address_hash = ? AND attempted_at >= ?',
-        )
-        .get(addressHash, cutoff) as { count: number };
-      if (failures.count >= this.config.redemptionMaxFailures) {
-        throw new AccessControlError('redemption_rate_limited', 429);
-      }
 
       const invitation = this.database
         .prepare(
-          `SELECT id FROM invitations
-           WHERE code_hash = ? AND redeemed_at IS NULL AND revoked_at IS NULL AND expires_at > ?`,
+          `SELECT id, expires_at, redeemed_at, revoked_at FROM invitations WHERE code_hash = ?`,
         )
-        .get(this.hash('invitation', normalizeInvitation(code)), now) as { id: string } | undefined;
-      if (!invitation) {
+        .get(this.hash('invitation', normalizeInvitation(code))) as InvitationRow | undefined;
+
+      const invitationIsUsable =
+        invitation &&
+        invitation.redeemed_at === null &&
+        invitation.revoked_at === null &&
+        invitation.expires_at > now;
+
+      // A valid invitation must not be blocked by failures from other testers on the same NAT IP.
+      if (!invitationIsUsable) {
+        const failures = this.database
+          .prepare(
+            'SELECT COUNT(*) AS count FROM redemption_failures WHERE address_hash = ? AND attempted_at >= ?',
+          )
+          .get(addressHash, cutoff) as { count: number };
+        if (failures.count >= this.config.redemptionMaxFailures) {
+          throw new AccessControlError('redemption_rate_limited', 429);
+        }
         this.database
           .prepare('INSERT INTO redemption_failures(address_hash, attempted_at) VALUES (?, ?)')
           .run(addressHash, now);
-        return { ok: false };
+        if (invitation?.redeemed_at !== null && invitation?.redeemed_at !== undefined) {
+          return { ok: false, code: 'invitation_already_redeemed' };
+        }
+        if (invitation && invitation.expires_at <= now) {
+          return { ok: false, code: 'invitation_expired' };
+        }
+        return { ok: false, code: 'invalid_invitation' };
       }
 
       const redeemed = this.database
         .prepare('UPDATE invitations SET redeemed_at = ? WHERE id = ? AND redeemed_at IS NULL')
         .run(now, invitation.id);
-      if (redeemed.changes !== 1) return { ok: false };
+      if (redeemed.changes !== 1) {
+        return { ok: false, code: 'invitation_already_redeemed' };
+      }
 
       const accessToken = `rcl_at_${randomBytes(32).toString('base64url')}`;
       const expiresAt = now + this.config.tokenTtlDays * 86_400_000;
@@ -272,32 +294,37 @@ export class AnalysisAccessStore {
         .run(randomUUID(), this.hash('token', accessToken), now, expiresAt);
       return { ok: true, accessToken, expiresAt };
     });
-    if (!result.ok) throw new AccessControlError('invalid_invitation', 400);
+    if (!result.ok) throw new AccessControlError(result.code, 400);
     return { accessToken: result.accessToken, expiresAt: result.expiresAt };
   }
 
   revokeToken(tokenId: string, now = Date.now()): boolean {
     return (
       this.database
-        .prepare('UPDATE installation_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL')
+        .prepare(
+          'UPDATE installation_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL',
+        )
         .run(now, tokenId).changes === 1
     );
   }
 
-  listTokens(): Array<{ id: string; createdAt: number; expiresAt: number; revokedAt: number | null }> {
-    return (
-      this.database
-        .prepare(
-          `SELECT id, created_at AS createdAt, expires_at AS expiresAt, revoked_at AS revokedAt
+  listTokens(): Array<{
+    id: string;
+    createdAt: number;
+    expiresAt: number;
+    revokedAt: number | null;
+  }> {
+    return this.database
+      .prepare(
+        `SELECT id, created_at AS createdAt, expires_at AS expiresAt, revoked_at AS revokedAt
            FROM installation_tokens ORDER BY created_at DESC`,
-        )
-        .all() as Array<{
-        id: string;
-        createdAt: number;
-        expiresAt: number;
-        revokedAt: number | null;
-      }>
-    );
+      )
+      .all() as Array<{
+      id: string;
+      createdAt: number;
+      expiresAt: number;
+      revokedAt: number | null;
+    }>;
   }
 
   private tokenFor(rawToken: string | undefined, now: number): TokenRow {
@@ -342,7 +369,9 @@ export class AnalysisAccessStore {
       const token = this.tokenFor(rawToken, now);
       if (!force) {
         const cached = this.database
-          .prepare('SELECT analysis_json FROM analysis_cache WHERE token_id = ? AND fingerprint = ?')
+          .prepare(
+            'SELECT analysis_json FROM analysis_cache WHERE token_id = ? AND fingerprint = ?',
+          )
           .get(token.id, fingerprint) as { analysis_json: string } | undefined;
         if (cached) return { kind: 'cached', analysis: JSON.parse(cached.analysis_json) };
       }
@@ -458,9 +487,7 @@ export class AnalysisAccessStore {
         .prepare('SELECT * FROM active_analysis_requests WHERE id = ?')
         .get(reservationId) as ReservationRow | undefined;
       if (!reservation) return;
-      const estimated = usage
-        ? this.estimateUsageMicroUsd(usage)
-        : reservation.reserved_micro_usd;
+      const estimated = usage ? this.estimateUsageMicroUsd(usage) : reservation.reserved_micro_usd;
       this.database
         .prepare(
           `UPDATE monthly_estimated_spending
@@ -477,12 +504,7 @@ export class AnalysisAccessStore {
              ON CONFLICT(token_id, fingerprint) DO UPDATE SET
                analysis_json = excluded.analysis_json, created_at = excluded.created_at`,
           )
-          .run(
-            reservation.token_id,
-            reservation.fingerprint,
-            JSON.stringify(analysis),
-            now,
-          );
+          .run(reservation.token_id, reservation.fingerprint, JSON.stringify(analysis), now);
       }
       this.database.prepare('DELETE FROM active_analysis_requests WHERE id = ?').run(reservationId);
     });
@@ -502,8 +524,7 @@ export class AnalysisAccessStore {
         'SELECT estimated_micro_usd, reserved_micro_usd FROM monthly_estimated_spending WHERE month_key = ?',
       )
       .get(utcMonth(now)) as
-      | { estimated_micro_usd: number; reserved_micro_usd: number }
-      | undefined;
+      { estimated_micro_usd: number; reserved_micro_usd: number } | undefined;
     const active = this.database
       .prepare('SELECT COUNT(*) AS count FROM active_analysis_requests')
       .get() as { count: number };

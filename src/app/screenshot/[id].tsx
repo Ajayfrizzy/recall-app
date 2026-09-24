@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -46,6 +46,7 @@ import type {
   ScreenshotCategory,
   SuggestedAction,
 } from '@/services/understanding';
+import { useAiAccess } from '@/features/ai-access/context';
 
 const CATEGORY_LABELS: Record<ScreenshotCategory, string> = {
   event: 'Event',
@@ -76,6 +77,8 @@ const COMPLETED_LABELS: Record<RecallActionType, string> = {
 
 export default function ScreenshotRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const aiAccess = useAiAccess();
   const [showExtractedText, setShowExtractedText] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
   const {
@@ -153,8 +156,11 @@ export default function ScreenshotRoute() {
           showExtractedText={showExtractedText}
           semanticAnalysisAcknowledged={semanticAnalysisAcknowledged}
           acknowledgeSemanticAnalysis={acknowledgeSemanticAnalysis}
+          aiAccessInitialized={aiAccess.initialized}
+          aiActivated={aiAccess.activated}
+          onActivateAi={() => router.push('/ai-access')}
           onToggleExtractedText={() => setShowExtractedText((current) => !current)}
-          onAnalyze={() => void analyzeScreenshot(screenshot.id)}
+          onAnalyze={(options) => void analyzeScreenshot(screenshot.id, options)}
         />
       </ScrollView>
       <Modal
@@ -209,14 +215,20 @@ function AnalysisSection({
   onAnalyze,
   semanticAnalysisAcknowledged,
   acknowledgeSemanticAnalysis,
+  aiAccessInitialized,
+  aiActivated,
+  onActivateAi,
 }: {
   screenshotId: string;
   analysis: ScreenshotAnalysis;
   showExtractedText: boolean;
   onToggleExtractedText: () => void;
-  onAnalyze: () => void;
+  onAnalyze: (options?: { useAi?: boolean; reanalyze?: boolean }) => void;
   semanticAnalysisAcknowledged: boolean;
   acknowledgeSemanticAnalysis: () => void;
+  aiAccessInitialized: boolean;
+  aiActivated: boolean;
+  onActivateAi: () => void;
 }) {
   return (
     <View style={styles.analysis}>
@@ -232,19 +244,49 @@ function AnalysisSection({
                 of this screenshot and its extracted text to its AI analysis service. Recall will
                 not act on the result without your choice.
               </ThemedText>
-              <PrimaryButton
-                label="Continue with Secure Analysis"
-                onPress={() => {
-                  acknowledgeSemanticAnalysis();
-                  onAnalyze();
-                }}
-              />
-              <Pressable accessibilityRole="button" onPress={onAnalyze} style={styles.textToggle}>
+              {aiActivated ? (
+                <PrimaryButton
+                  label="Continue with Secure Analysis"
+                  onPress={() => {
+                    acknowledgeSemanticAnalysis();
+                    onAnalyze({ useAi: true });
+                  }}
+                />
+              ) : (
+                <ActionButton
+                  label={aiAccessInitialized ? 'Activate Recall AI' : 'Checking AI access…'}
+                  state={aiAccessInitialized ? 'idle' : 'disabled'}
+                  onPress={onActivateAi}
+                />
+              )}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => onAnalyze({ useAi: false })}
+                style={styles.textToggle}
+              >
                 <ThemedText type="linkPrimary">Use on-device analysis only</ThemedText>
               </Pressable>
             </>
+          ) : aiActivated ? (
+            <PrimaryButton label="Analyze screenshot" onPress={() => onAnalyze({ useAi: true })} />
           ) : (
-            <PrimaryButton label="Analyze screenshot" onPress={onAnalyze} />
+            <>
+              <ThemedText themeColor="textSecondary">
+                Activate Recall AI with an invitation, or keep analysis on this device.
+              </ThemedText>
+              <ActionButton
+                label={aiAccessInitialized ? 'Activate Recall AI' : 'Checking AI access…'}
+                state={aiAccessInitialized ? 'idle' : 'disabled'}
+                onPress={onActivateAi}
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => onAnalyze({ useAi: false })}
+                style={styles.textToggle}
+              >
+                <ThemedText type="linkPrimary">Use on-device analysis only</ThemedText>
+              </Pressable>
+            </>
           )}
         </>
       ) : null}
@@ -262,7 +304,7 @@ function AnalysisSection({
       {analysis.status === 'failed' ? (
         <>
           <ThemedText>{analysis.error}</ThemedText>
-          <PrimaryButton label="Try Again" onPress={onAnalyze} />
+          <PrimaryButton label="Try Again" onPress={() => onAnalyze({ useAi: aiActivated })} />
         </>
       ) : null}
       {analysis.status === 'complete' && analysis.analysisSource ? (
@@ -288,6 +330,16 @@ function AnalysisSection({
       ) : null}
       {analysis.status === 'complete' ? (
         <>
+          {analysis.analysisSource === 'semantic' && aiActivated ? (
+            <ActionButton
+              label="Reanalyze with Recall AI"
+              variant="secondary"
+              onPress={() => onAnalyze({ useAi: true, reanalyze: true })}
+            />
+          ) : null}
+          {analysis.analysisSource === 'local' && !aiActivated ? (
+            <ActionButton label="Activate Recall AI" variant="secondary" onPress={onActivateAi} />
+          ) : null}
           <Pressable
             accessibilityRole="button"
             accessibilityState={{ expanded: showExtractedText }}

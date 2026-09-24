@@ -4,10 +4,11 @@ import * as MediaLibrary from 'expo-media-library/legacy';
 
 import type { RecallScreenshot } from './types';
 import { createIdleScreenshotAnalysis } from '@/services/understanding/types';
+import { resolveScreenshotPermission, type ScreenshotPermission } from './permission-state';
 
 const PAGE_SIZE = 50;
 
-export type ScreenshotPermission = 'granted' | 'limited' | 'denied' | 'unavailable';
+export type { ScreenshotPermission } from './permission-state';
 export type ScreenshotPermissionState = {
   permission: ScreenshotPermission;
   canAskAgain: boolean;
@@ -16,12 +17,7 @@ export type ScreenshotPermissionState = {
 export function permissionFromResponse(
   response: MediaLibrary.PermissionResponse,
 ): ScreenshotPermission {
-  if (Platform.OS === 'web') return 'unavailable';
-  // accessPrivileges is the source of truth on Android 14+, including limited access.
-  if (response.accessPrivileges === 'all') return 'granted';
-  if (response.accessPrivileges === 'limited') return 'limited';
-  if (response.granted && response.status === 'granted') return 'granted';
-  return 'denied';
+  return resolveScreenshotPermission(response, Platform.OS);
 }
 
 export async function getScreenshotPermissionState(): Promise<ScreenshotPermissionState> {
@@ -46,6 +42,12 @@ export async function requestScreenshotPermission(): Promise<ScreenshotPermissio
   return (await requestScreenshotPermissionState()).permission;
 }
 
+export async function updateLimitedScreenshotSelection(): Promise<ScreenshotPermissionState> {
+  if (Platform.OS === 'web') return { permission: 'unavailable', canAskAgain: false };
+  await MediaLibrary.presentPermissionsPickerAsync(['photo']);
+  return getScreenshotPermissionState();
+}
+
 export async function loadDeviceScreenshots(
   permission: ScreenshotPermission,
 ): Promise<RecallScreenshot[]> {
@@ -63,7 +65,7 @@ export async function loadDeviceScreenshots(
     options.album = screenshotsAlbum;
   }
 
-  // Limited access only exposes the assets selected in Android's system picker.
+  // Limited access only exposes the assets selected in the system picker.
   const result = await MediaLibrary.getAssetsAsync(options);
 
   return result.assets.map((asset) => ({

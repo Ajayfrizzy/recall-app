@@ -51,6 +51,22 @@ Record failures instead of describing untested behavior as passed.
 - [ ] Confirm the four root tabs remain Inbox, Upcoming, Library, and Profile.
 - [ ] Force-stop and reopen offline; cached local state must still load.
 
+### Samsung screenshot permission flow
+
+Use a separate development application ID or a fresh test installation to verify the true first-run `not requested` state without deleting the primary Recall installation or its data. Do not clear storage or uninstall the primary app. If a separate build is unavailable, the remaining states can be exercised safely from **Settings > Apps > Recall > Permissions > Photos and videos**; Android does not provide a supported way to restore `undetermined` for an installed app while retaining all app data.
+
+1. Launch the fresh test installation, finish onboarding, and confirm the screenshot permission introduction appears before any native dialog. It must show **Grant Screenshot Access**, never **Try Again**.
+2. Tap **Grant Screenshot Access** once. Confirm only one Android permission dialog opens and the button remains disabled/loading while the request is active.
+3. Choose full photo access. Confirm Recall opens the Inbox immediately, discovers screenshots, and does not show the permission introduction after a force-stop and restart.
+4. In Android Settings, change Recall to selected photos, select at least one screenshot, and return to Recall. Confirm the app refreshes automatically, shows **Selected photos only**, and lists only accessible screenshots.
+5. Tap **Choose More Photos**, change the selection, and confirm the Inbox refreshes. On devices or Android versions where the system picker is unavailable, use **Open Settings** instead.
+6. In Android Settings, set Photos and videos to **Don't allow**, then return to Recall. Confirm it refreshes to the denied or Settings screen without resetting onboarding or persisted content.
+7. If **Grant Access** is shown, decline until Android reports that Recall cannot ask again. Confirm the action changes to **Open Settings** and no permission dialog opens automatically.
+8. Tap **Open Settings**, grant access, and return with the system Back action. Confirm the permission screen disappears automatically and screenshots load without an obsolete error.
+9. Exercise a real retryable failure by temporarily making Media Library access fail in a development build. Confirm **Try Again** appears only for that failure and disappears after a successful retry.
+
+The Android 14 selected-photo picker must be tested in a development or preview build. Do not use Expo Go for that case.
+
 ### Screenshot and AI analysis
 
 - [ ] Open a screenshot and confirm the preview is compact, tappable, and opens a dismissible full-screen image.

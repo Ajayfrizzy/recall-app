@@ -57,6 +57,7 @@
     "cleanup:check": "server/node_modules/.bin/tsx src/features/cleanup/cleanup.check.ts",
     "subscription:check": "server/node_modules/.bin/tsx src/features/subscription/subscription.check.ts",
     "ai-access:check": "server/node_modules/.bin/tsx src/services/ai/access-client.check.ts",
+    "screenshots:check": "server/node_modules/.bin/tsx src/features/screenshots/history.check.ts && server/node_modules/.bin/tsx src/features/screenshots/permission-state.check.ts",
     "release:config-check": "node --env-file-if-exists=.env scripts/check-release-config.mjs"
   },
   "private": true

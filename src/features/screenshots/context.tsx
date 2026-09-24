@@ -9,12 +9,13 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
 
 import {
   loadDeviceScreenshots,
   getScreenshotPermissionState,
   requestScreenshotPermissionState,
+  updateLimitedScreenshotSelection,
   type ScreenshotPermission,
 } from './media-library';
 import { usePersistence } from '@/features/persistence/context';
@@ -89,6 +90,7 @@ type ContextValue = {
   error: string | null;
   refresh: () => Promise<RecallScreenshot[] | null>;
   requestAccess: () => Promise<void>;
+  updateLimitedAccess: () => Promise<void>;
   setStatus: (id: string, status: ScreenshotStatus) => Promise<void>;
   analyzeScreenshot: (
     id: string,
@@ -148,6 +150,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
   );
   const semanticAnalysisAcknowledgedRef = useRef(persistedState.semanticAnalysisAcknowledged);
   const analysesInFlight = useRef(new Set<string>());
+  const permissionRequestInFlight = useRef(false);
 
   const loadForPermission = useCallback(async (nextPermission: ScreenshotPermission) => {
     if (nextPermission !== 'granted' && nextPermission !== 'limited') return null;
@@ -174,13 +177,21 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
     setRefreshing(true);
     setError(null);
     try {
-      const current = await getScreenshotPermissionState();
+      let current;
+      try {
+        current = await getScreenshotPermissionState();
+      } catch {
+        setError('We could not check screenshot access. Try again.');
+        return null;
+      }
       setPermission(current.permission);
       setCanAskAgain(current.canAskAgain);
-      return await loadForPermission(current.permission);
-    } catch {
-      setError('We could not load your screenshots. Try again.');
-      return null;
+      try {
+        return await loadForPermission(current.permission);
+      } catch {
+        setError('We could not load your screenshots. Try again.');
+        return null;
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -188,22 +199,66 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
   }, [loadForPermission]);
 
   const requestAccess = useCallback(async () => {
+    if (permissionRequestInFlight.current) return;
+    permissionRequestInFlight.current = true;
     setError(null);
     try {
-      const next = await requestScreenshotPermissionState();
+      let next;
+      try {
+        next = await requestScreenshotPermissionState();
+      } catch {
+        setError('We could not request screenshot access. Try again.');
+        return;
+      }
       setPermission(next.permission);
       setCanAskAgain(next.canAskAgain);
-      await loadForPermission(next.permission);
-    } catch {
-      setPermission('denied');
-      setCanAskAgain(false);
+      try {
+        await loadForPermission(next.permission);
+      } catch {
+        setError('Access was granted, but screenshots could not load. Try again.');
+      }
     } finally {
+      permissionRequestInFlight.current = false;
       setLoading(false);
+    }
+  }, [loadForPermission]);
+
+  const updateLimitedAccess = useCallback(async () => {
+    if (permissionRequestInFlight.current) return;
+    permissionRequestInFlight.current = true;
+    setError(null);
+    try {
+      let next;
+      try {
+        next = await updateLimitedScreenshotSelection();
+      } catch {
+        setError('We could not open the photo selection. Try again.');
+        return;
+      }
+      setPermission(next.permission);
+      setCanAskAgain(next.canAskAgain);
+      try {
+        await loadForPermission(next.permission);
+      } catch {
+        setError('Your selection changed, but screenshots could not load. Try again.');
+      }
+    } finally {
+      permissionRequestInFlight.current = false;
     }
   }, [loadForPermission]);
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    let previousState = AppState.currentState;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const returningToApp = previousState.match(/inactive|background/) && nextState === 'active';
+      previousState = nextState;
+      if (returningToApp && !permissionRequestInFlight.current) void refresh();
+    });
+    return () => subscription.remove();
   }, [refresh]);
 
   const analyzeScreenshot = useCallback(
@@ -352,6 +407,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       error,
       refresh,
       requestAccess,
+      updateLimitedAccess,
       setStatus,
       analyzeScreenshot,
       semanticAnalysisAcknowledged,
@@ -366,6 +422,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       error,
       refresh,
       requestAccess,
+      updateLimitedAccess,
       analyzeScreenshot,
       setStatus,
       semanticAnalysisAcknowledged,

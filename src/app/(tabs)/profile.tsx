@@ -20,7 +20,8 @@ const PACKAGE_PERIOD_LABELS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const [activeAction, setActiveAction] = useState<'upgrade' | 'restore' | 'retry'>();
+  const [activeAction, setActiveAction] = useState<'upgrade' | 'restore' | 'retry' | 'judge-pro'>();
+  const [judgeProMessage, setJudgeProMessage] = useState<string>();
   const [confirmDeactivation, setConfirmDeactivation] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const aiAccess = useAiAccess();
@@ -34,10 +35,35 @@ export default function ProfileScreen() {
     presentPaywall,
     restorePurchases,
     retry,
+    confirmJudgePro,
   } = useSubscription();
   const firstPackage = offering?.availablePackages[0];
   const period = firstPackage ? PACKAGE_PERIOD_LABELS[firstPackage.packageType] : undefined;
   const showPurchaseOptions = !isPro && aiAccess.credentials?.invitationType !== 'judge';
+  const judgeCredentials =
+    aiAccess.credentials?.invitationType === 'judge' ? aiAccess.credentials : undefined;
+
+  const retryJudgePro = async () => {
+    setActiveAction('judge-pro');
+    setJudgeProMessage(undefined);
+    try {
+      const credentials = await aiAccess.retryJudgePro();
+      const confirmed = await confirmJudgePro(credentials.revenueCatAppUserId!);
+      setJudgeProMessage(
+        confirmed
+          ? 'Recall Pro is active.'
+          : 'RevenueCat has not confirmed the active Pro entitlement on this device yet.',
+      );
+    } catch (activationError) {
+      setJudgeProMessage(
+        activationError instanceof Error
+          ? activationError.message
+          : 'Recall Pro could not be activated. Please try again.',
+      );
+    } finally {
+      setActiveAction(undefined);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -94,7 +120,7 @@ export default function ProfileScreen() {
         </ThemedView>
 
         <ThemedView type="backgroundElement" style={styles.card}>
-          <ThemedText type="smallBold">{isPro ? 'Recall Pro' : 'Recall Free'}</ThemedText>
+          <ThemedText type="smallBold">{isPro ? 'Recall Pro Active' : 'Recall Free'}</ThemedText>
           <ThemedText themeColor="textSecondary">
             {isPro
               ? 'Premium features active.'
@@ -127,6 +153,29 @@ export default function ProfileScreen() {
                 void presentPaywall().finally(() => setActiveAction(undefined));
               }}
             />
+          ) : null}
+
+          {judgeCredentials && !isPro ? (
+            <>
+              <ThemedText type="small" themeColor="textSecondary">
+                {judgeCredentials.proProvisioning === 'confirmed'
+                  ? 'Complimentary Pro was provisioned, but RevenueCat has not confirmed it on this device.'
+                  : 'Complimentary Pro provisioning is pending.'}
+              </ThemedText>
+              <ActionButton
+                label="Retry Pro Activation"
+                loadingLabel="Activating Recall Pro..."
+                variant="secondary"
+                state={activeAction === 'judge-pro' ? 'loading' : loading ? 'disabled' : 'idle'}
+                onPress={() => void retryJudgePro()}
+              />
+            </>
+          ) : null}
+
+          {judgeProMessage ? (
+            <ThemedText type="small" accessibilityLiveRegion="polite">
+              {judgeProMessage}
+            </ThemedText>
           ) : null}
 
           <ActionButton

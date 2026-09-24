@@ -6,7 +6,13 @@ const BODY_PATTERN = /^[A-HJ-NP-Z2-9]{20}$/;
 
 function compactInvitationCode(value: string): string {
   const compact = value.toUpperCase().replace(/[\s-]+/g, '');
-  return compact.startsWith('RCL') ? compact.slice(3) : compact;
+  return compact.startsWith('RCL') && compact.length > INVITATION_BODY_LENGTH
+    ? compact.slice(3)
+    : compact;
+}
+
+export function normalizeInvitationBodyInput(value: string): string {
+  return compactInvitationCode(value).slice(0, INVITATION_BODY_LENGTH);
 }
 
 export function normalizeInvitationCode(value: string): string {
@@ -19,24 +25,7 @@ export function isCompleteInvitationCode(value: string): boolean {
   return BODY_PATTERN.test(compactInvitationCode(value));
 }
 
-export type InvitationCodeEdit = {
-  value: string;
-  selection: { start: number; end: number };
-};
-
-export function formatInvitationCodeInput(
-  value: string,
-  cursor = value.length,
-): InvitationCodeEdit {
-  const prefixless = value.replace(/^\s*RCL-?/i, '');
-  const beforeCursor = value.slice(0, cursor).replace(/^\s*RCL-?/i, '');
-  const body = prefixless
-    .replace(/[\s-]+/g, '')
-    .toUpperCase()
-    .slice(0, INVITATION_BODY_LENGTH);
-  const bodyCursor = Math.min(beforeCursor.replace(/[\s-]+/g, '').length, INVITATION_BODY_LENGTH);
-  const valueFormatted = normalizeInvitationCode(body);
-  const formattedCursor = INVITATION_PREFIX.length + bodyCursor + Math.floor(bodyCursor / 5);
-  const position = Math.min(formattedCursor, valueFormatted.length);
-  return { value: valueFormatted, selection: { start: position, end: position } };
+export function invitationCodePreview(body: string): string {
+  const padded = normalizeInvitationBodyInput(body).padEnd(INVITATION_BODY_LENGTH, 'X');
+  return normalizeInvitationCode(padded);
 }

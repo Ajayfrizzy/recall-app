@@ -2,7 +2,10 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import { AccessControlError, InvalidJsonError, PayloadTooLargeError } from '../errors.js';
 import { bearerToken, getAnalysisAccessStore } from '../services/access-control.js';
-import { grantJudgePromotionalEntitlement } from '../services/revenuecat.js';
+import {
+  grantJudgePromotionalEntitlement,
+  RevenueCatProvisioningError,
+} from '../services/revenuecat.js';
 
 const RedeemSchema = z.object({ code: z.string().trim().min(8).max(128) }).strict();
 const MAX_BODY_BYTES = 2_048;
@@ -71,13 +74,13 @@ async function provisionJudgeEntitlement(rawToken: string | undefined): Promise<
 }> {
   const store = getAnalysisAccessStore();
   const judge = store.getJudgeProvisioning(rawToken);
-  if (!judge.confirmed) {
-    await grantJudgePromotionalEntitlement({
-      appUserId: judge.revenueCatAppUserId,
-      expiresAt: judge.expiresAt,
-    });
-    store.confirmJudgeProvisioning(judge.tokenId);
-  }
+  // Retry against RevenueCat even if an older server process marked this row confirmed.
+  // The grant endpoint is idempotent for the same customer, entitlement, and expiration.
+  await grantJudgePromotionalEntitlement({
+    appUserId: judge.revenueCatAppUserId,
+    expiresAt: judge.expiresAt,
+  });
+  store.confirmJudgeProvisioning(judge.tokenId);
   return {
     invitationType: 'judge',
     judgeAccessExpiresAt: judge.expiresAt,
@@ -96,6 +99,8 @@ export async function provisionJudgeEntitlementRoute(
   } catch (error) {
     if (error instanceof AccessControlError) {
       sendJson(response, error.status, { error: error.code });
+    } else if (error instanceof RevenueCatProvisioningError) {
+      sendJson(response, 503, { error: error.code });
     } else {
       sendJson(response, 503, { error: 'provisioning_unavailable' });
     }

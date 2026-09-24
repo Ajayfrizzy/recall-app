@@ -20,6 +20,14 @@ export type AiAccessErrorCode =
   | 'network_timeout'
   | 'backend_unavailable'
   | 'provisioning_unavailable'
+  | 'revenuecat_not_configured'
+  | 'revenuecat_authentication_failed'
+  | 'revenuecat_project_or_entitlement_mismatch'
+  | 'revenuecat_grant_rejected'
+  | 'revenuecat_invalid_response'
+  | 'revenuecat_expiration_mismatch'
+  | 'revenuecat_network_timeout'
+  | 'revenuecat_network_failure'
   | 'malformed_response';
 
 export class AiAccessError extends Error {
@@ -49,6 +57,19 @@ const ACTIVATION_MESSAGES: Record<string, string> = {
   invitation_already_redeemed: 'That invitation code has already been redeemed.',
   invitation_expired: 'That invitation code has expired.',
   redemption_rate_limited: 'Too many unsuccessful attempts. Please try again later.',
+};
+
+const PROVISIONING_MESSAGES: Record<string, string> = {
+  revenuecat_not_configured: 'Complimentary Pro is not configured on the server yet.',
+  revenuecat_authentication_failed: 'The server could not authenticate with RevenueCat.',
+  revenuecat_project_or_entitlement_mismatch:
+    'The RevenueCat project or Pro entitlement does not match this build.',
+  revenuecat_grant_rejected: 'RevenueCat rejected the complimentary Pro grant.',
+  revenuecat_invalid_response: 'RevenueCat returned an invalid Pro activation response.',
+  revenuecat_expiration_mismatch: 'RevenueCat returned the wrong Pro expiration date.',
+  revenuecat_network_timeout: 'The server timed out while contacting RevenueCat.',
+  revenuecat_network_failure: 'The server could not reach RevenueCat.',
+  provisioning_unavailable: 'Recall Pro could not be activated. Please try again.',
 };
 
 export function parseAiAccessCredentials(value: unknown): AiAccessCredentials | null {
@@ -263,14 +284,36 @@ export function createAiAccessClient({
           { cause: error },
         );
       }
-      if (!response.ok) {
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch (error) {
         throw new AiAccessError(
-          'provisioning_unavailable',
-          'Recall Pro could not be activated. Please try again.',
+          'malformed_response',
+          'Recall Pro activation returned an invalid response.',
+          { cause: error },
         );
       }
-      const body = (await response.json()) as Partial<AiAccessCredentials>;
-      const next = parseAiAccessCredentials({ ...credentials, ...body });
+      if (!response.ok) {
+        const serverCode =
+          body &&
+          typeof body === 'object' &&
+          typeof (body as { error?: unknown }).error === 'string'
+            ? (body as { error: string }).error
+            : 'provisioning_unavailable';
+        const code =
+          serverCode in PROVISIONING_MESSAGES
+            ? (serverCode as AiAccessErrorCode)
+            : 'provisioning_unavailable';
+        throw new AiAccessError(
+          code,
+          PROVISIONING_MESSAGES[code] ?? PROVISIONING_MESSAGES.provisioning_unavailable,
+        );
+      }
+      const next = parseAiAccessCredentials({
+        ...credentials,
+        ...(body as Partial<AiAccessCredentials>),
+      });
       if (!next || next.proProvisioning !== 'confirmed') {
         throw new AiAccessError(
           'malformed_response',

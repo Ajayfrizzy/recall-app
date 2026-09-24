@@ -7,8 +7,6 @@ import {
   StyleSheet,
   TextInput,
   View,
-  type NativeSyntheticEvent,
-  type TextInputSelectionChangeEventData,
 } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { FadeInView } from '@/components/motion';
@@ -18,20 +16,18 @@ import { Colors, Radius } from '@/constants/theme';
 import { useAiAccess } from '@/features/ai-access/context';
 import { useSubscription } from '@/features/subscription/context';
 import {
-  formatInvitationCodeInput,
+  invitationCodePreview,
   isCompleteInvitationCode,
   INVITATION_PREFIX,
+  normalizeInvitationBodyInput,
+  normalizeInvitationCode,
 } from '../../shared/invitation-code';
 
 export default function AiAccessScreen() {
   const router = useRouter();
   const { activate, retryJudgePro } = useAiAccess();
   const { confirmJudgePro } = useSubscription();
-  const [code, setCode] = useState(INVITATION_PREFIX);
-  const [selection, setSelection] = useState({
-    start: INVITATION_PREFIX.length,
-    end: INVITATION_PREFIX.length,
-  });
+  const [codeBody, setCodeBody] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [judgeExpiration, setJudgeExpiration] = useState<number | null>(null);
@@ -39,7 +35,6 @@ export default function AiAccessScreen() {
   const [proError, setProError] = useState<string | null>(null);
   const [proLoading, setProLoading] = useState(false);
   const submitting = useRef(false);
-  const selectionRef = useRef(selection);
 
   const leave = () => {
     if (router.canGoBack()) router.back();
@@ -48,7 +43,7 @@ export default function AiAccessScreen() {
 
   const submit = async () => {
     if (submitting.current) return;
-    if (!isCompleteInvitationCode(code)) {
+    if (!isCompleteInvitationCode(codeBody)) {
       setError('Enter the complete invitation code.');
       return;
     }
@@ -56,7 +51,7 @@ export default function AiAccessScreen() {
     setState('loading');
     setError(null);
     try {
-      const credentials = await activate(code);
+      const credentials = await activate(normalizeInvitationCode(codeBody));
       setState('success');
       if (credentials.invitationType === 'judge') {
         setJudgeExpiration(credentials.judgeAccessExpiresAt ?? credentials.expiresAt);
@@ -67,8 +62,12 @@ export default function AiAccessScreen() {
           const confirmed = await confirmJudgePro(judge.revenueCatAppUserId!);
           setProConfirmed(confirmed);
           if (!confirmed) setProError('Recall Pro activation is still pending.');
-        } catch {
-          setProError('Recall Pro could not be activated. Your AI access is safe; try again.');
+        } catch (proActivationError) {
+          setProError(
+            proActivationError instanceof Error
+              ? `${proActivationError.message} Your AI access remains active.`
+              : 'Recall Pro could not be activated. Your AI access remains active; try again.',
+          );
         } finally {
           setProLoading(false);
         }
@@ -94,8 +93,12 @@ export default function AiAccessScreen() {
       const confirmed = await confirmJudgePro(credentials.revenueCatAppUserId!);
       setProConfirmed(confirmed);
       if (!confirmed) setProError('Recall Pro activation is still pending.');
-    } catch {
-      setProError('Recall Pro could not be activated. Please try again.');
+    } catch (proActivationError) {
+      setProError(
+        proActivationError instanceof Error
+          ? proActivationError.message
+          : 'Recall Pro could not be activated. Please try again.',
+      );
     } finally {
       setProLoading(false);
     }
@@ -167,42 +170,34 @@ export default function AiAccessScreen() {
           ) : (
             <View style={styles.form}>
               <ThemedText type="smallBold">Invitation code</ThemedText>
-              <TextInput
-                value={code}
-                onChangeText={(value) => {
-                  const previous = selectionRef.current;
-                  const delta = value.length - code.length;
-                  const cursor =
-                    previous.start === previous.end
-                      ? Math.max(0, previous.start + delta)
-                      : value.length;
-                  const edit = formatInvitationCodeInput(value, cursor);
-                  setCode(edit.value);
-                  setSelection(edit.selection);
-                  selectionRef.current = edit.selection;
-                  if (error) setError(null);
-                }}
-                selection={selection}
-                onSelectionChange={(
-                  event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
-                ) => {
-                  selectionRef.current = event.nativeEvent.selection;
-                  setSelection(event.nativeEvent.selection);
-                }}
-                placeholder="RCL-XXXXX-XXXXX-XXXXX-XXXXX"
-                placeholderTextColor={Colors.dark.textSecondary}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                spellCheck={false}
-                textContentType="oneTimeCode"
-                returnKeyType="done"
-                onSubmitEditing={() => {
-                  if (isCompleteInvitationCode(code)) void submit();
-                }}
-                editable={state !== 'loading'}
-                style={styles.input}
-                accessibilityLabel="AI invitation code"
-              />
+              <View style={styles.codeInputRow}>
+                <ThemedText type="smallBold" style={styles.codePrefix}>
+                  {INVITATION_PREFIX}
+                </ThemedText>
+                <TextInput
+                  value={codeBody}
+                  onChangeText={(value) => {
+                    setCodeBody(normalizeInvitationBodyInput(value));
+                    if (error) setError(null);
+                  }}
+                  placeholder="XXXXXXXXXXXXXXXXXXXX"
+                  placeholderTextColor={Colors.dark.textSecondary}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  textContentType="oneTimeCode"
+                  returnKeyType="done"
+                  onSubmitEditing={() => {
+                    if (isCompleteInvitationCode(codeBody)) void submit();
+                  }}
+                  editable={state !== 'loading'}
+                  style={styles.input}
+                  accessibilityLabel="AI invitation code body"
+                />
+              </View>
+              <ThemedText type="small" themeColor="textSecondary">
+                {invitationCodePreview(codeBody)}
+              </ThemedText>
               {error ? (
                 <ThemedText style={styles.error} accessibilityLiveRegion="polite">
                   {error}
@@ -214,7 +209,7 @@ export default function AiAccessScreen() {
                 state={
                   state === 'loading'
                     ? 'loading'
-                    : isCompleteInvitationCode(code)
+                    : isCompleteInvitationCode(codeBody)
                       ? 'idle'
                       : 'disabled'
                 }
@@ -234,14 +229,23 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: 'flex-start', padding: 24, paddingTop: 28, gap: 24 },
   intro: { gap: 10 },
   form: { gap: 12 },
-  input: {
+  codeInputRow: {
     minHeight: 52,
     borderWidth: 1,
     borderColor: Colors.dark.border,
     borderRadius: Radius.medium,
-    paddingHorizontal: 14,
-    color: Colors.dark.text,
     backgroundColor: Colors.dark.backgroundElement,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+  },
+  codePrefix: { color: Colors.dark.text, fontSize: 16 },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 12,
+    color: Colors.dark.text,
     fontSize: 16,
   },
   error: { color: Colors.dark.danger },

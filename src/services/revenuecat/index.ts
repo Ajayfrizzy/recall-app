@@ -9,8 +9,8 @@ import RevenueCatUI, { type PAYWALL_RESULT } from 'react-native-purchases-ui';
 import {
   getCurrentOffering,
   getRevenueCatAvailability,
-  hasActiveRevenueCatAccess,
-  judgeIdentityAction,
+  connectJudgeIdentity,
+  hasRevenueCatIdentityToProtect,
   RECALL_PRO_ENTITLEMENT,
   type RevenueCatAvailability,
 } from '@/features/subscription/logic';
@@ -20,6 +20,7 @@ export type { CustomerInfo, PurchasesOffering, PurchasesPackage };
 
 let configured = false;
 let warnedAboutConfiguration = false;
+let judgeConnectionInFlight: { appUserId: string; promise: Promise<CustomerInfo> } | undefined;
 
 function environment() {
   return {
@@ -60,23 +61,33 @@ export async function getCustomerInfo(): Promise<CustomerInfo> {
 
 export async function connectJudgeRevenueCatIdentity(appUserId: string): Promise<CustomerInfo> {
   requireConfiguration();
-  const [currentAppUserId, anonymous, currentInfo] = await Promise.all([
-    Purchases.getAppUserID(),
-    Purchases.isAnonymous(),
-    Purchases.getCustomerInfo(),
-  ]);
-  const action = judgeIdentityAction({
-    currentAppUserId,
-    judgeAppUserId: appUserId,
-    anonymous,
-    hasActiveAccess: hasActiveRevenueCatAccess(currentInfo),
-  });
-  if (action === 'conflict') {
-    throw new Error('An existing subscription identity is already active on this device.');
+  if (judgeConnectionInFlight?.appUserId === appUserId) {
+    return judgeConnectionInFlight.promise;
   }
-  if (action === 'login') await Purchases.logIn(appUserId);
-  await Purchases.invalidateCustomerInfoCache();
-  return Purchases.getCustomerInfo();
+  if (judgeConnectionInFlight) {
+    throw new Error('A different RevenueCat identity activation is already in progress.');
+  }
+  const promise = connectJudgeIdentity({
+    judgeAppUserId: appUserId,
+    loadIdentity: async () => {
+      const [currentAppUserId, anonymous, customerInfo] = await Promise.all([
+        Purchases.getAppUserID(),
+        Purchases.isAnonymous(),
+        Purchases.getCustomerInfo(),
+      ]);
+      return { currentAppUserId, anonymous, customerInfo };
+    },
+    hasProtectedIdentity: hasRevenueCatIdentityToProtect,
+    login: (judgeId) => Purchases.logIn(judgeId),
+    invalidateCustomerInfo: () => Purchases.invalidateCustomerInfoCache(),
+    refreshCustomerInfo: () => Purchases.getCustomerInfo(),
+  });
+  judgeConnectionInFlight = { appUserId, promise };
+  try {
+    return await promise;
+  } finally {
+    if (judgeConnectionInFlight?.promise === promise) judgeConnectionInFlight = undefined;
+  }
 }
 
 export async function getCurrentRevenueCatOffering(): Promise<PurchasesOffering | undefined> {

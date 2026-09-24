@@ -1,10 +1,12 @@
 import { canUseCleanupBatch, getSubscriptionLimits } from './features';
 import {
+  connectJudgeIdentity,
   didRestorePro,
   getCurrentOffering,
   getRevenueCatAvailability,
   hasActiveRevenueCatAccess,
   hasActiveProEntitlement,
+  hasRevenueCatIdentityToProtect,
   isPurchaseCancellation,
   loadSubscriptionResources,
   judgeIdentityAction,
@@ -45,6 +47,10 @@ assert(didRestorePro(active), 'active restored entitlement was not recognized');
 assert(!didRestorePro(inactive), 'empty restore result enabled Pro');
 assert(hasActiveRevenueCatAccess(active), 'active access was not detected');
 assert(
+  hasRevenueCatIdentityToProtect({ allPurchasedProductIdentifiers: ['paid_product'] }),
+  'an anonymous customer with purchase history was not protected',
+);
+assert(
   judgeIdentityAction({
     currentAppUserId: '$RCAnonymousID:one',
     judgeAppUserId: 'recall_judge_one',
@@ -59,8 +65,8 @@ assert(
     judgeAppUserId: 'recall_judge_one',
     anonymous: true,
     hasActiveAccess: true,
-  }) === 'keep',
-  'an existing paying anonymous customer must not be switched',
+  }) === 'conflict',
+  'an existing paying anonymous customer must block identity switching',
 );
 assert(
   judgeIdentityAction({
@@ -73,6 +79,56 @@ assert(
 );
 
 void (async () => {
+  const identityCalls: string[] = [];
+  const connected = await connectJudgeIdentity({
+    judgeAppUserId: 'recall_judge_one',
+    loadIdentity: async () => ({
+      currentAppUserId: '$RCAnonymousID:one',
+      anonymous: true,
+      customerInfo: inactive,
+    }),
+    hasProtectedIdentity: hasRevenueCatIdentityToProtect,
+    login: async (appUserId) => {
+      identityCalls.push(`login:${appUserId}`);
+    },
+    invalidateCustomerInfo: async () => {
+      identityCalls.push('invalidate');
+    },
+    refreshCustomerInfo: async () => {
+      identityCalls.push('refresh');
+      return active;
+    },
+  });
+  assert(hasActiveProEntitlement(connected), 'fresh judge CustomerInfo did not confirm Pro');
+  assert(
+    identityCalls.join(',') === 'login:recall_judge_one,invalidate,refresh',
+    'judge login and CustomerInfo refresh ran out of order',
+  );
+
+  let conflictingLogin = false;
+  let conflictRejected = false;
+  try {
+    await connectJudgeIdentity({
+      judgeAppUserId: 'recall_judge_one',
+      loadIdentity: async () => ({
+        currentAppUserId: 'existing_account',
+        anonymous: false,
+        customerInfo: inactive,
+      }),
+      hasProtectedIdentity: hasRevenueCatIdentityToProtect,
+      login: async () => {
+        conflictingLogin = true;
+      },
+      invalidateCustomerInfo: async () => undefined,
+      refreshCustomerInfo: async () => active,
+    });
+  } catch (error) {
+    conflictRejected =
+      error instanceof Error && error.message.includes('existing subscription identity');
+  }
+  assert(conflictRejected, 'an unrelated identified customer was not rejected');
+  assert(!conflictingLogin, 'an unrelated identified customer was overwritten');
+
   const failedResources = await loadSubscriptionResources(
     async () => Promise.reject(new Error('offline')),
     async () => undefined,

@@ -4,6 +4,8 @@ export type SubscriptionPlatform = 'android' | 'ios' | 'web' | string;
 
 interface EntitlementCustomerInfo {
   activeSubscriptions?: string[];
+  allPurchasedProductIdentifiers?: string[];
+  nonSubscriptionTransactions?: unknown[];
   entitlements?: {
     active?: Record<string, { isActive?: boolean } | undefined>;
   };
@@ -88,6 +90,14 @@ export function hasActiveRevenueCatAccess(customerInfo?: EntitlementCustomerInfo
   );
 }
 
+export function hasRevenueCatIdentityToProtect(customerInfo?: EntitlementCustomerInfo): boolean {
+  return (
+    hasActiveRevenueCatAccess(customerInfo) ||
+    (customerInfo?.allPurchasedProductIdentifiers?.length ?? 0) > 0 ||
+    (customerInfo?.nonSubscriptionTransactions?.length ?? 0) > 0
+  );
+}
+
 export function judgeIdentityAction({
   currentAppUserId,
   judgeAppUserId,
@@ -99,6 +109,41 @@ export function judgeIdentityAction({
   anonymous: boolean;
   hasActiveAccess: boolean;
 }): 'keep' | 'login' | 'conflict' {
-  if (currentAppUserId === judgeAppUserId || hasActiveAccess) return 'keep';
+  if (currentAppUserId === judgeAppUserId) return 'keep';
+  if (hasActiveAccess) return 'conflict';
   return anonymous ? 'login' : 'conflict';
+}
+
+export async function connectJudgeIdentity<Customer>({
+  judgeAppUserId,
+  loadIdentity,
+  hasProtectedIdentity,
+  login,
+  invalidateCustomerInfo,
+  refreshCustomerInfo,
+}: {
+  judgeAppUserId: string;
+  loadIdentity: () => Promise<{
+    currentAppUserId: string;
+    anonymous: boolean;
+    customerInfo: Customer;
+  }>;
+  hasProtectedIdentity: (customerInfo: Customer) => boolean;
+  login: (appUserId: string) => Promise<unknown>;
+  invalidateCustomerInfo: () => Promise<void>;
+  refreshCustomerInfo: () => Promise<Customer>;
+}): Promise<Customer> {
+  const current = await loadIdentity();
+  const action = judgeIdentityAction({
+    currentAppUserId: current.currentAppUserId,
+    judgeAppUserId,
+    anonymous: current.anonymous,
+    hasActiveAccess: hasProtectedIdentity(current.customerInfo),
+  });
+  if (action === 'conflict') {
+    throw new Error('An existing subscription identity is already active on this device.');
+  }
+  if (action === 'login') await login(judgeAppUserId);
+  await invalidateCustomerInfo();
+  return refreshCustomerInfo();
 }

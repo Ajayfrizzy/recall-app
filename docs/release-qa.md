@@ -149,13 +149,15 @@ The Android 14 selected-photo picker must be tested in a development or preview 
 ### Physical Android judge flow
 
 1. Configure the HTTPS backend with `REVENUECAT_SECRET_API_KEY`, restart it, and verify the mobile public Android SDK key belongs to the same RevenueCat project with the `pro` entitlement.
-2. Create one judge code in a private terminal with `npm run access:admin -- create-judge-invitations 1`; retain its invitation ID and send the code through a private channel.
-3. Install a fresh development or preview APK on the physical device. Open **Profile → Activate AI**, paste the lowercase code with leading/trailing spaces, and confirm it formats without moving the cursor unexpectedly.
-4. Activate once. Confirm **Recall AI Active**, then **Recall Pro Active**, the 90-day expiration date, and **Continue**. Reopen Profile and confirm no Upgrade/Paywall action is shown.
-5. Force-stop and reopen the app. Confirm both AI and Pro remain active and an AI request still observes the normal daily/global/spending limits.
-6. For recovery testing, block the backend's RevenueCat request or temporarily remove its secret, redeem a different judge code, and confirm AI stays active while Pro is pending. Restore the backend configuration and use **Retry Pro Activation**; do not enter another invitation.
-7. On a separate fresh installation, redeem a standard code and confirm it activates AI without changing the RevenueCat identity or enabling Pro.
-8. On a device with an active sandbox purchase, redeem a judge code and verify the current paying identity and entitlement remain intact.
+2. On the already-redeemed judge installation that currently shows Recall Free, open Profile and tap **Retry Pro Activation**. Do not enter another invitation. Confirm the backend logs one redacted `judge_provisioning` success event and Profile changes to **Recall Pro Active** only after the SDK refresh confirms active `pro`.
+3. If the existing installation remains pending, record the machine-readable backend error code. For project/entitlement mismatch, verify the backend secret and APK public Android SDK key belong to the same RevenueCat project and that its entitlement identifier is exactly `pro`; restart the backend after changing its environment.
+4. Create one judge code in a private terminal with `npm run access:admin -- create-judge-invitations 1`; retain its invitation ID and send the code through a private channel.
+5. Install a fresh development or preview APK on the physical device. Open **Profile → Activate AI**. Paste the complete formatted code, then repeat with lowercase and accidental spaces. Type, backspace, delete, and replace a character in the middle; confirm the fixed `RCL-` prefix stays visible, the caret does not jump, and the preview is correct.
+6. Activate once. Confirm **Recall AI Active**, then **Recall Pro Active**, the 90-day expiration date, and **Continue**. Reopen Profile and confirm no Upgrade/Paywall action is shown.
+7. Force-stop and reopen the app. Confirm both AI and Pro remain active and an AI request still observes the normal daily/global/spending limits.
+8. For recovery testing, block the backend's RevenueCat request or temporarily remove its secret, redeem a different judge code, and confirm AI stays active while Pro is pending. Restore the backend configuration, restart it, and use **Retry Pro Activation**; do not enter another invitation.
+9. On a separate fresh installation, redeem a standard code and confirm it activates AI without changing the RevenueCat identity or enabling Pro.
+10. On a device with an active sandbox purchase or purchase history, redeem a judge code and verify the existing identity and entitlement remain intact.
 
 ### Navigation and final checks
 

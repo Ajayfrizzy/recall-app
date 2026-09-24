@@ -234,12 +234,12 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         if (!active) setError('Recall Pro activation is still pending. Please try again.');
         return active;
       } catch (identityError) {
-        setError(
+        const message =
           identityError instanceof Error && identityError.message.includes('existing subscription')
             ? identityError.message
-            : 'Recall Pro could not be confirmed. Please try again.',
-        );
-        return false;
+            : 'RevenueCat could not refresh Pro status on this device. Please try again.';
+        setError(message);
+        throw new Error(message, { cause: identityError });
       } finally {
         actionInFlight.current = false;
         setLoading(false);

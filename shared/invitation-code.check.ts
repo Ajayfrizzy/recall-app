@@ -1,29 +1,43 @@
 import assert from 'node:assert/strict';
 import {
-  formatInvitationCodeInput,
+  invitationCodePreview,
   isCompleteInvitationCode,
+  normalizeInvitationBodyInput,
   normalizeInvitationCode,
 } from './invitation-code';
 
+const body = 'ABCDEFGHJKLMNPQRSTUV';
 const complete = 'RCL-ABCDE-FGHJK-LMNPQ-RSTUV';
 
-assert.equal(formatInvitationCodeInput('rcl-abcde').value, 'RCL-ABCDE');
-assert.equal(formatInvitationCodeInput('RCL-ABCDEf').value, 'RCL-ABCDE-F');
-assert.equal(formatInvitationCodeInput('RCL-ABCDE-FGHJ').value, 'RCL-ABCDE-FGHJ');
-assert.equal(formatInvitationCodeInput('RCL-ABCDE-FGHJ', 14).selection.start, 14);
-assert.equal(formatInvitationCodeInput('  rcl-abcde fghjk lmnpq rstuv  ').value, complete);
-assert.equal(formatInvitationCodeInput(`${complete}WXYZ`).value, complete);
-assert.equal(normalizeInvitationCode(' rcl-abcde fghjk-lmnpq rstuv '), complete);
+assert.equal(normalizeInvitationBodyInput(complete), body, 'formatted paste lost characters');
+assert.equal(
+  normalizeInvitationBodyInput(`rcl${body}`),
+  body,
+  'unformatted complete-code paste lost characters',
+);
+assert.equal(
+  normalizeInvitationBodyInput('  rcl-abcde fghjk lmnpq rstuv  '),
+  body,
+  'lowercase or whitespace paste was not normalized',
+);
+assert.equal(normalizeInvitationBodyInput(`${body}WXYZ`), body, 'input exceeded the body limit');
+assert.equal(
+  normalizeInvitationBodyInput('RCLABCDEFGHJKLMNPQRS'),
+  'RCLABCDEFGHJKLMNPQRS',
+  'a body beginning with RCL was mistaken for the fixed prefix',
+);
+
+const deleted = normalizeInvitationBodyInput(`${body.slice(0, 9)}${body.slice(10)}`);
+assert.equal(deleted, 'ABCDEFGHJLMNPQRSTUV', 'middle deletion changed another character');
+const middleEdited = normalizeInvitationBodyInput(`${body.slice(0, 9)}Z${body.slice(10)}`);
+assert.equal(middleEdited, 'ABCDEFGHJZLMNPQRSTUV', 'middle editing reordered characters');
+
+assert.equal(normalizeInvitationCode(body), complete);
+assert.equal(invitationCodePreview('ABC'), 'RCL-ABCXX-XXXXX-XXXXX-XXXXX');
 assert(isCompleteInvitationCode(complete));
-assert(isCompleteInvitationCode('abcde fghjk lmnpq rstuv'));
+assert(isCompleteInvitationCode(body));
 assert(!isCompleteInvitationCode('RCL-ABCDE-FGHJK-LMNPQ-RSTU'));
 assert(!isCompleteInvitationCode('RCL-ABCDE-FGHIK-LMNPQ-RSTUV'));
 assert(!isCompleteInvitationCode('RCL-ABCDE-FGHJK-LMNPQ-RSTUVW'));
 
-const middleEdit = formatInvitationCodeInput('RCL-ABCDE-ZFGHJK-LMNPQ-RSTUV', 11);
-assert.equal(middleEdit.value, 'RCL-ABCDE-ZFGHJ-KLMNP-QRSTU');
-assert.equal(middleEdit.selection.start, 11);
-
-console.log(
-  'Invitation code typing, deletion, paste, casing, spacing, and validation checks passed',
-);
+console.log('Invitation code paste, normalization, length, deletion, and editing checks passed');

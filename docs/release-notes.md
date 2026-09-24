@@ -2,6 +2,9 @@
 
 ## Implemented
 
+- Corrected judge Pro provisioning for RevenueCat v1's `value.subscriber` response envelope, added machine-readable provisioning diagnostics, and made retry revalidate the existing judge installation without requiring another invitation.
+- Replaced the invitation field's selection-rewriting formatter with a fixed `RCL-` prefix, a plain 20-character editable body, and a separate formatted preview for stable typing, editing, and full-code paste.
+- Protected unrelated identified and previously paying RevenueCat customers from judge identity switching, deduplicated concurrent judge identity refreshes, and kept Pro gated on a freshly confirmed `pro` CustomerInfo entitlement.
 - Added invitation activation, SecureStore-backed installation credentials, startup expiration handling, and Profile access status/deactivation without coupling AI access to Recall Pro.
 - Added Bearer authorization for real and mock analysis, backend error-code mapping, local fallback, credential clearing on invalid/expired/revoked access, and an explicit activation path when access is missing.
 - Added mobile cache/reanalysis behavior: normal requests allow server cache reuse, while only the user-facing reanalysis action sends `reanalyze: true`.

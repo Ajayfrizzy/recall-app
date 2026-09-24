@@ -26,7 +26,7 @@ import {
 export default function AiAccessScreen() {
   const router = useRouter();
   const { activate, credentials: aiCredentials } = useAiAccess();
-  const { activateJudgePro } = useSubscription();
+  const { activateJudgePro, isPro } = useSubscription();
   const [codeBody, setCodeBody] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +35,7 @@ export default function AiAccessScreen() {
   const [proError, setProError] = useState<string | null>(null);
   const [proLoading, setProLoading] = useState(false);
   const submitting = useRef(false);
+  const proActive = proConfirmed || isPro;
 
   const leave = () => {
     if (router.canGoBack()) router.back();
@@ -140,10 +141,10 @@ export default function AiAccessScreen() {
                   <>
                     <ThemedText
                       type="smallBold"
-                      style={proConfirmed ? styles.successText : undefined}
+                      style={proActive ? styles.successText : undefined}
                       accessibilityLiveRegion="polite"
                     >
-                      {proConfirmed
+                      {proActive
                         ? 'Recall Pro Active'
                         : proLoading
                           ? 'Activating Recall Pro...'
@@ -152,8 +153,10 @@ export default function AiAccessScreen() {
                     <ThemedText type="small" themeColor="textSecondary">
                       Judge access expires {new Date(judgeExpiration).toLocaleDateString()}.
                     </ThemedText>
-                    {proError ? <ThemedText style={styles.error}>{proError}</ThemedText> : null}
-                    {!proConfirmed ? (
+                    {!proActive && proError ? (
+                      <ThemedText style={styles.error}>{proError}</ThemedText>
+                    ) : null}
+                    {!proActive ? (
                       <ActionButton
                         label="Retry Pro Activation"
                         loadingLabel="Activating Recall Pro..."

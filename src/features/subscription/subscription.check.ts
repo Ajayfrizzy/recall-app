@@ -11,6 +11,7 @@ import {
   isPurchaseCancellation,
   loadSubscriptionResources,
   judgeIdentityAction,
+  reconcileSubscriptionFeedback,
 } from './logic';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -46,6 +47,19 @@ assert(
 );
 assert(didRestorePro(active), 'active restored entitlement was not recognized');
 assert(!didRestorePro(inactive), 'empty restore result enabled Pro');
+assert(
+  Object.keys(
+    reconcileSubscriptionFeedback(active, {
+      error: 'Recall Pro activation is still pending.',
+      statusMessage: 'No active Pro entitlement was found.',
+    }),
+  ).length === 0,
+  'fresh active CustomerInfo did not clear stale subscription feedback',
+);
+assert(
+  reconcileSubscriptionFeedback(inactive, { error: 'Still pending' }).error === 'Still pending',
+  'inactive CustomerInfo incorrectly cleared the pending state',
+);
 assert(hasActiveRevenueCatAccess(active), 'active access was not detected');
 assert(
   hasRevenueCatIdentityToProtect({ allPurchasedProductIdentifiers: ['paid_product'] }),
@@ -153,31 +167,44 @@ void (async () => {
   assert(activation.active, 'fresh CustomerInfo did not verify the granted Pro entitlement');
 
   const failedActivationCalls: string[] = [];
-  let grantFailed = false;
+  const recoveredActivation = await activateJudgeProFlow({
+    connectIdentity: async () => {
+      failedActivationCalls.push('connect');
+      return inactive;
+    },
+    provisionEntitlement: async () => {
+      failedActivationCalls.push('provision');
+      throw new Error('grant failed');
+    },
+    refreshIdentity: async () => {
+      failedActivationCalls.push('refresh');
+      return active;
+    },
+    hasActiveEntitlement: hasActiveProEntitlement,
+  });
+  assert(
+    recoveredActivation.active && recoveredActivation.provisioningError instanceof Error,
+    'fresh active CustomerInfo did not recover a previously successful grant',
+  );
+  assert(
+    failedActivationCalls.join(',') === 'connect,provision,refresh',
+    'CustomerInfo was not refreshed after an ambiguous provisioning failure',
+  );
+
+  let inactiveGrantFailed = false;
   try {
     await activateJudgeProFlow({
-      connectIdentity: async () => {
-        failedActivationCalls.push('connect');
-        return inactive;
-      },
+      connectIdentity: async () => inactive,
       provisionEntitlement: async () => {
-        failedActivationCalls.push('provision');
         throw new Error('grant failed');
       },
-      refreshIdentity: async () => {
-        failedActivationCalls.push('refresh');
-        return active;
-      },
+      refreshIdentity: async () => inactive,
       hasActiveEntitlement: hasActiveProEntitlement,
     });
   } catch {
-    grantFailed = true;
+    inactiveGrantFailed = true;
   }
-  assert(grantFailed, 'a failed promotional grant was treated as successful');
-  assert(
-    failedActivationCalls.join(',') === 'connect,provision',
-    'a failed grant must not be presented as verified Pro access',
-  );
+  assert(inactiveGrantFailed, 'inactive Pro was enabled after a failed promotional grant');
 
   const failedResources = await loadSubscriptionResources(
     async () => Promise.reject(new Error('offline')),

@@ -28,6 +28,7 @@ import {
   hasActiveProEntitlement,
   isPurchaseCancellation,
   loadSubscriptionResources,
+  reconcileSubscriptionFeedback,
 } from './logic';
 import { useAiAccess } from '@/features/ai-access/context';
 import { AiAccessError, type AiAccessCredentials } from '@/services/ai/access-client';
@@ -65,15 +66,24 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const actionInFlight = useRef(false);
   const aiAccess = useAiAccess();
 
+  const applyCustomerInfo = useCallback((updated: CustomerInfo) => {
+    setCustomerInfo(updated);
+    setError((current) => reconcileSubscriptionFeedback(updated, { error: current }).error);
+    setStatusMessage(
+      (current) => reconcileSubscriptionFeedback(updated, { statusMessage: current }).statusMessage,
+    );
+  }, []);
+
   const refreshCustomerInfo = useCallback(async () => {
     if (!available) return;
     try {
-      setCustomerInfo(await getCustomerInfo());
-      setError(undefined);
+      const updated = await getCustomerInfo();
+      applyCustomerInfo(updated);
+      if (!hasActiveProEntitlement(updated)) setError(undefined);
     } catch {
       setError(TEMPORARILY_UNAVAILABLE);
     }
-  }, [available]);
+  }, [applyCustomerInfo, available]);
 
   const loadSubscription = useCallback(async () => {
     const configuration = configureRevenueCat();
@@ -91,15 +101,16 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(undefined);
     setStatusMessage(undefined);
+    let latestCustomerInfo: CustomerInfo | undefined;
     if (
       aiAccess.credentials?.invitationType === 'judge' &&
-      aiAccess.credentials.proProvisioning === 'confirmed' &&
       aiAccess.credentials.revenueCatAppUserId
     ) {
       try {
-        setCustomerInfo(
-          await connectJudgeRevenueCatIdentity(aiAccess.credentials.revenueCatAppUserId),
+        latestCustomerInfo = await connectJudgeRevenueCatIdentity(
+          aiAccess.credentials.revenueCatAppUserId,
         );
+        applyCustomerInfo(latestCustomerInfo);
       } catch {
         setError('Recall Pro activation needs attention. Open AI Access to retry.');
       }
@@ -108,29 +119,31 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       getCustomerInfo,
       getCurrentRevenueCatOffering,
     );
-    if (resources.customerInfo) setCustomerInfo(resources.customerInfo);
+    if (resources.customerInfo) {
+      latestCustomerInfo = resources.customerInfo;
+      applyCustomerInfo(resources.customerInfo);
+    }
     setOffering(resources.offering);
-    if (resources.failed) {
+    if (resources.failed && !hasActiveProEntitlement(latestCustomerInfo)) {
       setError(TEMPORARILY_UNAVAILABLE);
-    } else if (!resources.offering) {
+    } else if (!resources.offering && !hasActiveProEntitlement(latestCustomerInfo)) {
       setError('No subscription offering is configured.');
     }
     setLoading(false);
     setInitialized(true);
-  }, [aiAccess.credentials]);
+  }, [aiAccess.credentials, applyCustomerInfo]);
 
   useEffect(() => {
     const configuration = configureRevenueCat();
     let removeListener: (() => void) | undefined;
     if (configuration.available) {
       removeListener = addCustomerInfoListener((updated) => {
-        setCustomerInfo(updated);
-        setError(undefined);
+        applyCustomerInfo(updated);
       });
     }
     void loadSubscription();
     return () => removeListener?.();
-  }, [loadSubscription]);
+  }, [applyCustomerInfo, loadSubscription]);
 
   const purchasePackage = useCallback(
     async (aPackage: PurchasesPackage): Promise<SubscriptionActionResult> => {
@@ -145,7 +158,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       setStatusMessage(undefined);
       try {
         const result = await purchaseRevenueCatPackage(aPackage);
-        setCustomerInfo(result.customerInfo);
+        applyCustomerInfo(result.customerInfo);
         return 'success';
       } catch (purchaseError) {
         if (isPurchaseCancellation(purchaseError)) return 'cancelled';
@@ -156,7 +169,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setLoading(false);
       }
     },
-    [available],
+    [applyCustomerInfo, available],
   );
 
   const restorePurchases = useCallback(async (): Promise<SubscriptionActionResult> => {
@@ -171,7 +184,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     setStatusMessage(undefined);
     try {
       const restored = await restoreRevenueCatPurchases();
-      setCustomerInfo(restored);
+      applyCustomerInfo(restored);
       setStatusMessage(
         didRestorePro(restored)
           ? 'Recall Pro was restored successfully.'
@@ -185,7 +198,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       actionInFlight.current = false;
       setLoading(false);
     }
-  }, [available]);
+  }, [applyCustomerInfo, available]);
 
   const presentPaywall = useCallback(async (): Promise<SubscriptionActionResult> => {
     if (actionInFlight.current) return 'error';
@@ -233,6 +246,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       actionInFlight.current = true;
       setLoading(true);
       setError(undefined);
+      setStatusMessage(undefined);
       try {
         const appUserId = credentials.revenueCatAppUserId;
         const result = await activateJudgeProFlow({
@@ -241,7 +255,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
           refreshIdentity: () => refreshJudgeRevenueCatIdentity(appUserId),
           hasActiveEntitlement: hasActiveProEntitlement,
         });
-        setCustomerInfo(result.customerInfo);
+        applyCustomerInfo(result.customerInfo);
         const active = result.active;
         if (!active) setError('Recall Pro activation is still pending. Please try again.');
         return active;
@@ -260,7 +274,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setLoading(false);
       }
     },
-    [aiAccess, available],
+    [aiAccess, applyCustomerInfo, available],
   );
 
   const isPro = hasActiveProEntitlement(customerInfo);

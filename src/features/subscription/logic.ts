@@ -31,6 +31,11 @@ export interface SubscriptionResources<Customer, Offering> {
   failed: boolean;
 }
 
+export interface SubscriptionFeedback {
+  error?: string;
+  statusMessage?: string;
+}
+
 export type RevenueCatAvailability =
   | { available: true; apiKey: string }
   | { available: false; reason: 'missing-key' | 'unsupported-platform' };
@@ -64,6 +69,13 @@ export function isPurchaseCancellation(error: unknown): boolean {
 
 export function didRestorePro(customerInfo?: EntitlementCustomerInfo): boolean {
   return hasActiveProEntitlement(customerInfo);
+}
+
+export function reconcileSubscriptionFeedback(
+  customerInfo: EntitlementCustomerInfo | undefined,
+  feedback: SubscriptionFeedback,
+): SubscriptionFeedback {
+  return hasActiveProEntitlement(customerInfo) ? {} : feedback;
 }
 
 export async function loadSubscriptionResources<Customer, Offering>(
@@ -158,9 +170,27 @@ export async function activateJudgeProFlow<Customer, Credentials>({
   provisionEntitlement: () => Promise<Credentials>;
   refreshIdentity: () => Promise<Customer>;
   hasActiveEntitlement: (customerInfo: Customer) => boolean;
-}): Promise<{ credentials: Credentials; customerInfo: Customer; active: boolean }> {
+}): Promise<{
+  credentials?: Credentials;
+  customerInfo: Customer;
+  active: boolean;
+  provisioningError?: unknown;
+}> {
   await connectIdentity();
-  const credentials = await provisionEntitlement();
+  let credentials: Credentials | undefined;
+  let provisioningError: unknown;
+  try {
+    credentials = await provisionEntitlement();
+  } catch (error) {
+    provisioningError = error;
+  }
   const customerInfo = await refreshIdentity();
-  return { credentials, customerInfo, active: hasActiveEntitlement(customerInfo) };
+  const active = hasActiveEntitlement(customerInfo);
+  if (provisioningError && !active) throw provisioningError;
+  return {
+    ...(credentials === undefined ? {} : { credentials }),
+    customerInfo,
+    active,
+    ...(provisioningError === undefined ? {} : { provisioningError }),
+  };
 }

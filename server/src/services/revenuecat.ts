@@ -22,12 +22,26 @@ export type RevenueCatProvisioningErrorCode =
   | 'revenuecat_network_timeout'
   | 'revenuecat_network_failure';
 
+type RevenueCatOperation = 'preflight_lookup' | 'promotional_grant' | 'verification_lookup';
+type RevenueCatStage =
+  | 'configuration'
+  | 'response_status'
+  | 'json_parsing'
+  | 'response_envelope'
+  | 'subscriber_record'
+  | 'entitlement_lookup'
+  | 'expiration_parsing'
+  | 'expiration_verification'
+  | 'complete';
+
 type RevenueCatDiagnostic = {
   event: 'judge_provisioning';
-  result: 'success' | 'failure';
+  result: 'success' | 'failure' | 'fallback';
   code: 'revenuecat_provisioning_succeeded' | RevenueCatProvisioningErrorCode;
   customerRef: string;
   entitlementId: string;
+  operation?: RevenueCatOperation;
+  stage: RevenueCatStage;
   status?: number;
   providerCode?: string;
 };
@@ -136,6 +150,72 @@ function isAbortError(error: unknown, signal: AbortSignal): boolean {
   return signal.aborted || (error instanceof Error && error.name === 'AbortError');
 }
 
+type Inspection =
+  | { confirmed: true }
+  | {
+      confirmed: false;
+      code:
+        | 'revenuecat_invalid_response'
+        | 'revenuecat_entitlement_not_found'
+        | 'revenuecat_expiration_mismatch';
+      stage: Exclude<
+        RevenueCatStage,
+        'configuration' | 'response_status' | 'json_parsing' | 'complete'
+      >;
+    };
+
+function inspectCustomerInfo(
+  body: unknown,
+  entitlementId: string,
+  expiresAt: number,
+  now: number,
+  onStage: (stage: RevenueCatStage) => void,
+): Inspection {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { confirmed: false, code: 'revenuecat_invalid_response', stage: 'response_envelope' };
+  }
+
+  // Customer lookups return top-level Customer Info. RevenueCat also documents a wrapped
+  // mutating response, so accept either shape without requiring unrelated optional fields.
+  const wrapped = (body as { value?: unknown }).value;
+  const envelope =
+    wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped) ? wrapped : body;
+  onStage('response_envelope');
+  const subscriber = (envelope as { subscriber?: unknown }).subscriber;
+  if (!subscriber || typeof subscriber !== 'object' || Array.isArray(subscriber)) {
+    return { confirmed: false, code: 'revenuecat_invalid_response', stage: 'subscriber_record' };
+  }
+  onStage('subscriber_record');
+  const entitlements = (subscriber as { entitlements?: unknown }).entitlements;
+  if (!entitlements || typeof entitlements !== 'object' || Array.isArray(entitlements)) {
+    return { confirmed: false, code: 'revenuecat_invalid_response', stage: 'entitlement_lookup' };
+  }
+  const entitlement = (entitlements as Record<string, unknown>)[entitlementId];
+  if (!entitlement || typeof entitlement !== 'object' || Array.isArray(entitlement)) {
+    return {
+      confirmed: false,
+      code: 'revenuecat_entitlement_not_found',
+      stage: 'entitlement_lookup',
+    };
+  }
+  onStage('entitlement_lookup');
+  const expiration = (entitlement as { expires_date?: unknown }).expires_date;
+  const confirmedExpiration = typeof expiration === 'string' ? Date.parse(expiration) : Number.NaN;
+  if (!Number.isFinite(confirmedExpiration)) {
+    return { confirmed: false, code: 'revenuecat_invalid_response', stage: 'expiration_parsing' };
+  }
+  onStage('expiration_parsing');
+  if (confirmedExpiration <= now || Math.abs(confirmedExpiration - expiresAt) > 1_000) {
+    return {
+      confirmed: false,
+      code: 'revenuecat_expiration_mismatch',
+      stage: 'expiration_verification',
+    };
+  }
+  onStage('expiration_verification');
+  return { confirmed: true };
+}
+
 export async function grantJudgePromotionalEntitlement({
   appUserId,
   expiresAt,
@@ -143,6 +223,7 @@ export async function grantJudgePromotionalEntitlement({
   fetcher = fetch,
   timeoutMs = 10_000,
   logger = defaultLogger,
+  now = Date.now,
 }: {
   appUserId: string;
   expiresAt: number;
@@ -150,60 +231,107 @@ export async function grantJudgePromotionalEntitlement({
   fetcher?: typeof fetch;
   timeoutMs?: number;
   logger?: DiagnosticLogger;
+  now?: () => number;
 }): Promise<void> {
   const diagnostic = {
     event: 'judge_provisioning' as const,
     customerRef: customerReference(appUserId),
     entitlementId: config.entitlementId,
   };
+  let operation: RevenueCatOperation = 'preflight_lookup';
+  let stage: RevenueCatStage = 'configuration';
+  const log = (
+    result: RevenueCatDiagnostic['result'],
+    code: RevenueCatDiagnostic['code'],
+    status?: number,
+    providerCode?: string,
+  ) =>
+    logger({
+      ...diagnostic,
+      result,
+      code,
+      operation,
+      stage,
+      ...(status !== undefined ? { status } : {}),
+      ...(providerCode ? { providerCode } : {}),
+    });
   const fail = (
     code: RevenueCatProvisioningErrorCode,
     status?: number,
     cause?: unknown,
     providerCode?: string,
   ): never => {
-    logger({
-      ...diagnostic,
-      result: 'failure',
-      code,
-      ...(status ? { status } : {}),
-      ...(providerCode ? { providerCode } : {}),
-    });
+    log('failure', code, status, providerCode);
     throw new RevenueCatProvisioningError(code, status, cause ? { cause } : undefined);
+  };
+  const pass = (nextStage: RevenueCatStage, status?: number): void => {
+    stage = nextStage;
+    log('success', 'revenuecat_provisioning_succeeded', status);
   };
 
   if (!config.secretApiKey) fail('revenuecat_not_configured');
   if (config.entitlementId !== 'pro') fail('revenuecat_entitlement_not_found');
+  const customerUrl = `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}`;
+  const grantUrl = `${customerUrl}/entitlements/${encodeURIComponent(config.entitlementId)}/promotional`;
+  const headers = { authorization: `Bearer ${config.secretApiKey}` };
 
-  const url =
-    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}` +
-    `/entitlements/${encodeURIComponent(config.entitlementId)}/promotional`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  let response: Response;
-  try {
-    response = await fetcher(url, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${config.secretApiKey}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ end_time_ms: expiresAt }),
-      signal: controller.signal,
-    });
-  } catch (error) {
-    response = fail(
-      isAbortError(error, controller.signal)
-        ? 'revenuecat_network_timeout'
-        : 'revenuecat_network_failure',
-      undefined,
-      error,
+  const request = async (url: string, init: RequestInit): Promise<Response> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetcher(url, { ...init, signal: controller.signal });
+    } catch (error) {
+      return fail(
+        isAbortError(error, controller.signal)
+          ? 'revenuecat_network_timeout'
+          : 'revenuecat_network_failure',
+        undefined,
+        error,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
+  const parseResponse = async (
+    response: Response,
+    allowFallback: boolean,
+  ): Promise<Inspection | undefined> => {
+    stage = 'json_parsing';
+    let body: unknown;
+    try {
+      body = await response.json();
+      pass('json_parsing', response.status);
+    } catch (error) {
+      if (allowFallback) {
+        log('fallback', 'revenuecat_invalid_response', response.status);
+        return undefined;
+      }
+      fail('revenuecat_invalid_response', response.status, error);
+    }
+    const inspected = inspectCustomerInfo(body, config.entitlementId, expiresAt, now(), (next) =>
+      pass(next, response.status),
     );
-  } finally {
-    clearTimeout(timeout);
-  }
+    if (!inspected.confirmed) {
+      stage = inspected.stage;
+      if (allowFallback) {
+        log('fallback', inspected.code, response.status);
+        return inspected;
+      }
+      return inspected;
+    }
+    return inspected;
+  };
 
-  if (response.status !== 201) {
+  const requireSuccessfulStatus = async (
+    response: Response,
+    expected: readonly number[],
+  ): Promise<void> => {
+    stage = 'response_status';
+    if (expected.includes(response.status)) {
+      pass('response_status', response.status);
+      return;
+    }
     let fields: RevenueCatErrorFields = {};
     try {
       fields = revenueCatErrorFields(await response.json());
@@ -216,40 +344,50 @@ export async function grantJudgePromotionalEntitlement({
       undefined,
       safeProviderCode(fields.code),
     );
+  };
+
+  const lookup = async (): Promise<Inspection> => {
+    const response = await request(customerUrl, { method: 'GET', headers });
+    await requireSuccessfulStatus(response, [200, 201]);
+    const inspected = await parseResponse(response, false);
+    return inspected!;
+  };
+
+  const existing = await lookup();
+  if (existing.confirmed) {
+    stage = 'complete';
+    log('success', 'revenuecat_provisioning_succeeded');
+    return;
+  }
+  // Only a valid customer with no matching entitlement is eligible for one grant attempt.
+  // Malformed data or an existing entitlement with another expiration is not safe to overwrite.
+  if (existing.code !== 'revenuecat_entitlement_not_found') {
+    stage = existing.stage;
+    fail(existing.code);
   }
 
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch (error) {
-    fail('revenuecat_invalid_response', response.status, error);
-  }
-  if (!body || typeof body !== 'object') fail('revenuecat_invalid_response', response.status);
-  const value = (body as { value?: unknown }).value;
-  if (!value || typeof value !== 'object') fail('revenuecat_invalid_response', response.status);
-  const subscriber = (value as { subscriber?: unknown }).subscriber;
-  if (!subscriber || typeof subscriber !== 'object') {
-    fail('revenuecat_invalid_response', response.status);
-  }
-  const entitlements = (subscriber as { entitlements?: unknown }).entitlements;
-  if (!entitlements || typeof entitlements !== 'object') {
-    fail('revenuecat_invalid_response', response.status);
-  }
-  const entitlement = (entitlements as Record<string, unknown>)[config.entitlementId];
-  if (!entitlement || typeof entitlement !== 'object') {
-    fail('revenuecat_entitlement_not_found', response.status);
-  }
-  const expiration = (entitlement as { expires_date?: unknown }).expires_date;
-  const confirmedExpiration = typeof expiration === 'string' ? Date.parse(expiration) : Number.NaN;
-  if (!Number.isFinite(confirmedExpiration)) fail('revenuecat_invalid_response', response.status);
-  if (Math.abs(confirmedExpiration - expiresAt) > 1_000) {
-    fail('revenuecat_expiration_mismatch', response.status);
-  }
-
-  logger({
-    ...diagnostic,
-    result: 'success',
-    code: 'revenuecat_provisioning_succeeded',
-    status: response.status,
+  operation = 'promotional_grant';
+  const grantResponse = await request(grantUrl, {
+    method: 'POST',
+    headers: { ...headers, 'content-type': 'application/json' },
+    body: JSON.stringify({ end_time_ms: expiresAt }),
   });
+  await requireSuccessfulStatus(grantResponse, [201]);
+  const granted = await parseResponse(grantResponse, true);
+  if (granted?.confirmed) {
+    stage = 'complete';
+    log('success', 'revenuecat_provisioning_succeeded', grantResponse.status);
+    return;
+  }
+
+  // A 201 means RevenueCat accepted the grant, but only fresh Customer Info can confirm a
+  // sparse, malformed, missing-entitlement, or mismatched grant response.
+  operation = 'verification_lookup';
+  const verified = await lookup();
+  if (!verified.confirmed) {
+    stage = verified.stage;
+    fail(verified.code);
+  }
+  stage = 'complete';
+  log('success', 'revenuecat_provisioning_succeeded');
 }

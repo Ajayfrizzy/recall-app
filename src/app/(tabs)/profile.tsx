@@ -171,7 +171,7 @@ export default function ProfileScreen() {
             </>
           ) : null}
 
-          {judgeProMessage ? (
+          {!isPro && judgeProMessage ? (
             <ThemedText type="small" accessibilityLiveRegion="polite">
               {judgeProMessage}
             </ThemedText>

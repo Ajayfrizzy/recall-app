@@ -68,8 +68,8 @@ async function provisionJudgeEntitlement(rawToken: string | undefined): Promise<
 }> {
   const store = getAnalysisAccessStore();
   const judge = store.getJudgeProvisioning(rawToken);
-  // Retry against RevenueCat even if an older server process marked this row confirmed.
-  // The grant endpoint is idempotent for the same customer, entitlement, and expiration.
+  // The RevenueCat service first verifies the existing entitlement and only grants when needed.
+  // This preserves the original judge expiration without extending an already-correct grant.
   await grantJudgePromotionalEntitlement({
     appUserId: judge.revenueCatAppUserId,
     expiresAt: judge.expiresAt,

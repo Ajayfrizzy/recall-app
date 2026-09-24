@@ -16,8 +16,10 @@ type AiAccessContextValue = {
   initialized: boolean;
   activated: boolean;
   expiresAt: number | null;
+  credentials: AiAccessCredentials | null;
   authorizationState: AiAuthorizationState;
-  activate: (code: string) => Promise<void>;
+  activate: (code: string) => Promise<AiAccessCredentials>;
+  retryJudgePro: () => Promise<AiAccessCredentials>;
   deactivate: () => Promise<void>;
   invalidateCredentials: (reason: 'expired' | 'revoked') => Promise<void>;
   getAccessToken: () => string | null;
@@ -55,6 +57,18 @@ export function AiAccessProvider({ children }: PropsWithChildren) {
     credentialsRef.current = next;
     setCredentials(next);
     setAuthorizationState('active');
+    return next;
+  }, []);
+
+  const retryJudgePro = useCallback(async () => {
+    const current = credentialsRef.current;
+    if (!current || current.invitationType !== 'judge') {
+      throw new Error('Judge access is not active on this installation.');
+    }
+    const next = await aiAccessClient.provisionJudgeEntitlement(current);
+    credentialsRef.current = next;
+    setCredentials(next);
+    return next;
   }, []);
 
   const deactivate = useCallback(async () => {
@@ -99,16 +113,19 @@ export function AiAccessProvider({ children }: PropsWithChildren) {
       initialized: authorizationState !== 'loading',
       activated: authorizationState === 'active',
       expiresAt: credentials?.expiresAt ?? null,
+      credentials,
       authorizationState,
       activate,
+      retryJudgePro,
       deactivate,
       invalidateCredentials,
       getAccessToken,
     }),
     [
       authorizationState,
-      credentials?.expiresAt,
+      credentials,
       activate,
+      retryJudgePro,
       deactivate,
       invalidateCredentials,
       getAccessToken,

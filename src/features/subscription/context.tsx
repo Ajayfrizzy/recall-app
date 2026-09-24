@@ -10,6 +10,7 @@ import {
 } from 'react';
 import {
   addCustomerInfoListener,
+  connectJudgeRevenueCatIdentity,
   configureRevenueCat,
   getCurrentRevenueCatOffering,
   getCustomerInfo,
@@ -25,8 +26,8 @@ import {
   hasActiveProEntitlement,
   isPurchaseCancellation,
   loadSubscriptionResources,
-  shouldForceProInDevelopment,
 } from './logic';
+import { useAiAccess } from '@/features/ai-access/context';
 
 export type SubscriptionActionResult = 'success' | 'cancelled' | 'unavailable' | 'error';
 
@@ -44,6 +45,7 @@ interface SubscriptionContextValue {
   purchasePackage: (aPackage: PurchasesPackage) => Promise<SubscriptionActionResult>;
   restorePurchases: () => Promise<SubscriptionActionResult>;
   presentPaywall: () => Promise<SubscriptionActionResult>;
+  confirmJudgePro: (appUserId: string) => Promise<boolean>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -58,7 +60,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string>();
   const [statusMessage, setStatusMessage] = useState<string>();
   const actionInFlight = useRef(false);
-  const forcePro = shouldForceProInDevelopment(__DEV__, process.env.EXPO_PUBLIC_DEV_FORCE_PRO);
+  const aiAccess = useAiAccess();
 
   const refreshCustomerInfo = useCallback(async () => {
     if (!available) return;
@@ -86,6 +88,19 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     setLoading(true);
     setError(undefined);
     setStatusMessage(undefined);
+    if (
+      aiAccess.credentials?.invitationType === 'judge' &&
+      aiAccess.credentials.proProvisioning === 'confirmed' &&
+      aiAccess.credentials.revenueCatAppUserId
+    ) {
+      try {
+        setCustomerInfo(
+          await connectJudgeRevenueCatIdentity(aiAccess.credentials.revenueCatAppUserId),
+        );
+      } catch {
+        setError('Recall Pro activation needs attention. Open AI Access to retry.');
+      }
+    }
     const resources = await loadSubscriptionResources(
       getCustomerInfo,
       getCurrentRevenueCatOffering,
@@ -99,7 +114,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
     setLoading(false);
     setInitialized(true);
-  }, []);
+  }, [aiAccess.credentials]);
 
   useEffect(() => {
     const configuration = configureRevenueCat();
@@ -171,6 +186,10 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
 
   const presentPaywall = useCallback(async (): Promise<SubscriptionActionResult> => {
     if (actionInFlight.current) return 'error';
+    if (aiAccess.credentials?.invitationType === 'judge') {
+      setError('Judge Pro activation is managed through AI Access.');
+      return 'unavailable';
+    }
     if (!available || !offering) {
       setError(
         available
@@ -200,9 +219,36 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       actionInFlight.current = false;
       setLoading(false);
     }
-  }, [available, offering, refreshCustomerInfo]);
+  }, [aiAccess.credentials?.invitationType, available, offering, refreshCustomerInfo]);
 
-  const isPro = forcePro || hasActiveProEntitlement(customerInfo);
+  const confirmJudgePro = useCallback(
+    async (appUserId: string): Promise<boolean> => {
+      if (!available || actionInFlight.current) return false;
+      actionInFlight.current = true;
+      setLoading(true);
+      setError(undefined);
+      try {
+        const updated = await connectJudgeRevenueCatIdentity(appUserId);
+        setCustomerInfo(updated);
+        const active = hasActiveProEntitlement(updated);
+        if (!active) setError('Recall Pro activation is still pending. Please try again.');
+        return active;
+      } catch (identityError) {
+        setError(
+          identityError instanceof Error && identityError.message.includes('existing subscription')
+            ? identityError.message
+            : 'Recall Pro could not be confirmed. Please try again.',
+        );
+        return false;
+      } finally {
+        actionInFlight.current = false;
+        setLoading(false);
+      }
+    },
+    [available],
+  );
+
+  const isPro = hasActiveProEntitlement(customerInfo);
   const value = useMemo<SubscriptionContextValue>(
     () => ({
       initialized,
@@ -218,6 +264,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       purchasePackage,
       restorePurchases,
       presentPaywall,
+      confirmJudgePro,
     }),
     [
       initialized,
@@ -233,6 +280,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       purchasePackage,
       restorePurchases,
       presentPaywall,
+      confirmJudgePro,
     ],
   );
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

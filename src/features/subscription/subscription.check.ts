@@ -3,10 +3,11 @@ import {
   didRestorePro,
   getCurrentOffering,
   getRevenueCatAvailability,
+  hasActiveRevenueCatAccess,
   hasActiveProEntitlement,
   isPurchaseCancellation,
   loadSubscriptionResources,
-  shouldForceProInDevelopment,
+  judgeIdentityAction,
 } from './logic';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -42,9 +43,33 @@ assert(
 );
 assert(didRestorePro(active), 'active restored entitlement was not recognized');
 assert(!didRestorePro(inactive), 'empty restore result enabled Pro');
+assert(hasActiveRevenueCatAccess(active), 'active access was not detected');
 assert(
-  !shouldForceProInDevelopment(false, 'true') && shouldForceProInDevelopment(true, 'true'),
-  'development Pro override escaped development or failed to activate',
+  judgeIdentityAction({
+    currentAppUserId: '$RCAnonymousID:one',
+    judgeAppUserId: 'recall_judge_one',
+    anonymous: true,
+    hasActiveAccess: false,
+  }) === 'login',
+  'an eligible anonymous judge customer was not identified',
+);
+assert(
+  judgeIdentityAction({
+    currentAppUserId: '$RCAnonymousID:paying',
+    judgeAppUserId: 'recall_judge_one',
+    anonymous: true,
+    hasActiveAccess: true,
+  }) === 'keep',
+  'an existing paying anonymous customer must not be switched',
+);
+assert(
+  judgeIdentityAction({
+    currentAppUserId: 'existing_account',
+    judgeAppUserId: 'recall_judge_one',
+    anonymous: false,
+    hasActiveAccess: false,
+  }) === 'conflict',
+  'an unrelated identified customer must not be replaced',
 );
 
 void (async () => {

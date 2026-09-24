@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { AccessControlError } from '../errors.js';
 import type { RecallAnalysis } from '../schemas/recall-analysis.js';
 import { AnalysisAccessStore, type AccessConfig } from './access-control.js';
@@ -27,6 +28,7 @@ function config(overrides: Partial<AccessConfig> = {}): AccessConfig {
     globalDailyLimit: 40,
     globalConcurrencyLimit: 2,
     tokenTtlDays: 30,
+    standardInvitationTtlDays: 7,
     redemptionWindowMinutes: 15,
     redemptionMaxFailures: 5,
     monthlyEstimatedLimitMicroUsd: 1_500_000,
@@ -53,12 +55,16 @@ try {
   const baseConfig = config();
   let store = new AnalysisAccessStore(baseConfig);
   const invitation = store.createInvitation(baseTime);
+  assert.equal(invitation.expiresAt, baseTime + 7 * 86_400_000);
   expectCode(
     () => store.redeemInvitation('not-a-real-code', '10.0.0.1', baseTime),
     'invalid_invitation',
   );
-  const redeemed = store.redeemInvitation(invitation.code, '10.0.0.1', baseTime);
+  const spacedLowercaseCode = invitation.code.toLowerCase().replaceAll('-', ' - ');
+  const redeemed = store.redeemInvitation(spacedLowercaseCode, '10.0.0.1', baseTime);
   assert.match(redeemed.accessToken, /^rcl_at_[A-Za-z0-9_-]+$/);
+  assert.equal(redeemed.invitationType, 'standard');
+  assert.equal(redeemed.proProvisioning, undefined, 'standard invitations must not grant Pro');
   expectCode(
     () => store.redeemInvitation(invitation.code, '10.0.0.1', baseTime),
     'invitation_already_redeemed',
@@ -82,6 +88,62 @@ try {
 
   const restartSnapshot = store.getUsageSnapshot(baseTime);
   store.close();
+
+  const judgeStore = new AnalysisAccessStore(config());
+  const judgeInvitation = judgeStore.createJudgeInvitation(baseTime);
+  assert.equal(judgeInvitation.expiresAt, baseTime + 60 * 86_400_000);
+  const judge = judgeStore.redeemInvitation(judgeInvitation.code, '10.0.0.9', baseTime);
+  assert.equal(judge.invitationType, 'judge');
+  assert.equal(judge.expiresAt, baseTime + 90 * 86_400_000);
+  assert.equal(judge.judgeAccessExpiresAt, judge.expiresAt);
+  assert.match(judge.revenueCatAppUserId ?? '', /^recall_judge_/);
+  assert.equal(judge.proProvisioning, 'pending');
+  const pendingJudge = judgeStore.getJudgeProvisioning(judge.accessToken, baseTime);
+  assert.equal(pendingJudge.confirmed, false);
+  assert.equal(pendingJudge.revenueCatAppUserId, judge.revenueCatAppUserId);
+  judgeStore.confirmJudgeProvisioning(pendingJudge.tokenId, baseTime + 1);
+  assert.equal(judgeStore.getJudgeProvisioning(judge.accessToken, baseTime).confirmed, true);
+  judgeStore.close();
+
+  const revokedInvitationStore = new AnalysisAccessStore(config());
+  const revokedJudge = revokedInvitationStore.createJudgeInvitation(baseTime);
+  assert(revokedInvitationStore.revokeInvitation(revokedJudge.invitationId, baseTime + 1));
+  expectCode(
+    () => revokedInvitationStore.redeemInvitation(revokedJudge.code, '10.0.0.10', baseTime + 2),
+    'invalid_invitation',
+  );
+  revokedInvitationStore.close();
+
+  const standardOnlyStore = new AnalysisAccessStore(config());
+  const standardOnly = token(standardOnlyStore, baseTime);
+  expectCode(
+    () => standardOnlyStore.getJudgeProvisioning(standardOnly, baseTime),
+    'judge_access_required',
+  );
+  standardOnlyStore.close();
+
+  const migrationDirectory = mkdtempSync(join(tmpdir(), 'recall-access-migration-'));
+  directories.push(migrationDirectory);
+  const migrationPath = join(migrationDirectory, 'access.sqlite');
+  const legacyDatabase = new DatabaseSync(migrationPath);
+  legacyDatabase.exec(`
+    CREATE TABLE invitations (
+      id TEXT PRIMARY KEY, code_hash TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL, redeemed_at INTEGER, revoked_at INTEGER
+    );
+    CREATE TABLE installation_tokens (
+      id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL, revoked_at INTEGER
+    );
+    INSERT INTO installation_tokens(id, token_hash, created_at, expires_at, revoked_at)
+      VALUES ('legacy-token', 'legacy-hash', ${baseTime}, ${baseTime + 86_400_000}, NULL);
+  `);
+  legacyDatabase.close();
+  const migratedStore = new AnalysisAccessStore({ ...config(), databasePath: migrationPath });
+  const migratedToken = migratedStore.listTokens().find((item) => item.id === 'legacy-token');
+  assert.equal(migratedToken?.invitationType, 'standard');
+  assert.equal(migratedToken?.promotionalProvisionedAt, null);
+  migratedStore.close();
   store = new AnalysisAccessStore(baseConfig);
   assert.equal(store.getUsageSnapshot(baseTime).globalDailyCount, restartSnapshot.globalDailyCount);
   assert.equal(
@@ -202,6 +264,31 @@ try {
     405,
   );
   spendingStore.close();
+
+  const judgeSpendingStore = new AnalysisAccessStore(
+    config({ monthlyEstimatedLimitMicroUsd: 50_000, requestReservationMicroUsd: 50_000 }),
+  );
+  const judgeSpendingInvitation = judgeSpendingStore.createJudgeInvitation(baseTime);
+  const judgeSpendingToken = judgeSpendingStore.redeemInvitation(
+    judgeSpendingInvitation.code,
+    '10.0.0.11',
+    baseTime,
+  ).accessToken;
+  const judgeReservation = judgeSpendingStore.reserveAnalysis(
+    judgeSpendingToken,
+    'judge-spend-1',
+    true,
+    baseTime,
+  );
+  assert.equal(judgeReservation.kind, 'reserved');
+  if (judgeReservation.kind === 'reserved') {
+    judgeSpendingStore.completeAnalysis(judgeReservation.id, undefined, undefined);
+  }
+  expectCode(
+    () => judgeSpendingStore.reserveAnalysis(judgeSpendingToken, 'judge-spend-2', true, baseTime),
+    'estimated_spending_limit_exhausted',
+  );
+  judgeSpendingStore.close();
 
   const disabledStore = new AnalysisAccessStore(config({ analysisEnabled: false }));
   const disabledToken = token(disabledStore, baseTime);

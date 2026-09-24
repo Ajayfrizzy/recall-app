@@ -58,7 +58,8 @@ export type AccessErrorCode =
   | 'invalid_invitation'
   | 'invitation_already_redeemed'
   | 'invitation_expired'
-  | 'redemption_rate_limited';
+  | 'redemption_rate_limited'
+  | 'judge_access_required';
 
 export class AccessControlError extends Error {
   readonly code: AccessErrorCode;

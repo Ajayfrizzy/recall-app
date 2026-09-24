@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { z } from 'zod';
 import { AccessControlError, InvalidJsonError, PayloadTooLargeError } from '../errors.js';
-import { getAnalysisAccessStore } from '../services/access-control.js';
+import { bearerToken, getAnalysisAccessStore } from '../services/access-control.js';
+import { grantJudgePromotionalEntitlement } from '../services/revenuecat.js';
 
 const RedeemSchema = z.object({ code: z.string().trim().min(8).max(128) }).strict();
 const MAX_BODY_BYTES = 2_048;
@@ -40,6 +41,14 @@ export async function redeemAccessRoute(
     }
     const { code } = RedeemSchema.parse(await readBody(request));
     const result = getAnalysisAccessStore().redeemInvitation(code, request.socket.remoteAddress);
+    if (result.invitationType === 'judge') {
+      try {
+        await provisionJudgeEntitlement(result.accessToken);
+        result.proProvisioning = 'confirmed';
+      } catch {
+        result.proProvisioning = 'pending';
+      }
+    }
     sendJson(response, 200, result);
   } catch (error) {
     if (error instanceof AccessControlError) {
@@ -50,6 +59,45 @@ export async function redeemAccessRoute(
       sendJson(response, 413, { error: 'payload_too_large' });
     } else {
       sendJson(response, 500, { error: 'internal_error' });
+    }
+  }
+}
+
+async function provisionJudgeEntitlement(rawToken: string | undefined): Promise<{
+  invitationType: 'judge';
+  judgeAccessExpiresAt: number;
+  revenueCatAppUserId: string;
+  proProvisioning: 'confirmed';
+}> {
+  const store = getAnalysisAccessStore();
+  const judge = store.getJudgeProvisioning(rawToken);
+  if (!judge.confirmed) {
+    await grantJudgePromotionalEntitlement({
+      appUserId: judge.revenueCatAppUserId,
+      expiresAt: judge.expiresAt,
+    });
+    store.confirmJudgeProvisioning(judge.tokenId);
+  }
+  return {
+    invitationType: 'judge',
+    judgeAccessExpiresAt: judge.expiresAt,
+    revenueCatAppUserId: judge.revenueCatAppUserId,
+    proProvisioning: 'confirmed',
+  };
+}
+
+export async function provisionJudgeEntitlementRoute(
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> {
+  try {
+    const result = await provisionJudgeEntitlement(bearerToken(request.headers.authorization));
+    sendJson(response, 200, result);
+  } catch (error) {
+    if (error instanceof AccessControlError) {
+      sendJson(response, error.status, { error: error.code });
+    } else {
+      sendJson(response, 503, { error: 'provisioning_unavailable' });
     }
   }
 }

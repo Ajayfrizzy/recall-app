@@ -4,6 +4,10 @@ import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { AccessControlError } from '../errors.js';
 import type { RecallAnalysis } from '../schemas/recall-analysis.js';
+import {
+  isCompleteInvitationCode,
+  normalizeInvitationCode,
+} from '../../../shared/invitation-code.js';
 
 type Environment = Record<string, string | undefined>;
 
@@ -15,6 +19,7 @@ export type AccessConfig = {
   globalDailyLimit: number;
   globalConcurrencyLimit: number;
   tokenTtlDays: number;
+  standardInvitationTtlDays: number;
   redemptionWindowMinutes: number;
   redemptionMaxFailures: number;
   monthlyEstimatedLimitMicroUsd: number;
@@ -35,6 +40,10 @@ type TokenRow = {
   id: string;
   expires_at: number;
   revoked_at: number | null;
+  invitation_type: InvitationType;
+  revenuecat_app_user_id: string | null;
+  promotional_expires_at: number | null;
+  promotional_provisioned_at: number | null;
 };
 
 type InvitationRow = {
@@ -42,6 +51,25 @@ type InvitationRow = {
   expires_at: number;
   redeemed_at: number | null;
   revoked_at: number | null;
+  invitation_type: InvitationType;
+};
+
+export type InvitationType = 'standard' | 'judge';
+
+export type RedeemedAccess = {
+  accessToken: string;
+  expiresAt: number;
+  invitationType: InvitationType;
+  judgeAccessExpiresAt?: number;
+  revenueCatAppUserId?: string;
+  proProvisioning?: 'pending' | 'confirmed';
+};
+
+export type JudgeProvisioning = {
+  tokenId: string;
+  revenueCatAppUserId: string;
+  expiresAt: number;
+  confirmed: boolean;
 };
 
 type ReservationRow = {
@@ -81,6 +109,7 @@ export function getAccessConfig(env: Environment = process.env): AccessConfig {
     globalDailyLimit: integerEnv(env.AI_GLOBAL_DAILY_LIMIT, 40),
     globalConcurrencyLimit: integerEnv(env.AI_GLOBAL_CONCURRENCY_LIMIT, 2),
     tokenTtlDays: integerEnv(env.AI_ACCESS_TOKEN_TTL_DAYS, 30),
+    standardInvitationTtlDays: integerEnv(env.AI_INVITATION_TTL_DAYS, 7),
     redemptionWindowMinutes: integerEnv(env.AI_REDEMPTION_WINDOW_MINUTES, 15),
     redemptionMaxFailures: integerEnv(env.AI_REDEMPTION_MAX_FAILURES, 5),
     monthlyEstimatedLimitMicroUsd: Math.floor(
@@ -102,10 +131,6 @@ function utcDay(now: number): string {
 
 function utcMonth(now: number): string {
   return new Date(now).toISOString().slice(0, 7);
-}
-
-function normalizeInvitation(code: string): string {
-  return code.trim().toUpperCase().replace(/\s+/g, '');
 }
 
 function invitationCode(): string {
@@ -142,14 +167,20 @@ export class AnalysisAccessStore {
         created_at INTEGER NOT NULL,
         expires_at INTEGER NOT NULL,
         redeemed_at INTEGER,
-        revoked_at INTEGER
+        revoked_at INTEGER,
+        invitation_type TEXT NOT NULL DEFAULT 'standard'
       );
       CREATE TABLE IF NOT EXISTS installation_tokens (
         id TEXT PRIMARY KEY,
         token_hash TEXT NOT NULL UNIQUE,
         created_at INTEGER NOT NULL,
         expires_at INTEGER NOT NULL,
-        revoked_at INTEGER
+        revoked_at INTEGER,
+        invitation_type TEXT NOT NULL DEFAULT 'standard',
+        invitation_id TEXT,
+        revenuecat_app_user_id TEXT,
+        promotional_expires_at INTEGER,
+        promotional_provisioned_at INTEGER
       );
       CREATE TABLE IF NOT EXISTS redemption_failures (
         address_hash TEXT NOT NULL,
@@ -192,6 +223,30 @@ export class AnalysisAccessStore {
         FOREIGN KEY(token_id) REFERENCES installation_tokens(id)
       );
     `);
+    this.addColumnIfMissing('invitations', 'invitation_type', "TEXT NOT NULL DEFAULT 'standard'");
+    this.addColumnIfMissing(
+      'installation_tokens',
+      'invitation_type',
+      "TEXT NOT NULL DEFAULT 'standard'",
+    );
+    this.addColumnIfMissing('installation_tokens', 'invitation_id', 'TEXT');
+    this.addColumnIfMissing('installation_tokens', 'revenuecat_app_user_id', 'TEXT');
+    this.addColumnIfMissing('installation_tokens', 'promotional_expires_at', 'INTEGER');
+    this.addColumnIfMissing('installation_tokens', 'promotional_provisioned_at', 'INTEGER');
+    this.database.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS installation_tokens_revenuecat_user
+        ON installation_tokens(revenuecat_app_user_id)
+        WHERE revenuecat_app_user_id IS NOT NULL;
+    `);
+  }
+
+  private addColumnIfMissing(table: string, column: string, definition: string): void {
+    const columns = this.database.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+      name: string;
+    }>;
+    if (!columns.some((candidate) => candidate.name === column)) {
+      this.database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
   }
 
   private transaction<T>(operation: () => T): T {
@@ -218,22 +273,91 @@ export class AnalysisAccessStore {
     return this.hash('analysis', parts.join('\0'));
   }
 
-  createInvitation(now = Date.now(), ttlDays = 7): { code: string; expiresAt: number } {
+  createInvitation(
+    now = Date.now(),
+    standardTtlDays = this.config.standardInvitationTtlDays,
+    type: InvitationType = 'standard',
+  ): {
+    invitationId: string;
+    code: string;
+    expiresAt: number;
+    invitationType: InvitationType;
+  } {
     const code = invitationCode();
+    const invitationId = randomUUID();
+    const ttlDays = type === 'judge' ? 60 : standardTtlDays;
     const expiresAt = now + ttlDays * 86_400_000;
     this.database
-      .prepare('INSERT INTO invitations(id, code_hash, created_at, expires_at) VALUES (?, ?, ?, ?)')
-      .run(randomUUID(), this.hash('invitation', normalizeInvitation(code)), now, expiresAt);
-    return { code, expiresAt };
+      .prepare(
+        `INSERT INTO invitations(id, code_hash, created_at, expires_at, invitation_type)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        invitationId,
+        this.hash('invitation', normalizeInvitationCode(code)),
+        now,
+        expiresAt,
+        type,
+      );
+    return { invitationId, code, expiresAt, invitationType: type };
+  }
+
+  createJudgeInvitation(now = Date.now()): {
+    code: string;
+    invitationId: string;
+    expiresAt: number;
+    invitationType: 'judge';
+  } {
+    return this.createInvitation(now, this.config.standardInvitationTtlDays, 'judge') as {
+      code: string;
+      invitationId: string;
+      expiresAt: number;
+      invitationType: 'judge';
+    };
+  }
+
+  revokeInvitation(invitationId: string, now = Date.now()): boolean {
+    return (
+      this.database
+        .prepare(
+          `UPDATE invitations SET revoked_at = ?
+           WHERE id = ? AND revoked_at IS NULL AND redeemed_at IS NULL`,
+        )
+        .run(now, invitationId).changes === 1
+    );
+  }
+
+  listInvitations(): Array<{
+    id: string;
+    invitationType: InvitationType;
+    createdAt: number;
+    expiresAt: number;
+    redeemedAt: number | null;
+    revokedAt: number | null;
+  }> {
+    return this.database
+      .prepare(
+        `SELECT id, invitation_type AS invitationType, created_at AS createdAt,
+                expires_at AS expiresAt, redeemed_at AS redeemedAt, revoked_at AS revokedAt
+         FROM invitations ORDER BY created_at DESC`,
+      )
+      .all() as Array<{
+      id: string;
+      invitationType: InvitationType;
+      createdAt: number;
+      expiresAt: number;
+      redeemedAt: number | null;
+      revokedAt: number | null;
+    }>;
   }
 
   redeemInvitation(
     code: string,
     remoteAddress: string | undefined,
     now = Date.now(),
-  ): { accessToken: string; expiresAt: number } {
+  ): RedeemedAccess {
     const result = this.transaction<
-      | { ok: true; accessToken: string; expiresAt: number }
+      | ({ ok: true } & RedeemedAccess)
       | {
           ok: false;
           code: 'invalid_invitation' | 'invitation_already_redeemed' | 'invitation_expired';
@@ -243,11 +367,15 @@ export class AnalysisAccessStore {
       const cutoff = now - this.config.redemptionWindowMinutes * 60_000;
       this.database.prepare('DELETE FROM redemption_failures WHERE attempted_at < ?').run(cutoff);
 
-      const invitation = this.database
-        .prepare(
-          `SELECT id, expires_at, redeemed_at, revoked_at FROM invitations WHERE code_hash = ?`,
-        )
-        .get(this.hash('invitation', normalizeInvitation(code))) as InvitationRow | undefined;
+      const normalizedCode = normalizeInvitationCode(code);
+      const invitation = isCompleteInvitationCode(normalizedCode)
+        ? (this.database
+            .prepare(
+              `SELECT id, expires_at, redeemed_at, revoked_at, invitation_type
+           FROM invitations WHERE code_hash = ?`,
+            )
+            .get(this.hash('invitation', normalizedCode)) as InvitationRow | undefined)
+        : undefined;
 
       const invitationIsUsable =
         invitation &&
@@ -285,17 +413,70 @@ export class AnalysisAccessStore {
       }
 
       const accessToken = `rcl_at_${randomBytes(32).toString('base64url')}`;
-      const expiresAt = now + this.config.tokenTtlDays * 86_400_000;
+      const isJudge = invitation.invitation_type === 'judge';
+      const expiresAt = now + (isJudge ? 90 : this.config.tokenTtlDays) * 86_400_000;
+      const tokenId = randomUUID();
+      const revenueCatAppUserId = isJudge ? `recall_judge_${randomUUID()}` : null;
       this.database
         .prepare(
-          `INSERT INTO installation_tokens(id, token_hash, created_at, expires_at)
-           VALUES (?, ?, ?, ?)`,
+          `INSERT INTO installation_tokens(
+             id, token_hash, created_at, expires_at, invitation_type, invitation_id,
+             revenuecat_app_user_id, promotional_expires_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(randomUUID(), this.hash('token', accessToken), now, expiresAt);
-      return { ok: true, accessToken, expiresAt };
+        .run(
+          tokenId,
+          this.hash('token', accessToken),
+          now,
+          expiresAt,
+          invitation.invitation_type,
+          invitation.id,
+          revenueCatAppUserId,
+          isJudge ? expiresAt : null,
+        );
+      return {
+        ok: true,
+        accessToken,
+        expiresAt,
+        invitationType: invitation.invitation_type,
+        ...(isJudge
+          ? {
+              judgeAccessExpiresAt: expiresAt,
+              revenueCatAppUserId: revenueCatAppUserId!,
+              proProvisioning: 'pending' as const,
+            }
+          : {}),
+      };
     });
     if (!result.ok) throw new AccessControlError(result.code, 400);
-    return { accessToken: result.accessToken, expiresAt: result.expiresAt };
+    const { ok: _ok, ...access } = result;
+    return access;
+  }
+
+  getJudgeProvisioning(rawToken: string | undefined, now = Date.now()): JudgeProvisioning {
+    const token = this.tokenFor(rawToken, now);
+    if (
+      token.invitation_type !== 'judge' ||
+      !token.revenuecat_app_user_id ||
+      !token.promotional_expires_at
+    ) {
+      throw new AccessControlError('judge_access_required', 403);
+    }
+    return {
+      tokenId: token.id,
+      revenueCatAppUserId: token.revenuecat_app_user_id,
+      expiresAt: token.promotional_expires_at,
+      confirmed: token.promotional_provisioned_at !== null,
+    };
+  }
+
+  confirmJudgeProvisioning(tokenId: string, now = Date.now()): void {
+    this.database
+      .prepare(
+        `UPDATE installation_tokens SET promotional_provisioned_at = ?
+         WHERE id = ? AND invitation_type = 'judge'`,
+      )
+      .run(now, tokenId);
   }
 
   revokeToken(tokenId: string, now = Date.now()): boolean {
@@ -313,10 +494,14 @@ export class AnalysisAccessStore {
     createdAt: number;
     expiresAt: number;
     revokedAt: number | null;
+    invitationType: InvitationType;
+    promotionalProvisionedAt: number | null;
   }> {
     return this.database
       .prepare(
-        `SELECT id, created_at AS createdAt, expires_at AS expiresAt, revoked_at AS revokedAt
+        `SELECT id, created_at AS createdAt, expires_at AS expiresAt, revoked_at AS revokedAt,
+                invitation_type AS invitationType,
+                promotional_provisioned_at AS promotionalProvisionedAt
            FROM installation_tokens ORDER BY created_at DESC`,
       )
       .all() as Array<{
@@ -324,13 +509,19 @@ export class AnalysisAccessStore {
       createdAt: number;
       expiresAt: number;
       revokedAt: number | null;
+      invitationType: InvitationType;
+      promotionalProvisionedAt: number | null;
     }>;
   }
 
   private tokenFor(rawToken: string | undefined, now: number): TokenRow {
     if (!rawToken) throw new AccessControlError('missing_access_token', 401);
     const token = this.database
-      .prepare('SELECT id, expires_at, revoked_at FROM installation_tokens WHERE token_hash = ?')
+      .prepare(
+        `SELECT id, expires_at, revoked_at, invitation_type, revenuecat_app_user_id,
+                promotional_expires_at, promotional_provisioned_at
+         FROM installation_tokens WHERE token_hash = ?`,
+      )
       .get(this.hash('token', rawToken)) as TokenRow | undefined;
     if (!token) throw new AccessControlError('invalid_access_token', 401);
     if (token.revoked_at !== null) throw new AccessControlError('access_token_revoked', 403);

@@ -18,11 +18,6 @@ assert(
   'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY is required for the Android preview build.',
 );
 assert.notEqual(
-  process.env.EXPO_PUBLIC_DEV_FORCE_PRO?.trim().toLowerCase(),
-  'true',
-  'EXPO_PUBLIC_DEV_FORCE_PRO must not be enabled in a preview build.',
-);
-assert.notEqual(
   process.env.EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP?.trim().toLowerCase(),
   'true',
   'EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP must not be enabled in a preview build.',
@@ -37,6 +32,14 @@ assert(
   'The mobile app config must not contain OPENAI_API_KEY.',
 );
 assert(!easConfig.includes('OPENAI_API_KEY'), 'The EAS config must not contain OPENAI_API_KEY.');
+assert(
+  !appConfig.includes('REVENUECAT_SECRET_API_KEY'),
+  'The mobile app config must not contain the RevenueCat secret API key.',
+);
+assert(
+  !easConfig.includes('REVENUECAT_SECRET_API_KEY'),
+  'EAS mobile configuration must not contain the RevenueCat secret API key.',
+);
 
 const eas = JSON.parse(easConfig);
 assert.equal(eas.build?.preview?.distribution, 'internal');

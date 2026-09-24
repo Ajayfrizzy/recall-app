@@ -3,6 +3,7 @@ export const RECALL_PRO_ENTITLEMENT = 'pro';
 export type SubscriptionPlatform = 'android' | 'ios' | 'web' | string;
 
 interface EntitlementCustomerInfo {
+  activeSubscriptions?: string[];
   entitlements?: {
     active?: Record<string, { isActive?: boolean } | undefined>;
   };
@@ -78,6 +79,26 @@ export async function loadSubscriptionResources<Customer, Offering>(
   };
 }
 
-export function shouldForceProInDevelopment(isDevelopment: boolean, value?: string): boolean {
-  return isDevelopment && value?.toLowerCase() === 'true';
+export function hasActiveRevenueCatAccess(customerInfo?: EntitlementCustomerInfo): boolean {
+  return (
+    (customerInfo?.activeSubscriptions?.length ?? 0) > 0 ||
+    Object.values(customerInfo?.entitlements?.active ?? {}).some(
+      (entitlement) => entitlement?.isActive === true,
+    )
+  );
+}
+
+export function judgeIdentityAction({
+  currentAppUserId,
+  judgeAppUserId,
+  anonymous,
+  hasActiveAccess,
+}: {
+  currentAppUserId: string;
+  judgeAppUserId: string;
+  anonymous: boolean;
+  hasActiveAccess: boolean;
+}): 'keep' | 'login' | 'conflict' {
+  if (currentAppUserId === judgeAppUserId || hasActiveAccess) return 'keep';
+  return anonymous ? 'login' : 'conflict';
 }

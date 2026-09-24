@@ -1,12 +1,15 @@
 import 'dotenv/config';
 import { createServer } from 'node:http';
-import { redeemAccessRoute } from './routes/access.js';
+import { provisionJudgeEntitlementRoute, redeemAccessRoute } from './routes/access.js';
 import { analyzeRoute } from './routes/analyze.js';
 
 function validateDeploymentConfiguration(): void {
   if (process.env.NODE_ENV !== 'production') return;
   if (process.env.MOCK_ANALYSIS?.trim().toLowerCase() === 'true') {
     throw new Error('MOCK_ANALYSIS cannot be enabled in production.');
+  }
+  if (!process.env.REVENUECAT_SECRET_API_KEY?.trim()) {
+    throw new Error('REVENUECAT_SECRET_API_KEY is required in production.');
   }
   const publicUrl = process.env.RECALL_PUBLIC_BASE_URL?.trim();
   if (!publicUrl || new URL(publicUrl).protocol !== 'https:') {
@@ -40,6 +43,15 @@ const server = createServer(async (request, response) => {
       return;
     }
     await redeemAccessRoute(request, response);
+    return;
+  }
+  if (request.url === '/access/judge-entitlement') {
+    if (request.method !== 'POST') {
+      response.writeHead(405, { 'content-type': 'application/json', allow: 'POST' });
+      response.end(JSON.stringify({ error: 'method_not_allowed' }));
+      return;
+    }
+    await provisionJudgeEntitlementRoute(request, response);
     return;
   }
   if (request.url === '/analyze') {

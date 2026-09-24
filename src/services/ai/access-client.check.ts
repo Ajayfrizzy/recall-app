@@ -24,7 +24,11 @@ function memoryStorage(initial: string | null = null): AiAccessStorage & { value
 
 async function run(): Promise<void> {
   const now = Date.UTC(2026, 8, 23);
-  const credentials = { accessToken: `rcl_at_${'a'.repeat(32)}`, expiresAt: now + 60_000 };
+  const credentials = {
+    accessToken: `rcl_at_${'a'.repeat(32)}`,
+    expiresAt: now + 60_000,
+    invitationType: 'standard' as const,
+  };
   const storage = memoryStorage();
   let fetchCount = 0;
   let releaseResponse!: () => void;
@@ -39,6 +43,7 @@ async function run(): Promise<void> {
       fetchCount += 1;
       assert.equal(request?.method, 'POST');
       assert.deepEqual(request?.headers, { 'content-type': 'application/json' });
+      assert.equal(request?.body, JSON.stringify({ code: 'RCL-ABCDE-FGHJK-LMNPQ-RSTUV' }));
       await responseGate;
       return new Response(JSON.stringify(credentials), {
         status: 200,
@@ -47,8 +52,8 @@ async function run(): Promise<void> {
     },
   });
 
-  const firstActivation = client.redeem('INVITATION');
-  const repeatedActivation = client.redeem('INVITATION');
+  const firstActivation = client.redeem(' rcl-abcde fghjk lmnpq rstuv ');
+  const repeatedActivation = client.redeem(' rcl-abcde fghjk lmnpq rstuv ');
   releaseResponse();
   assert.deepEqual(await firstActivation, credentials);
   assert.deepEqual(await repeatedActivation, credentials);
@@ -63,6 +68,49 @@ async function run(): Promise<void> {
   });
   assert.deepEqual(await expiredClient.load(), { credentials: null, expired: true });
   assert.equal(expiredStorage.value, null, 'expired token must be cleared');
+
+  const judgeCredentials = {
+    accessToken: `rcl_at_${'j'.repeat(32)}`,
+    expiresAt: now + 90 * 86_400_000,
+    invitationType: 'judge' as const,
+    judgeAccessExpiresAt: now + 90 * 86_400_000,
+    revenueCatAppUserId: 'recall_judge_stable-id',
+    proProvisioning: 'pending' as const,
+  };
+  const judgeStorage = memoryStorage(JSON.stringify(judgeCredentials));
+  let provisioningAttempts = 0;
+  const judgeClient = createAiAccessClient({
+    storage: judgeStorage,
+    now: () => now,
+    getBaseUrl: () => 'https://api.recall.test',
+    fetcher: async (_url, request) => {
+      provisioningAttempts += 1;
+      assert.deepEqual(request?.headers, {
+        authorization: `Bearer ${judgeCredentials.accessToken}`,
+      });
+      if (provisioningAttempts === 1) {
+        return new Response(JSON.stringify({ error: 'temporary' }), { status: 503 });
+      }
+      return new Response(
+        JSON.stringify({
+          invitationType: 'judge',
+          judgeAccessExpiresAt: judgeCredentials.judgeAccessExpiresAt,
+          revenueCatAppUserId: judgeCredentials.revenueCatAppUserId,
+          proProvisioning: 'confirmed',
+        }),
+        { status: 200 },
+      );
+    },
+  });
+  await assert.rejects(judgeClient.provisionJudgeEntitlement(judgeCredentials), AiAccessError);
+  assert.deepEqual(
+    (await judgeClient.load()).credentials,
+    judgeCredentials,
+    'failed Pro provisioning must preserve redeemed judge access',
+  );
+  const confirmedJudge = await judgeClient.provisionJudgeEntitlement(judgeCredentials);
+  assert.equal(confirmedJudge.proProvisioning, 'confirmed');
+  assert.equal(provisioningAttempts, 2, 'the same installation must be able to retry');
 
   for (const serverCode of [
     'invalid_invitation',

@@ -37,6 +37,7 @@ export default function ProfileScreen() {
   } = useSubscription();
   const firstPackage = offering?.availablePackages[0];
   const period = firstPackage ? PACKAGE_PERIOD_LABELS[firstPackage.packageType] : undefined;
+  const showPurchaseOptions = !isPro && aiAccess.credentials?.invitationType !== 'judge';
 
   return (
     <ThemedView style={styles.container}>
@@ -63,7 +64,11 @@ export default function ProfileScreen() {
             </ThemedText>
           ) : null}
           <ThemedText type="small" themeColor="textSecondary">
-            Invitation access is separate from Recall Pro and its subscription benefits.
+            {aiAccess.credentials?.invitationType === 'judge'
+              ? `Judge access includes complimentary Pro through ${new Date(
+                  aiAccess.credentials.judgeAccessExpiresAt ?? aiAccess.credentials.expiresAt,
+                ).toLocaleDateString()}.`
+              : 'Standard invitation access is separate from Recall Pro.'}
           </ThemedText>
           {aiAccess.activated ? (
             <View style={styles.aiActions}>
@@ -103,14 +108,14 @@ export default function ProfileScreen() {
             </View>
           ) : null}
 
-          {!isPro && firstPackage ? (
+          {showPurchaseOptions && firstPackage ? (
             <ThemedText type="smallBold">
               {firstPackage.product.priceString}
               {period ? ` / ${period}` : ''}
             </ThemedText>
           ) : null}
 
-          {!isPro ? (
+          {showPurchaseOptions ? (
             <ActionButton
               label="Upgrade to Pro"
               loadingLabel="Opening paywall..."

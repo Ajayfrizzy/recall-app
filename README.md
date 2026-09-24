@@ -41,7 +41,7 @@ OpenAI usage is server-side and pay-as-you-go. The model is configurable with `O
 
 ### Invitation access and safeguards
 
-AI invitation access is not an account and is separate from Recall Pro. RevenueCat's `pro` entitlement controls product features; it does not bypass AI invitations, quotas, shutdown, or the spending ceiling. Full user authentication and cross-device identity are future work.
+Standard AI invitation access is not an account and never grants Recall Pro. Judge invitations also provision a 90-day promotional RevenueCat `pro` entitlement for that installation. Neither invitation type bypasses AI quotas, shutdown, concurrency controls, or the global spending ceiling. Full user authentication and cross-device identity are future work.
 
 The backend hashes tokens in SQLite, isolates cached results by installation, and persists quota/cache records across restarts. Defaults are 10 analyses per installation per UTC day, 40 globally per UTC day, two concurrent requests, and a $1.50 estimated monthly ceiling. A normal repeat can use the server cache without consuming another allowance; only the explicit **Reanalyze with Recall AI** action sends `reanalyze: true`.
 
@@ -93,12 +93,15 @@ Generate invitations and administer installation access from the server director
 
 ```sh
 npm run access:admin -- create-invitations 3
+npm run access:admin -- create-judge-invitations 1
+npm run access:admin -- list-invitations
+npm run access:admin -- revoke-invitation INVITATION_ID
 npm run access:admin -- list-tokens
 npm run access:admin -- revoke-token TOKEN_ID
 npm run access:admin -- usage
 ```
 
-Share invitations privately. Testers open **Profile → Activate AI** and enter a code once. Revocation uses the opaque token ID shown by `list-tokens`; the raw token is never displayed by the admin command.
+Standard invitations use the configurable `AI_INVITATION_TTL_DAYS`; judge invitations expire after 60 days and create 90-day installation access. Generate codes only in a private operator terminal, retain the accompanying invitation ID for revocation, deliver each code through a private channel, and never paste active codes into source, issues, screenshots, APK/EAS configuration, or public documentation. Testers open **Profile → Activate AI** and enter a code once. Revoke an unused code with its invitation ID, or revoke redeemed access with the opaque token ID shown by `list-tokens`; raw installation tokens are never displayed by the admin command.
 
 ## Environment variables
 
@@ -109,7 +112,6 @@ EXPO_PUBLIC_ANALYSIS_API_URL=http://YOUR_LAN_IP:8787
 EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP=true
 EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=test_YOUR_PUBLIC_ANDROID_SDK_KEY
 EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=test_YOUR_PUBLIC_IOS_SDK_KEY
-EXPO_PUBLIC_DEV_FORCE_PRO=false
 ```
 
 Backend (`server/.env`):
@@ -122,6 +124,7 @@ OPENAI_REQUEST_TIMEOUT_MS=45000
 OPENAI_REASONING_EFFORT=low
 OPENAI_TEXT_VERBOSITY=low
 OPENAI_ERROR_DETAILS=false
+REVENUECAT_SECRET_API_KEY=
 MOCK_ANALYSIS=false
 PORT=8787
 ALLOWED_ORIGIN=http://localhost:8081
@@ -134,7 +137,7 @@ when absent or invalid. `OPENAI_REASONING_EFFORT` accepts `minimal`, `low`, `med
 back to `low`. Keep `OPENAI_ERROR_DETAILS=false` unless concise provider messages are
 needed during development.
 
-Never prefix `OPENAI_API_KEY`, an invitation, or an installation token with `EXPO_PUBLIC_`, or place one in Expo/EAS configuration. In production, set `NODE_ENV=production`, `MOCK_ANALYSIS=false`, a high-entropy `RECALL_TOKEN_PEPPER`, `AI_ANALYSIS_ENABLED=true`, and an HTTPS `RECALL_PUBLIC_BASE_URL`; terminate TLS at the service or a trusted reverse proxy. Restrict `ALLOWED_ORIGIN` where the client environment makes that effective. Back up the SQLite database if invitation, revocation, quota, and cache continuity must survive host replacement.
+Never prefix `OPENAI_API_KEY`, `REVENUECAT_SECRET_API_KEY`, an invitation, or an installation token with `EXPO_PUBLIC_`, or place one in Expo/EAS configuration. In production, set `NODE_ENV=production`, `MOCK_ANALYSIS=false`, a high-entropy `RECALL_TOKEN_PEPPER`, `AI_ANALYSIS_ENABLED=true`, the RevenueCat v1 secret key, and an HTTPS `RECALL_PUBLIC_BASE_URL`; terminate TLS at the service or a trusted reverse proxy. Restrict `ALLOWED_ORIGIN` where the client environment makes that effective. Back up the SQLite database if invitation, revocation, quota, and cache continuity must survive host replacement.
 
 ## Development build
 

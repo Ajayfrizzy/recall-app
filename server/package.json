@@ -6,7 +6,7 @@
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "fixtures:check": "tsx src/schemas/check-fixtures.ts && tsx src/schemas/check-openai-schema.ts && tsx src/services/check-openai.ts",
-    "access:check": "tsx src/services/access-control.check.ts",
+    "access:check": "tsx src/services/access-control.check.ts && tsx ../shared/invitation-code.check.ts && tsx src/services/revenuecat.check.ts",
     "access:admin": "tsx src/scripts/access-admin.ts",
     "openai:schema-check": "tsx src/schemas/check-openai-schema.ts",
     "openai:config-check": "tsx src/services/check-openai.ts",

@@ -9,6 +9,8 @@ import RevenueCatUI, { type PAYWALL_RESULT } from 'react-native-purchases-ui';
 import {
   getCurrentOffering,
   getRevenueCatAvailability,
+  hasActiveRevenueCatAccess,
+  judgeIdentityAction,
   RECALL_PRO_ENTITLEMENT,
   type RevenueCatAvailability,
 } from '@/features/subscription/logic';
@@ -53,6 +55,27 @@ function requireConfiguration(): void {
 
 export async function getCustomerInfo(): Promise<CustomerInfo> {
   requireConfiguration();
+  return Purchases.getCustomerInfo();
+}
+
+export async function connectJudgeRevenueCatIdentity(appUserId: string): Promise<CustomerInfo> {
+  requireConfiguration();
+  const [currentAppUserId, anonymous, currentInfo] = await Promise.all([
+    Purchases.getAppUserID(),
+    Purchases.isAnonymous(),
+    Purchases.getCustomerInfo(),
+  ]);
+  const action = judgeIdentityAction({
+    currentAppUserId,
+    judgeAppUserId: appUserId,
+    anonymous,
+    hasActiveAccess: hasActiveRevenueCatAccess(currentInfo),
+  });
+  if (action === 'conflict') {
+    throw new Error('An existing subscription identity is already active on this device.');
+  }
+  if (action === 'login') await Purchases.logIn(appUserId);
+  await Purchases.invalidateCustomerInfoCache();
   return Purchases.getCustomerInfo();
 }
 

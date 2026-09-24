@@ -8,7 +8,6 @@ Milestone 10 is not a completed release candidate until the physical Android che
 - Configure the EAS `preview` environment with `EXPO_PUBLIC_ANALYSIS_API_URL` and `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`.
 - Do not set `EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP` in preview or production.
 - Set `EXPO_PUBLIC_ANALYSIS_API_URL` to a public HTTPS backend. Do not use localhost, `10.0.2.2`, a LAN IP, or a Metro URL.
-- Keep `EXPO_PUBLIC_DEV_FORCE_PRO` unset or `false`.
 - Keep `OPENAI_API_KEY` only on the backend. Never add it to Expo or EAS public variables.
 - Run `npm run release:config-check` in the same environment used for the build.
 - Build with `eas build --platform android --profile preview` only after the configuration check passes.
@@ -67,6 +66,9 @@ Record failures instead of describing untested behavior as passed.
 - [ ] Fresh-install without an invitation. Skip activation; Inbox, Library, Upcoming, Profile, OCR, classification, and on-device analysis must remain usable.
 - [ ] Enter an invalid invitation. Confirm the concise error and that repeated taps create only one redemption request.
 - [ ] Redeem a fresh invitation. Confirm success, Profile shows active access and its expiration date, and no token is visible.
+- [ ] Redeem a judge invitation once. Confirm Recall AI Active, Recall Pro Active, the judge expiration date, and no paywall while `pro` remains active.
+- [ ] Temporarily make the RevenueCat grant fail, redeem a judge invitation, restore connectivity/configuration, and retry. Confirm the same installation activates Pro without another invitation.
+- [ ] Redeem a standard invitation and confirm it never changes the RevenueCat identity or grants Pro.
 - [ ] Force-stop and reopen. Confirm active access is restored from SecureStore without Metro.
 - [ ] With `MOCK_ANALYSIS=false`, analyze one prepared screenshot and confirm GPT-5 mini output. Do this once; never use live calls for quota tests.
 - [ ] Analyze the same screenshot through a normal eligible request and verify the server cache is returned without increasing the daily count.
@@ -122,8 +124,22 @@ Record failures instead of describing untested behavior as passed.
 - [ ] Open the managed paywall once; repeated taps must not open multiple paywalls.
 - [ ] Complete or sandbox-test purchase and verify the `pro` entitlement updates the UI.
 - [ ] Restore purchases and verify loading followed by an accurate success or no-entitlement message.
+- [ ] Configure the backend with a RevenueCat v1 secret API key allowed to grant promotional entitlements; keep it out of Expo/EAS mobile variables.
+- [ ] Confirm the RevenueCat project contains the exact `pro` entitlement and that the public Android SDK key belongs to the same project as the backend secret key.
+- [ ] On a physical Android device, test a fresh anonymous install, an existing paying anonymous customer, judge retry after airplane mode, app restart, and expiration. Confirm judge login never replaces an unrelated identified or actively paying customer.
 - [ ] Verify errors are concise and Retry is usable.
 - [ ] Verify Free and Pro cleanup/resurfacing limits.
+
+### Physical Android judge flow
+
+1. Configure the HTTPS backend with `REVENUECAT_SECRET_API_KEY`, restart it, and verify the mobile public Android SDK key belongs to the same RevenueCat project with the `pro` entitlement.
+2. Create one judge code in a private terminal with `npm run access:admin -- create-judge-invitations 1`; retain its invitation ID and send the code through a private channel.
+3. Install a fresh development or preview APK on the physical device. Open **Profile → Activate AI**, paste the lowercase code with leading/trailing spaces, and confirm it formats without moving the cursor unexpectedly.
+4. Activate once. Confirm **Recall AI Active**, then **Recall Pro Active**, the 90-day expiration date, and **Continue**. Reopen Profile and confirm no Upgrade/Paywall action is shown.
+5. Force-stop and reopen the app. Confirm both AI and Pro remain active and an AI request still observes the normal daily/global/spending limits.
+6. For recovery testing, block the backend's RevenueCat request or temporarily remove its secret, redeem a different judge code, and confirm AI stays active while Pro is pending. Restore the backend configuration and use **Retry Pro Activation**; do not enter another invitation.
+7. On a separate fresh installation, redeem a standard code and confirm it activates AI without changing the RevenueCat identity or enabling Pro.
+8. On a device with an active sandbox purchase, redeem a judge code and verify the current paying identity and entitlement remain intact.
 
 ### Navigation and final checks
 

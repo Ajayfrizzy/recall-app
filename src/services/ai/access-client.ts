@@ -1,6 +1,12 @@
+import { normalizeInvitationCode } from '../../../shared/invitation-code';
+
 export type AiAccessCredentials = {
   accessToken: string;
   expiresAt: number;
+  invitationType: 'standard' | 'judge';
+  judgeAccessExpiresAt?: number;
+  revenueCatAppUserId?: string;
+  proProvisioning?: 'pending' | 'confirmed';
 };
 
 export type AiAccessErrorCode =
@@ -13,6 +19,7 @@ export type AiAccessErrorCode =
   | 'redemption_rate_limited'
   | 'network_timeout'
   | 'backend_unavailable'
+  | 'provisioning_unavailable'
   | 'malformed_response';
 
 export class AiAccessError extends Error {
@@ -56,7 +63,29 @@ export function parseAiAccessCredentials(value: unknown): AiAccessCredentials | 
   ) {
     return null;
   }
-  return { accessToken: candidate.accessToken, expiresAt: candidate.expiresAt };
+  const invitationType = candidate.invitationType === 'judge' ? 'judge' : 'standard';
+  if (
+    invitationType === 'judge' &&
+    (typeof candidate.judgeAccessExpiresAt !== 'number' ||
+      !Number.isSafeInteger(candidate.judgeAccessExpiresAt) ||
+      typeof candidate.revenueCatAppUserId !== 'string' ||
+      !/^recall_judge_[A-Za-z0-9-]+$/.test(candidate.revenueCatAppUserId) ||
+      (candidate.proProvisioning !== 'pending' && candidate.proProvisioning !== 'confirmed'))
+  ) {
+    return null;
+  }
+  return {
+    accessToken: candidate.accessToken,
+    expiresAt: candidate.expiresAt,
+    invitationType,
+    ...(invitationType === 'judge'
+      ? {
+          judgeAccessExpiresAt: candidate.judgeAccessExpiresAt,
+          revenueCatAppUserId: candidate.revenueCatAppUserId,
+          proProvisioning: candidate.proProvisioning,
+        }
+      : {}),
+  };
 }
 
 export function resolveAnalysisApiUrl(
@@ -137,7 +166,7 @@ export function createAiAccessClient({
           response = await fetcher(`${getBaseUrl()}/access/redeem`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ code: code.trim() }),
+            body: JSON.stringify({ code: normalizeInvitationCode(code) }),
             signal: controller.signal,
           });
         } catch (error) {
@@ -211,5 +240,49 @@ export function createAiAccessClient({
     }
   }
 
-  return { load, redeem, clear };
+  async function provisionJudgeEntitlement(
+    credentials: AiAccessCredentials,
+  ): Promise<AiAccessCredentials> {
+    if (credentials.invitationType !== 'judge') return credentials;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      let response: Response;
+      try {
+        response = await fetcher(`${getBaseUrl()}/access/judge-entitlement`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${credentials.accessToken}` },
+          signal: controller.signal,
+        });
+      } catch (error) {
+        throw new AiAccessError(
+          controller.signal.aborted ? 'network_timeout' : 'provisioning_unavailable',
+          controller.signal.aborted
+            ? 'Pro activation timed out. Please try again.'
+            : 'Recall Pro could not be activated. Please try again.',
+          { cause: error },
+        );
+      }
+      if (!response.ok) {
+        throw new AiAccessError(
+          'provisioning_unavailable',
+          'Recall Pro could not be activated. Please try again.',
+        );
+      }
+      const body = (await response.json()) as Partial<AiAccessCredentials>;
+      const next = parseAiAccessCredentials({ ...credentials, ...body });
+      if (!next || next.proProvisioning !== 'confirmed') {
+        throw new AiAccessError(
+          'malformed_response',
+          'Recall Pro activation could not be confirmed. Please try again.',
+        );
+      }
+      await storage.set(JSON.stringify(next));
+      return next;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return { load, redeem, provisionJudgeEntitlement, clear };
 }

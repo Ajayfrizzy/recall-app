@@ -22,7 +22,12 @@ export type AiAccessErrorCode =
   | 'provisioning_unavailable'
   | 'revenuecat_not_configured'
   | 'revenuecat_authentication_failed'
+  | 'revenuecat_customer_not_found'
+  | 'revenuecat_entitlement_not_found'
+  | 'revenuecat_project_or_api_key_mismatch'
   | 'revenuecat_project_or_entitlement_mismatch'
+  | 'revenuecat_resource_not_found'
+  | 'revenuecat_unsupported_operation'
   | 'revenuecat_grant_rejected'
   | 'revenuecat_invalid_response'
   | 'revenuecat_expiration_mismatch'
@@ -62,8 +67,16 @@ const ACTIVATION_MESSAGES: Record<string, string> = {
 const PROVISIONING_MESSAGES: Record<string, string> = {
   revenuecat_not_configured: 'Complimentary Pro is not configured on the server yet.',
   revenuecat_authentication_failed: 'The server could not authenticate with RevenueCat.',
+  revenuecat_customer_not_found:
+    'RevenueCat has not created this judge customer yet. Please try again.',
+  revenuecat_entitlement_not_found: 'The RevenueCat Pro entitlement could not be found.',
+  revenuecat_project_or_api_key_mismatch:
+    'The RevenueCat project does not match the server API key.',
   revenuecat_project_or_entitlement_mismatch:
     'The RevenueCat project or Pro entitlement does not match this build.',
+  revenuecat_resource_not_found:
+    'RevenueCat could not find the requested customer or entitlement. Please try again.',
+  revenuecat_unsupported_operation: 'RevenueCat does not support this Pro activation request.',
   revenuecat_grant_rejected: 'RevenueCat rejected the complimentary Pro grant.',
   revenuecat_invalid_response: 'RevenueCat returned an invalid Pro activation response.',
   revenuecat_expiration_mismatch: 'RevenueCat returned the wrong Pro expiration date.',
@@ -149,6 +162,7 @@ export function createAiAccessClient({
   now?: () => number;
 }) {
   let activationInFlight: Promise<AiAccessCredentials> | null = null;
+  let provisioningInFlight: Promise<AiAccessCredentials> | null = null;
 
   async function clear(): Promise<void> {
     await storage.remove();
@@ -261,7 +275,7 @@ export function createAiAccessClient({
     }
   }
 
-  async function provisionJudgeEntitlement(
+  async function provisionJudgeEntitlementRequest(
     credentials: AiAccessCredentials,
   ): Promise<AiAccessCredentials> {
     if (credentials.invitationType !== 'judge') return credentials;
@@ -320,10 +334,33 @@ export function createAiAccessClient({
           'Recall Pro activation could not be confirmed. Please try again.',
         );
       }
+      if (
+        next.revenueCatAppUserId !== credentials.revenueCatAppUserId ||
+        next.judgeAccessExpiresAt !== credentials.judgeAccessExpiresAt ||
+        next.expiresAt !== credentials.expiresAt
+      ) {
+        throw new AiAccessError(
+          'malformed_response',
+          'Recall Pro activation returned mismatched judge access details.',
+        );
+      }
       await storage.set(JSON.stringify(next));
       return next;
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  async function provisionJudgeEntitlement(
+    credentials: AiAccessCredentials,
+  ): Promise<AiAccessCredentials> {
+    if (credentials.invitationType !== 'judge') return credentials;
+    if (provisioningInFlight) return provisioningInFlight;
+    provisioningInFlight = provisionJudgeEntitlementRequest(credentials);
+    try {
+      return await provisioningInFlight;
+    } finally {
+      provisioningInFlight = null;
     }
   }
 

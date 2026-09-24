@@ -44,14 +44,8 @@ export async function redeemAccessRoute(
     }
     const { code } = RedeemSchema.parse(await readBody(request));
     const result = getAnalysisAccessStore().redeemInvitation(code, request.socket.remoteAddress);
-    if (result.invitationType === 'judge') {
-      try {
-        await provisionJudgeEntitlement(result.accessToken);
-        result.proProvisioning = 'confirmed';
-      } catch {
-        result.proProvisioning = 'pending';
-      }
-    }
+    // Judge provisioning is intentionally a separate, authenticated request. The mobile SDK must
+    // first log in with revenueCatAppUserId so RevenueCat has created the customer.
     sendJson(response, 200, result);
   } catch (error) {
     if (error instanceof AccessControlError) {

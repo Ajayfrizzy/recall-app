@@ -90,6 +90,16 @@ export async function connectJudgeRevenueCatIdentity(appUserId: string): Promise
   }
 }
 
+export async function refreshJudgeRevenueCatIdentity(appUserId: string): Promise<CustomerInfo> {
+  requireConfiguration();
+  const currentAppUserId = await Purchases.getAppUserID();
+  if (currentAppUserId !== appUserId) {
+    throw new Error('RevenueCat is not connected to the judge identity.');
+  }
+  await Purchases.invalidateCustomerInfoCache();
+  return Purchases.getCustomerInfo();
+}
+
 export async function getCurrentRevenueCatOffering(): Promise<PurchasesOffering | undefined> {
   requireConfiguration();
   return getCurrentOffering(await Purchases.getOfferings());

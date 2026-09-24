@@ -110,7 +110,41 @@ async function run(): Promise<void> {
   );
   const confirmedJudge = await judgeClient.provisionJudgeEntitlement(judgeCredentials);
   assert.equal(confirmedJudge.proProvisioning, 'confirmed');
+  assert.equal(
+    confirmedJudge.judgeAccessExpiresAt,
+    judgeCredentials.judgeAccessExpiresAt,
+    'Pro retry changed the original 90-day expiration',
+  );
   assert.equal(provisioningAttempts, 2, 'the same installation must be able to retry');
+
+  let duplicateFetches = 0;
+  let releaseProvisioning!: () => void;
+  const provisioningGate = new Promise<void>((resolve) => {
+    releaseProvisioning = resolve;
+  });
+  const duplicateClient = createAiAccessClient({
+    storage: memoryStorage(JSON.stringify(judgeCredentials)),
+    now: () => now,
+    getBaseUrl: () => 'https://api.recall.test',
+    fetcher: async () => {
+      duplicateFetches += 1;
+      await provisioningGate;
+      return new Response(
+        JSON.stringify({
+          invitationType: 'judge',
+          judgeAccessExpiresAt: judgeCredentials.judgeAccessExpiresAt,
+          revenueCatAppUserId: judgeCredentials.revenueCatAppUserId,
+          proProvisioning: 'confirmed',
+        }),
+        { status: 200 },
+      );
+    },
+  });
+  const firstProvisioning = duplicateClient.provisionJudgeEntitlement(judgeCredentials);
+  const duplicateProvisioning = duplicateClient.provisionJudgeEntitlement(judgeCredentials);
+  releaseProvisioning();
+  await Promise.all([firstProvisioning, duplicateProvisioning]);
+  assert.equal(duplicateFetches, 1, 'duplicate Pro retries must share one backend request');
 
   for (const serverCode of [
     'invalid_invitation',

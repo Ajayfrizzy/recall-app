@@ -10,7 +10,12 @@ export type RevenueCatConfig = {
 export type RevenueCatProvisioningErrorCode =
   | 'revenuecat_not_configured'
   | 'revenuecat_authentication_failed'
+  | 'revenuecat_customer_not_found'
+  | 'revenuecat_entitlement_not_found'
+  | 'revenuecat_project_or_api_key_mismatch'
   | 'revenuecat_project_or_entitlement_mismatch'
+  | 'revenuecat_resource_not_found'
+  | 'revenuecat_unsupported_operation'
   | 'revenuecat_grant_rejected'
   | 'revenuecat_invalid_response'
   | 'revenuecat_expiration_mismatch'
@@ -24,6 +29,7 @@ type RevenueCatDiagnostic = {
   customerRef: string;
   entitlementId: string;
   status?: number;
+  providerCode?: string;
 };
 
 type DiagnosticLogger = (diagnostic: RevenueCatDiagnostic) => void;
@@ -55,9 +61,74 @@ function defaultLogger(diagnostic: RevenueCatDiagnostic): void {
   method('[revenuecat-provisioning]', diagnostic);
 }
 
-function responseErrorCode(status: number): RevenueCatProvisioningErrorCode {
-  if (status === 401 || status === 403) return 'revenuecat_authentication_failed';
-  if (status === 404) return 'revenuecat_project_or_entitlement_mismatch';
+type RevenueCatErrorFields = { code?: string; message?: string };
+
+function safeErrorField(value: unknown): string | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, 300) : undefined;
+}
+
+function safeProviderCode(value: string | undefined): string | undefined {
+  return value && /^[A-Za-z0-9_.-]{1,64}$/.test(value) ? value : undefined;
+}
+
+export function revenueCatErrorFields(body: unknown): RevenueCatErrorFields {
+  if (!body || typeof body !== 'object') return {};
+  const candidate = body as { code?: unknown; message?: unknown; error?: unknown };
+  const nested =
+    candidate.error && typeof candidate.error === 'object'
+      ? (candidate.error as { code?: unknown; message?: unknown })
+      : undefined;
+  return {
+    code: safeErrorField(candidate.code) ?? safeErrorField(nested?.code),
+    message:
+      safeErrorField(candidate.message) ??
+      safeErrorField(nested?.message) ??
+      safeErrorField(candidate.error),
+  };
+}
+
+export function classifyRevenueCatError(
+  status: number,
+  fields: RevenueCatErrorFields,
+): RevenueCatProvisioningErrorCode {
+  const detail = `${fields.code ?? ''} ${fields.message ?? ''}`.toLowerCase();
+  if (
+    status === 401 ||
+    status === 403 ||
+    /(?:invalid|missing|unauthorized|forbidden).{0,24}(?:api[ _-]?key|authentication|token)/.test(
+      detail,
+    )
+  ) {
+    return 'revenuecat_authentication_failed';
+  }
+  if (status === 405 || /method not allowed|unsupported (?:method|operation)/.test(detail)) {
+    return 'revenuecat_unsupported_operation';
+  }
+  if (
+    /\b(?:customer|subscriber)\b.{0,40}\b(?:not found|does not exist|unknown)\b/.test(detail) ||
+    /\b(?:could not|couldn't|cannot) find\b.{0,40}\b(?:customer|subscriber)\b/.test(detail)
+  ) {
+    return 'revenuecat_customer_not_found';
+  }
+  if (
+    /\bentitlement\b.{0,40}\b(?:not found|does not exist|unknown|invalid)\b/.test(detail) ||
+    /\b(?:could not|couldn't|cannot) find\b.{0,40}\bentitlement\b/.test(detail)
+  ) {
+    return 'revenuecat_entitlement_not_found';
+  }
+  if (
+    /\bproject\b.{0,40}\b(?:not found|does not exist|mismatch|wrong|invalid)\b/.test(detail) ||
+    /api[ _-]?key.{0,40}\b(?:different|wrong|mismatched)\b.{0,24}\b(?:project|app)\b/.test(
+      detail,
+    ) ||
+    /api[ _-]?key.{0,40}\b(?:project|app)\b.{0,24}\b(?:mismatch|wrong|different)\b/.test(detail)
+  ) {
+    return 'revenuecat_project_or_api_key_mismatch';
+  }
+  if (status === 404) return 'revenuecat_resource_not_found';
   return 'revenuecat_grant_rejected';
 }
 
@@ -85,13 +156,24 @@ export async function grantJudgePromotionalEntitlement({
     customerRef: customerReference(appUserId),
     entitlementId: config.entitlementId,
   };
-  const fail = (code: RevenueCatProvisioningErrorCode, status?: number, cause?: unknown): never => {
-    logger({ ...diagnostic, result: 'failure', code, ...(status ? { status } : {}) });
+  const fail = (
+    code: RevenueCatProvisioningErrorCode,
+    status?: number,
+    cause?: unknown,
+    providerCode?: string,
+  ): never => {
+    logger({
+      ...diagnostic,
+      result: 'failure',
+      code,
+      ...(status ? { status } : {}),
+      ...(providerCode ? { providerCode } : {}),
+    });
     throw new RevenueCatProvisioningError(code, status, cause ? { cause } : undefined);
   };
 
   if (!config.secretApiKey) fail('revenuecat_not_configured');
-  if (config.entitlementId !== 'pro') fail('revenuecat_project_or_entitlement_mismatch');
+  if (config.entitlementId !== 'pro') fail('revenuecat_entitlement_not_found');
 
   const url =
     `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(appUserId)}` +
@@ -121,7 +203,20 @@ export async function grantJudgePromotionalEntitlement({
     clearTimeout(timeout);
   }
 
-  if (response.status !== 201) fail(responseErrorCode(response.status), response.status);
+  if (response.status !== 201) {
+    let fields: RevenueCatErrorFields = {};
+    try {
+      fields = revenueCatErrorFields(await response.json());
+    } catch {
+      // The HTTP status still provides a safe fallback classification.
+    }
+    fail(
+      classifyRevenueCatError(response.status, fields),
+      response.status,
+      undefined,
+      safeProviderCode(fields.code),
+    );
+  }
 
   let body: unknown;
   try {
@@ -142,7 +237,7 @@ export async function grantJudgePromotionalEntitlement({
   }
   const entitlement = (entitlements as Record<string, unknown>)[config.entitlementId];
   if (!entitlement || typeof entitlement !== 'object') {
-    fail('revenuecat_project_or_entitlement_mismatch', response.status);
+    fail('revenuecat_entitlement_not_found', response.status);
   }
   const expiration = (entitlement as { expires_date?: unknown }).expires_date;
   const confirmedExpiration = typeof expiration === 'string' ? Date.parse(expiration) : Number.NaN;

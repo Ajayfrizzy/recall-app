@@ -1,5 +1,6 @@
 import { canUseCleanupBatch, getSubscriptionLimits } from './features';
 import {
+  activateJudgeProFlow,
   connectJudgeIdentity,
   didRestorePro,
   getCurrentOffering,
@@ -128,6 +129,55 @@ void (async () => {
   }
   assert(conflictRejected, 'an unrelated identified customer was not rejected');
   assert(!conflictingLogin, 'an unrelated identified customer was overwritten');
+
+  const activationCalls: string[] = [];
+  const activation = await activateJudgeProFlow({
+    connectIdentity: async () => {
+      activationCalls.push('connect');
+      return inactive;
+    },
+    provisionEntitlement: async () => {
+      activationCalls.push('provision');
+      return { proProvisioning: 'confirmed' as const };
+    },
+    refreshIdentity: async () => {
+      activationCalls.push('invalidate-and-refresh');
+      return active;
+    },
+    hasActiveEntitlement: hasActiveProEntitlement,
+  });
+  assert(
+    activationCalls.join(',') === 'connect,provision,invalidate-and-refresh',
+    'judge customer identity was not established before backend provisioning and verification',
+  );
+  assert(activation.active, 'fresh CustomerInfo did not verify the granted Pro entitlement');
+
+  const failedActivationCalls: string[] = [];
+  let grantFailed = false;
+  try {
+    await activateJudgeProFlow({
+      connectIdentity: async () => {
+        failedActivationCalls.push('connect');
+        return inactive;
+      },
+      provisionEntitlement: async () => {
+        failedActivationCalls.push('provision');
+        throw new Error('grant failed');
+      },
+      refreshIdentity: async () => {
+        failedActivationCalls.push('refresh');
+        return active;
+      },
+      hasActiveEntitlement: hasActiveProEntitlement,
+    });
+  } catch {
+    grantFailed = true;
+  }
+  assert(grantFailed, 'a failed promotional grant was treated as successful');
+  assert(
+    failedActivationCalls.join(',') === 'connect,provision',
+    'a failed grant must not be presented as verified Pro access',
+  );
 
   const failedResources = await loadSubscriptionResources(
     async () => Promise.reject(new Error('offline')),

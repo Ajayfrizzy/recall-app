@@ -147,3 +147,20 @@ export async function connectJudgeIdentity<Customer>({
   await invalidateCustomerInfo();
   return refreshCustomerInfo();
 }
+
+export async function activateJudgeProFlow<Customer, Credentials>({
+  connectIdentity,
+  provisionEntitlement,
+  refreshIdentity,
+  hasActiveEntitlement,
+}: {
+  connectIdentity: () => Promise<Customer>;
+  provisionEntitlement: () => Promise<Credentials>;
+  refreshIdentity: () => Promise<Customer>;
+  hasActiveEntitlement: (customerInfo: Customer) => boolean;
+}): Promise<{ credentials: Credentials; customerInfo: Customer; active: boolean }> {
+  await connectIdentity();
+  const credentials = await provisionEntitlement();
+  const customerInfo = await refreshIdentity();
+  return { credentials, customerInfo, active: hasActiveEntitlement(customerInfo) };
+}

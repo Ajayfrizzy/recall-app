@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  classifyRevenueCatError,
   grantJudgePromotionalEntitlement,
   RevenueCatProvisioningError,
   type RevenueCatProvisioningErrorCode,
@@ -72,9 +73,28 @@ await expectCode(
   'revenuecat_authentication_failed',
   async () => new Response('{}', { status: 401 }),
 );
+await expectCode('revenuecat_resource_not_found', async () => new Response('{}', { status: 404 }));
 await expectCode(
-  'revenuecat_project_or_entitlement_mismatch',
-  async () => new Response('{}', { status: 404 }),
+  'revenuecat_customer_not_found',
+  async () =>
+    new Response(JSON.stringify({ code: 7225, message: 'Subscriber does not exist' }), {
+      status: 404,
+    }),
+);
+await expectCode(
+  'revenuecat_entitlement_not_found',
+  async () => new Response(JSON.stringify({ message: 'Entitlement not found' }), { status: 404 }),
+);
+await expectCode(
+  'revenuecat_project_or_api_key_mismatch',
+  async () =>
+    new Response(JSON.stringify({ message: 'API key belongs to a different project' }), {
+      status: 404,
+    }),
+);
+await expectCode(
+  'revenuecat_unsupported_operation',
+  async () => new Response(JSON.stringify({ message: 'Method not allowed' }), { status: 405 }),
 );
 await expectCode('revenuecat_grant_rejected', async () => new Response('{}', { status: 422 }));
 await expectCode(
@@ -82,11 +102,17 @@ await expectCode(
   async () => new Response('{invalid', { status: 201 }),
 );
 await expectCode(
-  'revenuecat_project_or_entitlement_mismatch',
+  'revenuecat_entitlement_not_found',
   async () =>
     new Response(JSON.stringify({ value: { subscriber: { entitlements: {} } } }), {
       status: 201,
     }),
+);
+
+assert.equal(
+  classifyRevenueCatError(404, { message: 'Not Found' }),
+  'revenuecat_resource_not_found',
+  'an ambiguous 404 must not be reported as a project or entitlement mismatch',
 );
 await expectCode('revenuecat_expiration_mismatch', async () => successResponse(expiresAt - 60_000));
 await expectCode('revenuecat_network_failure', async () => {

@@ -16,18 +16,21 @@ import {
   getCustomerInfo,
   presentRevenueCatPaywall,
   purchaseRevenueCatPackage,
+  refreshJudgeRevenueCatIdentity,
   restoreRevenueCatPurchases,
   type CustomerInfo,
   type PurchasesOffering,
   type PurchasesPackage,
 } from '@/services/revenuecat';
 import {
+  activateJudgeProFlow,
   didRestorePro,
   hasActiveProEntitlement,
   isPurchaseCancellation,
   loadSubscriptionResources,
 } from './logic';
 import { useAiAccess } from '@/features/ai-access/context';
+import { AiAccessError, type AiAccessCredentials } from '@/services/ai/access-client';
 
 export type SubscriptionActionResult = 'success' | 'cancelled' | 'unavailable' | 'error';
 
@@ -45,7 +48,7 @@ interface SubscriptionContextValue {
   purchasePackage: (aPackage: PurchasesPackage) => Promise<SubscriptionActionResult>;
   restorePurchases: () => Promise<SubscriptionActionResult>;
   presentPaywall: () => Promise<SubscriptionActionResult>;
-  confirmJudgePro: (appUserId: string) => Promise<boolean>;
+  activateJudgePro: (credentials: AiAccessCredentials) => Promise<boolean>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
@@ -221,23 +224,35 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
     }
   }, [aiAccess.credentials?.invitationType, available, offering, refreshCustomerInfo]);
 
-  const confirmJudgePro = useCallback(
-    async (appUserId: string): Promise<boolean> => {
+  const activateJudgePro = useCallback(
+    async (credentials: AiAccessCredentials): Promise<boolean> => {
       if (!available || actionInFlight.current) return false;
+      if (credentials.invitationType !== 'judge' || !credentials.revenueCatAppUserId) {
+        throw new Error('Judge access is not active on this installation.');
+      }
       actionInFlight.current = true;
       setLoading(true);
       setError(undefined);
       try {
-        const updated = await connectJudgeRevenueCatIdentity(appUserId);
-        setCustomerInfo(updated);
-        const active = hasActiveProEntitlement(updated);
+        const appUserId = credentials.revenueCatAppUserId;
+        const result = await activateJudgeProFlow({
+          connectIdentity: () => connectJudgeRevenueCatIdentity(appUserId),
+          provisionEntitlement: () => aiAccess.retryJudgePro(),
+          refreshIdentity: () => refreshJudgeRevenueCatIdentity(appUserId),
+          hasActiveEntitlement: hasActiveProEntitlement,
+        });
+        setCustomerInfo(result.customerInfo);
+        const active = result.active;
         if (!active) setError('Recall Pro activation is still pending. Please try again.');
         return active;
       } catch (identityError) {
         const message =
-          identityError instanceof Error && identityError.message.includes('existing subscription')
+          identityError instanceof AiAccessError ||
+          (identityError instanceof Error &&
+            (identityError.message.includes('existing subscription') ||
+              identityError.message.includes('judge identity')))
             ? identityError.message
-            : 'RevenueCat could not refresh Pro status on this device. Please try again.';
+            : 'RevenueCat could not complete Pro activation on this device. Please try again.';
         setError(message);
         throw new Error(message, { cause: identityError });
       } finally {
@@ -245,7 +260,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
         setLoading(false);
       }
     },
-    [available],
+    [aiAccess, available],
   );
 
   const isPro = hasActiveProEntitlement(customerInfo);
@@ -264,7 +279,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       purchasePackage,
       restorePurchases,
       presentPaywall,
-      confirmJudgePro,
+      activateJudgePro,
     }),
     [
       initialized,
@@ -280,7 +295,7 @@ export function SubscriptionProvider({ children }: PropsWithChildren) {
       purchasePackage,
       restorePurchases,
       presentPaywall,
-      confirmJudgePro,
+      activateJudgePro,
     ],
   );
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

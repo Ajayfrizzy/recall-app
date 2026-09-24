@@ -35,7 +35,7 @@ export default function ProfileScreen() {
     presentPaywall,
     restorePurchases,
     retry,
-    confirmJudgePro,
+    activateJudgePro,
   } = useSubscription();
   const firstPackage = offering?.availablePackages[0];
   const period = firstPackage ? PACKAGE_PERIOD_LABELS[firstPackage.packageType] : undefined;
@@ -47,8 +47,7 @@ export default function ProfileScreen() {
     setActiveAction('judge-pro');
     setJudgeProMessage(undefined);
     try {
-      const credentials = await aiAccess.retryJudgePro();
-      const confirmed = await confirmJudgePro(credentials.revenueCatAppUserId!);
+      const confirmed = await activateJudgePro(judgeCredentials!);
       setJudgeProMessage(
         confirmed
           ? 'Recall Pro is active.'

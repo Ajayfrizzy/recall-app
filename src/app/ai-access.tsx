@@ -25,8 +25,8 @@ import {
 
 export default function AiAccessScreen() {
   const router = useRouter();
-  const { activate, retryJudgePro } = useAiAccess();
-  const { confirmJudgePro } = useSubscription();
+  const { activate, credentials: aiCredentials } = useAiAccess();
+  const { activateJudgePro } = useSubscription();
   const [codeBody, setCodeBody] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -56,10 +56,8 @@ export default function AiAccessScreen() {
       if (credentials.invitationType === 'judge') {
         setJudgeExpiration(credentials.judgeAccessExpiresAt ?? credentials.expiresAt);
         setProLoading(true);
-        let judge = credentials;
         try {
-          if (judge.proProvisioning !== 'confirmed') judge = await retryJudgePro();
-          const confirmed = await confirmJudgePro(judge.revenueCatAppUserId!);
+          const confirmed = await activateJudgePro(credentials);
           setProConfirmed(confirmed);
           if (!confirmed) setProError('Recall Pro activation is still pending.');
         } catch (proActivationError) {
@@ -89,8 +87,10 @@ export default function AiAccessScreen() {
     setProLoading(true);
     setProError(null);
     try {
-      const credentials = await retryJudgePro();
-      const confirmed = await confirmJudgePro(credentials.revenueCatAppUserId!);
+      if (!aiCredentials || aiCredentials.invitationType !== 'judge') {
+        throw new Error('Judge access is not active on this installation.');
+      }
+      const confirmed = await activateJudgePro(aiCredentials);
       setProConfirmed(confirmed);
       if (!confirmed) setProError('Recall Pro activation is still pending.');
     } catch (proActivationError) {

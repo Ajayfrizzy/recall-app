@@ -1,0 +1,79 @@
+name: recall
+
+services:
+  backend:
+    image: recall-backend:local
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    env_file:
+      - ${RECALL_ENV_FILE:-/opt/recall/secrets/server.env}
+    environment:
+      NODE_ENV: production
+      RECALL_ACCESS_DB_PATH: /app/data/recall-access.sqlite
+      RECALL_BACKUP_DIR: /app/backups
+      PORT: '8787'
+      NPM_CONFIG_CACHE: /tmp/npm
+    expose:
+      - '8787'
+    volumes:
+      - recall_data:/app/data
+      - ${RECALL_BACKUP_DIR:-/opt/recall/backups}:/app/backups
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    stop_grace_period: 15s
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  caddy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+volumes:
+  recall_data:
+  caddy_data:
+  caddy_config:

@@ -150,6 +150,15 @@ expo-env.d.ts
 
 .expo/
 server/data/
+server/backups/
+backups/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+secrets/
+tmp/
+temp/
 .DS_Store
 .vscode/*
 !.vscode/settings.json

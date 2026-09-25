@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 import { provisionJudgeEntitlementRoute, redeemAccessRoute } from './routes/access.js';
 import { analyzeRoute } from './routes/analyze.js';
+import { closeAnalysisAccessStore, getAnalysisAccessStore } from './services/access-control.js';
 
 function validateDeploymentConfiguration(): void {
   if (process.env.NODE_ENV !== 'production') return;
@@ -11,6 +12,9 @@ function validateDeploymentConfiguration(): void {
   if (!process.env.REVENUECAT_SECRET_API_KEY?.trim()) {
     throw new Error('REVENUECAT_SECRET_API_KEY is required in production.');
   }
+  if (!process.env.RECALL_TOKEN_PEPPER?.trim()) {
+    throw new Error('RECALL_TOKEN_PEPPER is required in production.');
+  }
   const publicUrl = process.env.RECALL_PUBLIC_BASE_URL?.trim();
   if (!publicUrl || new URL(publicUrl).protocol !== 'https:') {
     throw new Error('RECALL_PUBLIC_BASE_URL must be an HTTPS URL in production.');
@@ -18,6 +22,7 @@ function validateDeploymentConfiguration(): void {
 }
 
 validateDeploymentConfiguration();
+if (process.env.NODE_ENV === 'production') getAnalysisAccessStore();
 
 const port = Number(process.env.PORT ?? 8787);
 const origin = process.env.ALLOWED_ORIGIN ?? 'http://localhost:8081';
@@ -70,3 +75,29 @@ const server = createServer(async (request, response) => {
 server.listen(port, '0.0.0.0', () =>
   console.log(`Recall analysis server listening on http://0.0.0.0:${port}`),
 );
+
+let shuttingDown = false;
+
+function shutDown(signal: NodeJS.Signals): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; shutting down.`);
+
+  const deadline = setTimeout(() => {
+    console.error('Graceful shutdown timed out; closing remaining connections.');
+    server.closeAllConnections();
+  }, 10_000);
+  deadline.unref();
+
+  server.close((error) => {
+    clearTimeout(deadline);
+    closeAnalysisAccessStore();
+    if (error) {
+      console.error('HTTP server shutdown failed.');
+      process.exitCode = 1;
+    }
+  });
+}
+
+process.once('SIGTERM', () => shutDown('SIGTERM'));
+process.once('SIGINT', () => shutDown('SIGINT'));

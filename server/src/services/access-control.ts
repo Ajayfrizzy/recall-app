@@ -735,6 +735,11 @@ export function getAnalysisAccessStore(): AnalysisAccessStore {
   return sharedStore;
 }
 
+export function closeAnalysisAccessStore(): void {
+  sharedStore?.close();
+  sharedStore = undefined;
+}
+
 export function bearerToken(header: string | string[] | undefined): string | undefined {
   const value = Array.isArray(header) ? header[0] : header;
   const match = value?.match(/^Bearer ([A-Za-z0-9_-]+)$/);

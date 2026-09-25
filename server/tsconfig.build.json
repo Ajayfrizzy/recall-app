@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "..",
+    "sourceMap": true
+  },
+  "exclude": [
+    "src/**/*.check.ts",
+    "src/schemas/check-*.ts",
+    "src/services/check-openai.ts",
+    "../shared/**/*.check.ts"
+  ]
+}

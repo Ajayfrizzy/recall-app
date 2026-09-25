@@ -1,5 +1,6 @@
 import type { RecallBundle } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
+import { formatScheduledDateTime } from '@/features/upcoming/format';
 import { migratePersistedState } from '@/services/storage/migrations';
 import { getSubscriptionLimits } from '@/features/subscription/features';
 import {
@@ -46,6 +47,7 @@ const eventInThreeDays = {
 
 const tomorrowCard = generateUpcomingCards([deadlineTomorrow], now)[0];
 assert(tomorrowCard.id === 'deadline:scholarship:tomorrow', 'tomorrow ID is not deterministic');
+assert(tomorrowCard.scheduledAt === deadlineTomorrow.date, 'upcoming card lost its scheduled date');
 assert(tomorrowCard.message.includes('is tomorrow'), 'deadline tomorrow wording is incorrect');
 assert(
   tomorrowCard.priority === RESURFACING_PRIORITY.DEADLINE_TOMORROW,
@@ -67,6 +69,23 @@ assert(
 const eventCard = generateUpcomingCards([eventInThreeDays], now)[0];
 assert(eventCard.id.endsWith(':3days'), 'event within three days has the wrong bucket');
 assert(eventCard.message.includes('in 3 days in Abuja'), 'event location wording is incorrect');
+assert(
+  formatScheduledDateTime(deadlineTomorrow.date, 'en-US') === 'Sep 21 · 5:00 PM',
+  'scheduled date formatting is incorrect',
+);
+
+const sameTitleCards = generateUpcomingCards(
+  [
+    deadlineTomorrow,
+    { ...deadlineTomorrow, id: 'scholarship-later', date: localDate(2026, 9, 22, 17) },
+  ],
+  now,
+);
+assert(sameTitleCards.length === 2, 'same-title reminders were incorrectly merged');
+assert(
+  sameTitleCards[0].scheduledAt !== sameTitleCards[1].scheduledAt,
+  'same-title reminders lost their distinct scheduled dates',
+);
 
 assert(
   daysUntil(localDate(2026, 9, 21, 8), localDate(2026, 9, 20, 23, 30)) === 1,

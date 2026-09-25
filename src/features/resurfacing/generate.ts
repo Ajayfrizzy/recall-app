@@ -75,6 +75,7 @@ export function generateUpcomingCards(
         ...(bucket === 'overdue' ? {} : { expiresAt: nextLocalMidnight(now) }),
         screenshotId: item.screenshotId,
         upcomingId: item.id,
+        scheduledAt: item.date,
         bucket,
         action: {
           label: 'Open',

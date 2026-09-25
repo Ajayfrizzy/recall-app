@@ -3,6 +3,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EmptyState } from '@/components/empty-state';
 import { useUpcoming } from '@/features/upcoming/context';
+import { formatScheduledDateTime } from '@/features/upcoming/format';
 
 export default function UpcomingScreen() {
   const { items } = useUpcoming();
@@ -30,14 +31,8 @@ export default function UpcomingScreen() {
               </ThemedText>
               <ThemedText>{item.title}</ThemedText>
               {item.date ? (
-                <ThemedText themeColor="textSecondary">
-                  {new Date(item.date).toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
+                <ThemedText type="smallBold" themeColor="accent">
+                  {formatScheduledDateTime(item.date)}
                 </ThemedText>
               ) : null}
               {item.location ? (

@@ -1,5 +1,6 @@
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Fonts } from '@/constants/theme';
 import { ScreenshotProvider } from '@/features/screenshots/context';
 import { LibraryProvider } from '@/features/library/context';
 import { UpcomingProvider } from '@/features/upcoming/context';
@@ -11,9 +12,19 @@ import { CleanupProvider } from '@/features/cleanup/context';
 import { SubscriptionProvider } from '@/features/subscription/context';
 import { AiAccessProvider } from '@/features/ai-access/context';
 
+const recallDarkTheme: Theme = {
+  ...DarkTheme,
+  fonts: {
+    regular: { ...DarkTheme.fonts.regular, fontFamily: Fonts.sans },
+    medium: { ...DarkTheme.fonts.medium, fontFamily: Fonts.sans },
+    bold: { ...DarkTheme.fonts.bold, fontFamily: Fonts.sans },
+    heavy: { ...DarkTheme.fonts.heavy, fontFamily: Fonts.sans },
+  },
+};
+
 export default function RootLayout() {
   return (
-    <ThemeProvider value={DarkTheme}>
+    <ThemeProvider value={recallDarkTheme}>
       <PersistenceProvider>
         <AiAccessProvider>
           <ScreenshotProvider>
@@ -27,7 +38,7 @@ export default function RootLayout() {
                         {/* Cleanup derives candidates and applies the subscription batch limit. */}
                         <CleanupProvider>
                           <StatusBar style="light" />
-                          <Stack>
+                          <Stack screenOptions={{ headerTitleStyle: { fontFamily: Fonts.sans } }}>
                             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                             <Stack.Screen name="onboarding" options={{ headerShown: false }} />
                             <Stack.Screen

@@ -17,6 +17,7 @@ export interface RecallResurfacingCard {
   screenshotId?: string;
   bundleId?: string;
   upcomingId?: string;
+  scheduledAt?: number;
   bucket?: string;
   action?: {
     label: string;

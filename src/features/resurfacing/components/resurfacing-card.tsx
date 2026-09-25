@@ -5,6 +5,7 @@ import { ActionButton } from '@/components/action-button';
 import { FadeInView } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { formatScheduledDateTime } from '@/features/upcoming/format';
 import type { RecallResurfacingCard } from '../types';
 
 export function ResurfacingCard({
@@ -30,6 +31,11 @@ export function ResurfacingCard({
           style={styles.copy}
         >
           <ThemedText type="smallBold">{card.title}</ThemedText>
+          {card.scheduledAt !== undefined ? (
+            <ThemedText type="smallBold" themeColor="accent">
+              {formatScheduledDateTime(card.scheduledAt)}
+            </ThemedText>
+          ) : null}
           <ThemedText themeColor="textSecondary">{card.message}</ThemedText>
         </Pressable>
         <View style={styles.actions}>

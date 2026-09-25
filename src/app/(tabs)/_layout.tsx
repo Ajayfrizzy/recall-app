@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 
 const icons = {
   inbox: { ios: 'tray', android: 'inbox', web: 'inbox' },
@@ -16,6 +16,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.dark.accent,
         tabBarInactiveTintColor: Colors.dark.textSecondary,
+        tabBarLabelStyle: { fontFamily: Fonts.sans },
         tabBarStyle: {
           backgroundColor: Colors.dark.backgroundElement,
           borderTopColor: Colors.dark.border,

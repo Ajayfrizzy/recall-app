@@ -63,16 +63,6 @@ export function BundleItemRow({
             {screenshot?.filename ? ` · ${screenshot.filename}` : ''}
             {!screenshot ? ' · Gallery asset missing' : ''}
           </ThemedText>
-          {__DEV__ ? (
-            <View>
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-                Item ref: {refItem.screenshotId}:{refItem.itemIndex ?? 0}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Membership: {membership}
-              </ThemedText>
-            </View>
-          ) : null}
         </View>
       </Pressable>
       <ActionButton

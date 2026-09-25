@@ -71,11 +71,6 @@ export function BundleCard({
             <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
               {lifecycleSummary(counts)}
             </ThemedText>
-            {__DEV__ && bundle.reason ? (
-              <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-                Bundled because: {bundle.reason}
-              </ThemedText>
-            ) : null}
           </View>
         </Pressable>
         {action ? (

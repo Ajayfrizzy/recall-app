@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
 import { ConfirmationModal } from '@/components/confirmation-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -15,6 +16,7 @@ import { ScreenshotImage } from '@/features/screenshots/components/screenshot-im
 import { formatScreenshotCreationDate } from '@/features/screenshots/creation-time';
 
 export default function CleanupRoute() {
+  const insets = useSafeAreaInsets();
   const {
     candidates,
     selectedIds,
@@ -33,7 +35,12 @@ export default function CleanupRoute() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(48, insets.bottom + 24) },
+        ]}
+      >
         <ThemedText type="subtitle">Ready to clean up</ThemedText>
         <ThemedText themeColor="textSecondary">
           {candidates.length} {candidates.length === 1 ? 'screenshot' : 'screenshots'} ready for
@@ -158,12 +165,6 @@ function CleanupCard({
               {reason}
             </ThemedText>
           ))}
-          {__DEV__ ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              {candidate.confidence} · {candidate.handledState.handledItems}/
-              {candidate.handledState.totalItems} handled
-            </ThemedText>
-          ) : null}
         </View>
       </Pressable>
       <Pressable

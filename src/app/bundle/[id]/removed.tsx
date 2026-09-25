@@ -1,11 +1,13 @@
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BundleItemRow } from '@/features/bundles/components/bundle-item-row';
 import { useBundles } from '@/features/bundles/context';
 
 export default function RemovedBundleItemsRoute() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getBundle, restoreItem, getExcludedItemsForBundle, getBundleLifecycleCounts } =
     useBundles();
@@ -29,7 +31,12 @@ export default function RemovedBundleItemsRoute() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(48, insets.bottom + 24) },
+        ]}
+      >
         <ThemedText type="subtitle">Removed from {bundle.title}</ThemedText>
         <ThemedText themeColor="textSecondary">
           {counts.active} active · {counts.removed} removed

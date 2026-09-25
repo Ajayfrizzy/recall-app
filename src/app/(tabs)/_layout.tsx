@@ -16,8 +16,10 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.dark.accent,
         tabBarInactiveTintColor: Colors.dark.textSecondary,
-        tabBarLabelStyle: { fontFamily: Fonts.sans },
+        tabBarLabelStyle: { fontFamily: Fonts.sans, fontSize: 11 },
+        tabBarItemStyle: { paddingHorizontal: 0 },
         tabBarStyle: {
+          minHeight: 64,
           backgroundColor: Colors.dark.backgroundElement,
           borderTopColor: Colors.dark.border,
         },

@@ -51,6 +51,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "actions:check": "server/node_modules/.bin/tsx src/features/actions/suggestions.check.ts && server/node_modules/.bin/tsx src/features/actions/date-safeguards.check.ts",
+    "library:check": "server/node_modules/.bin/tsx src/features/library/preview.check.ts",
+    "ui:check": "node scripts/check-release-ui.mjs",
     "bundles:check": "server/node_modules/.bin/tsx src/features/bundles/grouping.check.ts && server/node_modules/.bin/tsx src/features/bundles/membership.check.ts && server/node_modules/.bin/tsx src/features/bundles/lifecycle.check.ts",
     "persistence:check": "server/node_modules/.bin/tsx src/services/storage/migrations.check.ts",
     "resurfacing:check": "server/node_modules/.bin/tsx src/features/resurfacing/resurfacing.check.ts",

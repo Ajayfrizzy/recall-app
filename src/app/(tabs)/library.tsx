@@ -7,6 +7,7 @@ import { ActionButton } from '@/components/action-button';
 import { EmptyState } from '@/components/empty-state';
 import { Colors } from '@/constants/theme';
 import { useLibrary } from '@/features/library/context';
+import { getLibraryContentPreview } from '@/features/library/preview';
 import type { LibraryItem } from '@/features/library/types';
 import { useScreenshots } from '@/features/screenshots/context';
 import { ScreenshotHistoryCard } from '@/features/screenshots/components/history-card';
@@ -262,37 +263,62 @@ function ScreenshotHistory({
 function LibraryCard({ item }: { item: LibraryItem }) {
   if (item.type === 'product') {
     return (
-      <ThemedView type="backgroundElement" style={styles.card}>
+      <LibraryCardLink item={item}>
         <ThemedText type="smallBold">Product</ThemedText>
         <ThemedText>{item.title}</ThemedText>
         {item.currentPrice ? <ThemedText>{item.currentPrice}</ThemedText> : null}
         {item.source ? <Meta>{item.source}</Meta> : null}
-      </ThemedView>
+      </LibraryCardLink>
     );
   }
   if (item.type === 'place') {
     return (
-      <ThemedView type="backgroundElement" style={styles.card}>
+      <LibraryCardLink item={item}>
         <ThemedText type="smallBold">Place</ThemedText>
         <ThemedText>{item.title}</ThemedText>
         {item.address ? <Meta>{item.address}</Meta> : null}
-      </ThemedView>
+      </LibraryCardLink>
     );
   }
+  const preview = getLibraryContentPreview(item);
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
+    <LibraryCardLink item={item}>
       <ThemedText type="smallBold">Read Later</ThemedText>
-      <ThemedText>{item.title ?? item.summary}</ThemedText>
-      {item.title ? <Meta>{item.summary}</Meta> : null}
+      <ThemedText numberOfLines={item.title ? 2 : 3} ellipsizeMode="tail">
+        {preview.title}
+      </ThemedText>
+      {preview.summary ? <Meta numberOfLines={3}>{preview.summary}</Meta> : null}
       {item.author || item.source ? (
         <Meta>{[item.author, item.source].filter(Boolean).join(' · ')}</Meta>
       ) : null}
-    </ThemedView>
+    </LibraryCardLink>
   );
 }
 
-function Meta({ children }: { children: string }) {
-  return <ThemedText themeColor="textSecondary">{children}</ThemedText>;
+function LibraryCardLink({ item, children }: { item: LibraryItem; children: React.ReactNode }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${item.type === 'content' ? 'Read Later item' : item.title}`}
+      onPress={() => router.push(`/screenshot/${encodeURIComponent(item.screenshotId)}`)}
+    >
+      <ThemedView type="backgroundElement" style={styles.card}>
+        {children}
+      </ThemedView>
+    </Pressable>
+  );
+}
+
+function Meta({ children, numberOfLines }: { children: string; numberOfLines?: number }) {
+  return (
+    <ThemedText
+      themeColor="textSecondary"
+      numberOfLines={numberOfLines}
+      ellipsizeMode={numberOfLines ? 'tail' : undefined}
+    >
+      {children}
+    </ThemedText>
+  );
 }
 
 const styles = StyleSheet.create({

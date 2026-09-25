@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
 import { FadeInView } from '@/components/motion';
 import { ThemedText } from '@/components/themed-text';
@@ -24,6 +25,7 @@ import {
 } from '../../shared/invitation-code';
 
 export default function AiAccessScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activate, credentials: aiCredentials } = useAiAccess();
   const { activateJudgePro, isPro } = useSubscription();
@@ -113,7 +115,10 @@ export default function AiAccessScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: Math.max(24, insets.bottom + 24) },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           automaticallyAdjustKeyboardInsets

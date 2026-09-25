@@ -82,7 +82,10 @@ export function ActionButton({
           type="smallBold"
           numberOfLines={2}
           maxFontSizeMultiplier={1.5}
-          style={variant === 'primary' || variant === 'danger' ? styles.primaryText : undefined}
+          style={[
+            styles.label,
+            variant === 'primary' || variant === 'danger' ? styles.primaryText : undefined,
+          ]}
         >
           {visibleLabel}
         </ThemedText>
@@ -93,6 +96,8 @@ export function ActionButton({
 
 const styles = StyleSheet.create({
   base: {
+    flexShrink: 0,
+    maxWidth: '100%',
     minHeight: Layout.minimumTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',
@@ -102,8 +107,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  compact: { minHeight: 44, paddingHorizontal: 12, paddingVertical: 8 },
-  content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  compact: { minHeight: 44, paddingHorizontal: 10, paddingVertical: 8 },
+  content: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  label: { flexShrink: 1, textAlign: 'center' },
   primary: { backgroundColor: Colors.dark.accent },
   secondary: { backgroundColor: Colors.dark.backgroundElement, borderColor: Colors.dark.border },
   danger: { backgroundColor: '#B93842' },

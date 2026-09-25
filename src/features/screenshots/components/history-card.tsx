@@ -56,11 +56,6 @@ export function ScreenshotHistoryCard({
               Date unavailable
             </ThemedText>
           )}
-          {__DEV__ && complete && screenshot.analysis.analysisSource ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              {screenshot.analysis.analysisSource === 'semantic' ? 'Semantic' : 'Local'}
-            </ThemedText>
-          ) : null}
         </View>
       </Pressable>
     </ThemedView>

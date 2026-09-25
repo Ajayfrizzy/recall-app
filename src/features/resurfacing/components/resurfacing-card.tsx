@@ -40,7 +40,7 @@ export function ResurfacingCard({
         </Pressable>
         <View style={styles.actions}>
           {card.action?.route ? (
-            <ActionButton label={card.action.label} compact onPress={open} />
+            <ActionButton label={card.action.label} compact onPress={open} style={styles.action} />
           ) : null}
           <ActionButton
             label="Snooze 1 day"
@@ -48,6 +48,7 @@ export function ResurfacingCard({
             state={activeAction === 'snooze' ? 'loading' : activeAction ? 'disabled' : 'idle'}
             variant="ghost"
             compact
+            style={styles.action}
             onPress={() => {
               setActiveAction('snooze');
               void onSnooze().finally(() => setActiveAction(undefined));
@@ -59,18 +60,13 @@ export function ResurfacingCard({
             state={activeAction === 'dismiss' ? 'loading' : activeAction ? 'disabled' : 'idle'}
             variant="ghost"
             compact
+            style={styles.action}
             onPress={() => {
               setActiveAction('dismiss');
               void onDismiss().finally(() => setActiveAction(undefined));
             }}
           />
         </View>
-        {__DEV__ ? (
-          <ThemedText type="small" themeColor="textSecondary" style={styles.debug}>
-            {card.id} · p{card.priority}
-            {card.bucket ? ` · ${card.bucket}` : ''}
-          </ThemedText>
-        ) : null}
       </ThemedView>
     </FadeInView>
   );
@@ -80,5 +76,5 @@ const styles = StyleSheet.create({
   card: { padding: 16, borderRadius: 8, gap: 12 },
   copy: { gap: 4 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  debug: { fontSize: 11 },
+  action: { alignSelf: 'flex-start' },
 });

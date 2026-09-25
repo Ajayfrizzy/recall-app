@@ -19,6 +19,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton, type ActionButtonState } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -80,6 +81,7 @@ export default function ScreenshotRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const aiAccess = useAiAccess();
+  const insets = useSafeAreaInsets();
   const [showExtractedText, setShowExtractedText] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
   const {
@@ -111,7 +113,12 @@ export default function ScreenshotRoute() {
   const date = formatScreenshotCreationDateTime(screenshot.creationTime);
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(48, insets.bottom + Layout.screenPadding) },
+        ]}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="View screenshot full screen"
@@ -136,11 +143,6 @@ export default function ScreenshotRoute() {
           <ThemedText themeColor="textSecondary">
             {date ?? `${screenshot.width} x ${screenshot.height}`}
           </ThemedText>
-          {__DEV__ ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              Asset ID: {screenshot.id}
-            </ThemedText>
-          ) : null}
         </View>
         <View accessibilityRole="tablist" style={styles.actions}>
           {(['kept', 'ignored', 'processed'] as ScreenshotStatus[]).map((status) => (
@@ -176,7 +178,15 @@ export default function ScreenshotRoute() {
         animationType="fade"
         onRequestClose={() => setShowFullImage(false)}
       >
-        <View style={styles.fullImageBackdrop}>
+        <View
+          style={[
+            styles.fullImageBackdrop,
+            {
+              paddingTop: Math.max(16, insets.top + 8),
+              paddingBottom: Math.max(16, insets.bottom + 12),
+            },
+          ]}
+        >
           <ScreenshotImage
             uri={screenshot.uri}
             screenshotId={screenshot.id}
@@ -604,18 +614,12 @@ function ItemAction({
           <ThemedText type="small" style={styles.errorText}>
             {action.error}
           </ThemedText>
-          {__DEV__ && action.debugMessage ? (
-            <ThemedText type="small" style={styles.errorText}>
-              Calendar debug: {action.debugMessage}
-            </ThemedText>
-          ) : null}
         </>
       ) : null}
       {needsDateForm && showForm ? (
         <DateActionModal
           item={item}
           actionError={action?.status === 'failed' ? action.error : undefined}
-          actionDebugMessage={action?.debugMessage}
           onClose={() => setShowForm(false)}
           onSubmit={async (values) => {
             const duplicate = findDuplicateUpcoming(upcoming.items, {
@@ -679,16 +683,15 @@ function duplicateMessage(item: UpcomingItem): string {
 function DateActionModal({
   item,
   actionError,
-  actionDebugMessage,
   onClose,
   onSubmit,
 }: {
   item: Extract<RecallItem, { type: 'event' | 'deadline' }>;
   actionError?: string;
-  actionDebugMessage?: string;
   onClose: () => void;
   onSubmit: (values: Partial<ExecuteActionInput>) => Promise<void>;
 }) {
+  const insets = useSafeAreaInsets();
   const initial = getExactDateParts(item.dates);
   const [title, setTitle] = useState(item.title);
   const [location, setLocation] = useState(item.type === 'event' ? (item.location ?? '') : '');
@@ -701,105 +704,116 @@ function DateActionModal({
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalBackdrop}
       >
-        <ThemedView style={styles.modalContent}>
-          <ThemedText type="smallBold">
-            {item.type === 'event' ? 'Add to Calendar' : 'Create Reminder'}
-          </ThemedText>
-          <Field label="Title" value={title} onChangeText={setTitle} />
-          {item.type === 'event' ? (
-            <Field label="Location" value={location} onChangeText={setLocation} />
-          ) : null}
-          {item.dates[0] && item.dates[0].precision !== 'exact' ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              Found: {item.dates[0].normalized ?? item.dates[0].raw}. An exact date and time are
-              required.
+        <ScrollView
+          contentContainerStyle={[
+            styles.modalScrollContent,
+            {
+              paddingTop: Math.max(20, insets.top + 12),
+              paddingBottom: Math.max(20, insets.bottom + 12),
+            },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          <ThemedView style={styles.modalContent}>
+            <ThemedText type="smallBold">
+              {item.type === 'event' ? 'Add to Calendar' : 'Create Reminder'}
             </ThemedText>
-          ) : null}
-          <Field
-            label="Date"
-            value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            keyboardType="numbers-and-punctuation"
-          />
-          <Field
-            label="Time"
-            value={time}
-            onChangeText={setTime}
-            placeholder="HH:MM"
-            keyboardType="numbers-and-punctuation"
-          />
-          {item.type === 'deadline' ? (
-            <View style={styles.timingGroup}>
+            <Field label="Title" value={title} onChangeText={setTitle} />
+            {item.type === 'event' ? (
+              <Field label="Location" value={location} onChangeText={setLocation} />
+            ) : null}
+            {item.dates[0] && item.dates[0].precision !== 'exact' ? (
               <ThemedText type="small" themeColor="textSecondary">
-                Remind me
+                Found: {item.dates[0].normalized ?? item.dates[0].raw}. An exact date and time are
+                required.
               </ThemedText>
-              {(
-                [
-                  ['at_deadline', 'At deadline'],
-                  ['one_hour_before', '1 hour before'],
-                  ['one_day_before', '1 day before'],
-                ] as const
-              ).map(([value, label]) => (
-                <Pressable
-                  key={value}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: timing === value }}
-                  onPress={() => setTiming(value)}
-                  style={[styles.timingOption, timing === value && styles.timingSelected]}
-                >
-                  <ThemedText type="smallBold">{label}</ThemedText>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-          {error || actionError ? (
-            <ThemedText style={styles.errorText}>{error ?? actionError}</ThemedText>
-          ) : null}
-          {__DEV__ && actionDebugMessage ? (
-            <ThemedText type="small" style={styles.errorText}>
-              Calendar debug: {actionDebugMessage}
-            </ThemedText>
-          ) : null}
-          <View style={styles.modalActions}>
-            <Pressable accessibilityRole="button" onPress={onClose} style={styles.secondaryButton}>
-              <ThemedText type="smallBold">Cancel</ThemedText>
-            </Pressable>
-            <ActionButton
-              label="Continue"
-              loadingLabel="Working..."
-              state={submitting ? 'loading' : 'idle'}
-              onPress={() => {
-                const exactDate = parseExactDate(date, time);
-                if (!title.trim()) {
-                  setError('A title is required.');
-                  return;
-                }
-                if (!exactDate) {
-                  setError('Enter an exact date and time in the formats shown.');
-                  return;
-                }
-                const dateError = validateDateAction(item.type, exactDate, timing);
-                if (dateError) {
-                  setError(dateError);
-                  return;
-                }
-                setError(null);
-                setSubmitting(true);
-                void onSubmit({
-                  exactDate,
-                  title: title.trim(),
-                  location: location.trim() || undefined,
-                  reminderTiming: item.type === 'deadline' ? timing : undefined,
-                }).finally(() => setSubmitting(false));
-              }}
-              style={styles.modalPrimary}
+            ) : null}
+            <Field
+              label="Date"
+              value={date}
+              onChangeText={setDate}
+              placeholder="YYYY-MM-DD"
+              keyboardType="numbers-and-punctuation"
             />
-          </View>
-        </ThemedView>
+            <Field
+              label="Time"
+              value={time}
+              onChangeText={setTime}
+              placeholder="HH:MM"
+              keyboardType="numbers-and-punctuation"
+            />
+            {item.type === 'deadline' ? (
+              <View style={styles.timingGroup}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Remind me
+                </ThemedText>
+                {(
+                  [
+                    ['at_deadline', 'At deadline'],
+                    ['one_hour_before', '1 hour before'],
+                    ['one_day_before', '1 day before'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Pressable
+                    key={value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: timing === value }}
+                    onPress={() => setTiming(value)}
+                    style={[styles.timingOption, timing === value && styles.timingSelected]}
+                  >
+                    <ThemedText type="smallBold">{label}</ThemedText>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {error || actionError ? (
+              <ThemedText style={styles.errorText}>{error ?? actionError}</ThemedText>
+            ) : null}
+            <View style={styles.modalActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={onClose}
+                style={styles.secondaryButton}
+              >
+                <ThemedText type="smallBold">Cancel</ThemedText>
+              </Pressable>
+              <ActionButton
+                label="Continue"
+                loadingLabel="Working..."
+                state={submitting ? 'loading' : 'idle'}
+                onPress={() => {
+                  const exactDate = parseExactDate(date, time);
+                  if (!title.trim()) {
+                    setError('A title is required.');
+                    return;
+                  }
+                  if (!exactDate) {
+                    setError('Enter an exact date and time in the formats shown.');
+                    return;
+                  }
+                  const dateError = validateDateAction(item.type, exactDate, timing);
+                  if (dateError) {
+                    setError(dateError);
+                    return;
+                  }
+                  setError(null);
+                  setSubmitting(true);
+                  void onSubmit({
+                    exactDate,
+                    title: title.trim(),
+                    location: location.trim() || undefined,
+                    reminderTiming: item.type === 'deadline' ? timing : undefined,
+                  }).finally(() => setSubmitting(false));
+                }}
+                style={styles.modalPrimary}
+              />
+            </View>
+          </ThemedView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -978,8 +992,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.dark.overlay,
     padding: 16,
-    paddingTop: 44,
-    paddingBottom: 28,
   },
   fullImage: { flex: 1, width: '100%' },
   fullImageClose: { alignSelf: 'center', minWidth: 140, marginTop: 12 },
@@ -1019,9 +1031,12 @@ const styles = StyleSheet.create({
   errorText: { color: Colors.dark.danger },
   modalBackdrop: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 20,
     backgroundColor: Colors.dark.overlay,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
   modalContent: {
     width: '100%',
@@ -1046,7 +1061,7 @@ const styles = StyleSheet.create({
   timingGroup: { gap: 8 },
   timingOption: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8 },
   timingSelected: { backgroundColor: Colors.dark.accentMuted },
-  modalActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+  modalActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-end' },
   secondaryButton: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 14 },
   modalPrimary: { minWidth: 110 },
 });

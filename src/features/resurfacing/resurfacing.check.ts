@@ -48,6 +48,10 @@ const eventInThreeDays = {
 const tomorrowCard = generateUpcomingCards([deadlineTomorrow], now)[0];
 assert(tomorrowCard.id === 'deadline:scholarship:tomorrow', 'tomorrow ID is not deterministic');
 assert(tomorrowCard.scheduledAt === deadlineTomorrow.date, 'upcoming card lost its scheduled date');
+assert(
+  tomorrowCard.action?.route === `/screenshot/${deadlineTomorrow.screenshotId}`,
+  'upcoming card lost its Open destination',
+);
 assert(tomorrowCard.message.includes('is tomorrow'), 'deadline tomorrow wording is incorrect');
 assert(
   tomorrowCard.priority === RESURFACING_PRIORITY.DEADLINE_TOMORROW,
@@ -127,6 +131,7 @@ const fiveUpcoming = [
   eventInThreeDays,
   { ...eventInThreeDays, id: 'second-event', title: 'Second event' },
 ];
+const fiveUpcomingSnapshot = JSON.stringify(fiveUpcoming);
 assert(
   generateResurfacingCards(
     { upcoming: fiveUpcoming, library: [], bundles: [] },
@@ -145,6 +150,7 @@ assert(
   ).length === 5,
   'Pro resurfacing did not expose five cards',
 );
+assert(JSON.stringify(fiveUpcoming) === fiveUpcomingSnapshot, 'resurfacing changed Upcoming data');
 
 const dismissed: ResurfacingPreference = { id: tomorrowCard.id, dismissedAt: now };
 assert(

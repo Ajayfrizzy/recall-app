@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -24,6 +25,7 @@ const TYPE_LABELS: Record<RecallBundle['type'], string> = {
 };
 
 export default function BundleRoute() {
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [lifecycleAction, setLifecycleAction] = useState<'archive' | 'restore'>();
   const {
@@ -67,7 +69,12 @@ export default function BundleRoute() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(48, insets.bottom + 24) },
+        ]}
+      >
         <ThemedText type="smallBold" themeColor="textSecondary">
           {TYPE_LABELS[bundle.type]}
           {bundle.status === 'archived' ? ' · Archived' : ''}
@@ -83,16 +90,6 @@ export default function BundleRoute() {
           {linkedUpcoming.length ? <Stat label="Upcoming" value={linkedUpcoming.length} /> : null}
           {linkedActions.length ? <Stat label="Actions" value={linkedActions.length} /> : null}
         </View>
-        {__DEV__ && bundle.reason ? (
-          <View style={styles.debugDetails}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Bundled because: {bundle.reason}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Bundle ID: {bundle.id}
-            </ThemedText>
-          </View>
-        ) : null}
         <ThemedText type="smallBold" style={styles.sectionLabel}>
           RELATED ITEMS
         </ThemedText>
@@ -182,7 +179,6 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   stat: { minWidth: 82, padding: 10, borderRadius: 8 },
   sectionLabel: { marginTop: 12 },
-  debugDetails: { gap: 2 },
   archiveButton: {
     alignSelf: 'flex-start',
     marginTop: 12,

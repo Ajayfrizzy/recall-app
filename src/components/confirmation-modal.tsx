@@ -1,4 +1,5 @@
 import { Modal, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton } from './action-button';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
@@ -24,9 +25,19 @@ export function ConfirmationModal({
   onCancel,
   destructive = false,
 }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <View
+        style={[
+          styles.backdrop,
+          {
+            paddingTop: Math.max(20, insets.top + 12),
+            paddingBottom: Math.max(20, insets.bottom + 12),
+          },
+        ]}
+      >
         <ThemedView style={styles.content}>
           <ThemedText type="smallBold">{title}</ThemedText>
           <ThemedText themeColor="textSecondary">{message}</ThemedText>
@@ -65,7 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 14,
   },
-  actions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-end' },
   cancelButton: { minWidth: 92 },
   confirmButton: { minWidth: 120 },
 });

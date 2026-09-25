@@ -1,74 +1,53 @@
 # Recall
 
-Turn screenshots into actions.
+Recall is an Android app that turns screenshots into user-controlled actions. It finds screenshots in the device gallery, reads their text on-device, and helps the user save products and places, keep content for later, create reminders or calendar events, group related items, resurface timely information, and review screenshots for deletion.
 
-## Problem
+Screenshots are easy to capture and easy to forget. Recall preserves the intent behind them without making actions or deleting gallery items automatically.
 
-Screenshots are easy to save and easy to forget. Important products, events, deadlines, places, and posts become undifferentiated gallery clutter.
+## Features
 
-## Solution
+- On-device OCR and local classification, available without Recall AI
+- Optional GPT-5 mini analysis for structured product, event, deadline, place, content, and general results
+- User-confirmed reminders, calendar events, saved products, saved places, and read-later items
+- Multi-item actions, Smart Bundles, and Relevant Now resurfacing
+- Screenshot Cleanup with explicit selection and Android Gallery confirmation
+- Local persistence for app state and structured analysis results
+- RevenueCat-managed Recall Pro paywall, purchases, restore flow, and entitlements
+- Invitation-protected AI access and 90-day complimentary Pro for judge invitations
 
-Recall reads screenshot text on-device, optionally uses server-side vision analysis to understand the screenshot's structure, and lets the user turn detected items into deliberate actions. Recall never automatically creates actions or deletes screenshots.
+## How analysis works
 
-## Key features
+OCR and AI analysis are separate:
 
-- On-device OCR and local fallback classification
-- Structured product, event, deadline, place, content, and general analysis
-- Calendar events, reminders, saved products, saved places, and read-later items
-- Multi-item Smart Actions, Smart Bundles, and Relevant Now resurfacing
-- Reviewed Screenshot Cleanup with explicit Gallery deletion confirmation
-- Recall Pro subscriptions and a RevenueCat-managed paywall
-- Local persistence for app state and analysis results
-- Invitation-protected AI access with encrypted installation-token storage
+1. `expo-ocr-kit` reads screenshot text on the device.
+2. Recall creates a local result from that text.
+3. Only after the user acknowledges optional AI processing and starts an eligible AI analysis does the app send the current screenshot, resized when needed and encoded as JPEG, plus its OCR text and limited time context to the Recall backend.
+4. The backend calls `gpt-5-mini` through the OpenAI Responses API and validates a strict structured response.
+5. The mobile app validates the response again. Provider and network failures preserve the on-device result.
+6. The user decides whether to perform any suggested action.
 
-## Architecture
+See [Architecture](docs/architecture.md) for the full data flow.
 
-```text
-Screenshot → on-device OCR → compressed image + OCR text → Recall backend
-           → OpenAI structured analysis → mobile validation
-           → Actions / Bundles / Resurfacing / Cleanup
-```
+## Architecture and stack
 
-The mobile app uses Expo SDK 57 and React Native. It integrates Media Library, OCR, AsyncStorage, Calendar, Notifications, and RevenueCat. The Node/TypeScript backend accepts one prepared screenshot per request and calls the OpenAI Responses API. Its output must conform to the shared `RecallAnalysis` shape before it reaches the app, where it is validated again. `POST /access/redeem` exchanges a single-use invitation for an expiring installation token; `POST /analyze` requires that token as a Bearer credential.
+- Mobile: Expo SDK 57, React Native 0.86, React 19, Expo Router, TypeScript
+- Device services: Expo Media Library, OCR Kit, Image Manipulator, Calendar, Notifications, SecureStore, and AsyncStorage
+- Purchases: RevenueCat Purchases and RevenueCat Paywalls
+- Backend: Node.js 22, TypeScript, OpenAI JavaScript SDK, Zod, and built-in `node:sqlite`
+- AI: OpenAI Responses API, GPT-5 mini by default, and strict JSON Schema Structured Outputs
+- Persistence: AsyncStorage on mobile; SQLite for backend access, quotas, spending estimates, and structured-result cache
 
-## AI analysis
+The current backend is a single Node.js process. The planned production topology is a DigitalOcean VPS with Caddy, the Node backend, and a persistent SQLite volume. Container and Caddy files are not implemented in this repository yet; see [Deployment](docs/deployment.md).
 
-Real analysis uses `gpt-5-mini` by default through the OpenAI Responses API. A compressed JPEG and on-device OCR text are sent in the same request. The response uses strict JSON Schema Structured Outputs and is validated with Zod. Requests are stateless (`store: false`), have a 25-second provider timeout, do not enable tools, and do not include screenshot history or unrelated user state.
+## Requirements
 
-OpenAI usage is server-side and pay-as-you-go. The model is configurable with `OPENAI_MODEL`; no OpenAI key belongs in the mobile bundle.
+- Node.js 22.13.x or newer in the Node 22 line. Expo SDK 57 documents Node 22.13.x as its minimum.
+- npm
+- Android Studio/device tooling or EAS CLI
+- A development or preview build; Expo Go cannot exercise all native OCR and RevenueCat behavior
+- A physical Android device for release verification
 
-`MOCK_ANALYSIS=true` keeps deterministic fixture analysis available only when `NODE_ENV` is `development` or `test`. Mock requests still require valid installation access. The final demo should use real AI with `MOCK_ANALYSIS=false`.
-
-### Invitation access and safeguards
-
-Standard AI invitation access is not an account and never grants Recall Pro. Judge invitations also provision a 90-day promotional RevenueCat `pro` entitlement for that installation. Neither invitation type bypasses AI quotas, shutdown, concurrency controls, or the global spending ceiling. Full user authentication and cross-device identity are future work.
-
-The backend hashes tokens in SQLite, isolates cached results by installation, and persists quota/cache records across restarts. Defaults are 10 analyses per installation per UTC day, 40 globally per UTC day, two concurrent requests, and a $1.50 estimated monthly ceiling. A normal repeat can use the server cache without consuming another allowance; only the explicit **Reanalyze with Recall AI** action sends `reanalyze: true`.
-
-The mobile app stores only the access token and expiration in `expo-secure-store`, never AsyncStorage. Expired, revoked, or invalid credentials are removed locally. Invitation codes and tokens must not be placed in source, APK configuration, EAS variables, or logs.
-
-## RevenueCat integration
-
-Recall checks the `pro` entitlement and uses the default RevenueCat offering with Monthly and Yearly packages configured in the RevenueCat dashboard. The app presents the RevenueCat Paywall and supports Restore Purchases.
-
-- Free: cleanup batches of up to 3 screenshots and up to 3 Relevant Now cards
-- Pro: larger cleanup batches and up to 5 Relevant Now cards
-
-## Local-first and privacy approach
-
-Screenshots and OCR stay on-device unless the user acknowledges and starts AI analysis. The mobile app sends only the current compressed screenshot, OCR text, and time context. The backend does not persist images or analysis bodies and its diagnostics omit image data, OCR text, and API keys. AI output is advisory: the user confirms actions and deletion.
-
-## Tech stack
-
-- Expo SDK 57, React Native 0.86, Expo Router, TypeScript
-- Expo Media Library, Image Manipulator, Calendar, Notifications, and OCR Kit
-- AsyncStorage
-- RevenueCat Purchases and RevenueCat Paywalls
-- Node.js, Zod, and the OpenAI JavaScript SDK
-
-## Running locally
-
-Requirements: Node.js 22.13 or newer, Android Studio/device tooling, and a development build for native OCR and RevenueCat modules.
+## Mobile setup
 
 ```sh
 npm install
@@ -76,7 +55,18 @@ cp .env.example .env
 npm run start
 ```
 
-Set `EXPO_PUBLIC_ANALYSIS_API_URL` to a backend URL reachable from the device, such as `http://192.168.x.x:8787`. Do not use `localhost` for a separate physical Android device. Local HTTP additionally requires `EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP=true` in a development build. Preview and production builds require HTTPS.
+For a physical device, `EXPO_PUBLIC_ANALYSIS_API_URL` must be reachable from that device. A LAN URL can be used in a development build with `EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP=true`; preview and production builds require public HTTPS.
+
+Mobile environment variables:
+
+| Variable                                   | Purpose                                                                 |
+| ------------------------------------------ | ----------------------------------------------------------------------- |
+| `EXPO_PUBLIC_ANALYSIS_API_URL`             | Recall backend base URL                                                 |
+| `EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP` | Development-only opt-in for local HTTP                                  |
+| `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`   | Public Android RevenueCat SDK key                                       |
+| `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`       | Public iOS RevenueCat SDK key; unused by the current Android submission |
+
+The `EXPO_PUBLIC_` variables are compiled into the app and are not secrets. Never put an OpenAI secret, RevenueCat secret key, invitation code, or installation token in them.
 
 ## Backend setup
 
@@ -87,12 +77,92 @@ cp .env.example .env
 npm run dev
 ```
 
-The server exposes `GET /health`, `POST /access/redeem`, and protected `POST /analyze`. For a real-AI run, place secrets only in `server/.env` or the backend host's secret manager.
+The backend exposes `GET /health`, `POST /access/redeem`, `POST /access/judge-entitlement`, and protected `POST /analyze`.
 
-Generate invitations and administer installation access from the server directory:
+Backend environment variables:
+
+| Variable                                    | Purpose / current default                                        |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| `NODE_ENV`                                  | Runtime mode; use `production` on the server                     |
+| `OPENAI_API_KEY`                            | Server-only OpenAI secret                                        |
+| `OPENAI_MODEL`                              | Model, default `gpt-5-mini`                                      |
+| `OPENAI_REQUEST_TIMEOUT_MS`                 | Provider timeout, default `45000`                                |
+| `OPENAI_REASONING_EFFORT`                   | `minimal`, `low`, `medium`, or `high`; default `low`             |
+| `OPENAI_TEXT_VERBOSITY`                     | `low`, `medium`, or `high`; default `low`                        |
+| `OPENAI_ERROR_DETAILS`                      | Include concise provider details in server logs; default `false` |
+| `AI_ANALYSIS_ENABLED`                       | Backend AI shutdown switch; default `false`                      |
+| `RECALL_ACCESS_DB_PATH`                     | SQLite file, default `./data/recall-access.sqlite`               |
+| `RECALL_TOKEN_PEPPER`                       | High-entropy server-only value used for HMAC hashing             |
+| `AI_INSTALLATION_DAILY_LIMIT`               | Per-installation daily analyses, default `10`                    |
+| `AI_GLOBAL_DAILY_LIMIT`                     | Global daily analyses, default `40`                              |
+| `AI_GLOBAL_CONCURRENCY_LIMIT`               | Concurrent provider calls, default `2`                           |
+| `AI_ACCESS_TOKEN_TTL_DAYS`                  | Standard installation access lifetime, default `30`              |
+| `AI_INVITATION_TTL_DAYS`                    | Standard invitation lifetime, default `7`                        |
+| `AI_REDEMPTION_WINDOW_MINUTES`              | Failed-redemption window, default `15`                           |
+| `AI_REDEMPTION_MAX_FAILURES`                | Failed redemptions per hashed address/window, default `5`        |
+| `AI_MONTHLY_ESTIMATED_LIMIT_USD`            | Estimated monthly AI ceiling, default `1.50`                     |
+| `AI_REQUEST_RESERVATION_USD`                | Per-request budget reservation, default `0.05`                   |
+| `OPENAI_INPUT_PRICE_PER_MILLION_USD`        | Cost estimator input rate, default `0.25`                        |
+| `OPENAI_CACHED_INPUT_PRICE_PER_MILLION_USD` | Cost estimator cached-input rate, default `0.025`                |
+| `OPENAI_OUTPUT_PRICE_PER_MILLION_USD`       | Cost estimator output rate, default `2.00`                       |
+| `REVENUECAT_SECRET_API_KEY`                 | Server-only RevenueCat v1 secret for judge Pro provisioning      |
+| `MOCK_ANALYSIS`                             | Deterministic fixtures in development/test only; default `false` |
+| `PORT`                                      | HTTP port, default `8787`                                        |
+| `ALLOWED_ORIGIN`                            | CORS origin; CORS is not native-client authentication            |
+| `RECALL_PUBLIC_BASE_URL`                    | Public backend URL; production requires HTTPS                    |
+
+Use [server/.env.example](server/.env.example) as the source of truth for deploy-time values. Production startup rejects mock mode, a missing RevenueCat secret, and a non-HTTPS public base URL.
+
+## Development and checks
 
 ```sh
-npm run access:admin -- create-invitations 3
+npm run start
+npm run android
+npm run lint
+npx tsc --noEmit
+npm run screenshots:check
+npm run actions:check
+npm run library:check
+npm run ai-access:check
+npm run persistence:check
+npm run bundles:check
+npm run resurfacing:check
+npm run cleanup:check
+npm run subscription:check
+npm run ui:check
+npm run format:check
+
+cd server
+npm run typecheck
+npm run fixtures:check
+npm run access:check
+npm run format:check
+```
+
+`fixtures:check` skips the paid live OpenAI call unless `RUN_OPENAI_LIVE_TEST=true` is deliberately set. See [Release QA](docs/release-qa.md) for device testing.
+
+## Builds
+
+```sh
+eas build --profile development --platform android
+eas build --profile preview --platform android
+```
+
+The `preview` profile is configured to produce an internal APK, but the final standalone judge APK and its clean-install flow have not yet been verified. Run `npm run release:config-check` in the configured preview environment first.
+
+## RevenueCat and judge access
+
+Recall checks the `pro` entitlement, loads the default offering, presents the RevenueCat paywall, and supports Restore Purchases. The dashboard must provide Monthly and Yearly packages.
+
+- Free: cleanup batches of up to 3 screenshots and up to 3 Relevant Now cards
+- Pro: larger cleanup batches and up to 5 Relevant Now cards
+
+Standard invitations enable AI access only. Judge invitations create 90-day installation access and request a matching 90-day promotional `pro` entitlement through the backend. Invitations do not bypass AI quotas, concurrency limits, the shutdown switch, or the spending ceiling.
+
+From `server/`:
+
+```sh
+npm run access:admin -- create-invitations 1
 npm run access:admin -- create-judge-invitations 1
 npm run access:admin -- list-invitations
 npm run access:admin -- revoke-invitation INVITATION_ID
@@ -101,80 +171,45 @@ npm run access:admin -- revoke-token TOKEN_ID
 npm run access:admin -- usage
 ```
 
-Standard invitations use the configurable `AI_INVITATION_TTL_DAYS`; judge invitations expire after 60 days and create 90-day installation access. Generate codes only in a private operator terminal, retain the accompanying invitation ID for revocation, deliver each code through a private channel, and never paste active codes into source, issues, screenshots, APK/EAS configuration, or public documentation. Testers open **Profile → Activate AI** and enter a code once. Revoke an unused code with its invitation ID, or revoke redeemed access with the opaque token ID shown by `list-tokens`; raw installation tokens are never displayed by the admin command.
+Generate codes only in a private operator terminal and deliver them privately. Do not place codes in source, documentation, screenshots, EAS variables, or logs.
 
-## Environment variables
+## Privacy and security
 
-Mobile (`.env`):
+- Screenshot access uses Android media-library permission and may be full or user-selected.
+- OCR runs on-device. AI upload is optional and user initiated.
+- OpenAI and RevenueCat secret keys remain on the backend.
+- Installation access tokens are stored in SecureStore on-device and HMAC-hashed in SQLite on the backend.
+- App state, including saved items and structured results, is stored locally in AsyncStorage.
+- The backend does not store uploaded image bytes or OCR text as standalone fields. It does store access records, quota/cost records, request fingerprints, and cached structured analysis JSON in SQLite.
+- The current backend has no automatic cache-retention purge or user-facing backend deletion workflow. This must be addressed or documented operationally before a public launch.
+- Gallery deletion always requires an explicit user action and Android confirmation; Recall's saved record can remain after the original asset is deleted.
 
-```dotenv
-EXPO_PUBLIC_ANALYSIS_API_URL=http://YOUR_LAN_IP:8787
-EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP=true
-EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY=test_YOUR_PUBLIC_ANDROID_SDK_KEY
-EXPO_PUBLIC_REVENUECAT_IOS_API_KEY=test_YOUR_PUBLIC_IOS_SDK_KEY
-```
+Read the draft [Privacy Policy](docs/privacy-policy.md) before testing with personal screenshots.
 
-Backend (`server/.env`):
+## Current limitations
 
-```dotenv
-NODE_ENV=development
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5-mini
-OPENAI_REQUEST_TIMEOUT_MS=45000
-OPENAI_REASONING_EFFORT=low
-OPENAI_TEXT_VERBOSITY=low
-OPENAI_ERROR_DETAILS=false
-REVENUECAT_SECRET_API_KEY=
-MOCK_ANALYSIS=false
-PORT=8787
-ALLOWED_ORIGIN=http://localhost:8081
-RECALL_PUBLIC_BASE_URL=http://localhost:8787
-```
+- The public HTTPS backend, deployment automation, standalone APK, and clean first-time judge installation remain pending.
+- Android is the tested submission platform; iOS is not release-qualified.
+- AI quality depends on screenshot clarity, OCR quality, connectivity, and provider availability.
+- Access is installation-based, not a user account, and does not sync across devices.
+- Backend SQLite is single-host state; the supplemental 30-requests/minute limiter is in memory.
+- Cached structured backend analyses have no implemented automatic retention period.
+- Date and time actions still require user review when source content is incomplete.
+- RevenueCat products, offerings, entitlement, and keys must match the selected RevenueCat project.
 
-`OPENAI_REQUEST_TIMEOUT_MS` accepts 5000–120000 milliseconds and falls back to 45000
-when absent or invalid. `OPENAI_REASONING_EFFORT` accepts `minimal`, `low`, `medium`, or
-`high`; `OPENAI_TEXT_VERBOSITY` accepts `low`, `medium`, or `high`. Invalid values fall
-back to `low`. Keep `OPENAI_ERROR_DETAILS=false` unless concise provider messages are
-needed during development.
+## Documentation
 
-Never prefix `OPENAI_API_KEY`, `REVENUECAT_SECRET_API_KEY`, an invitation, or an installation token with `EXPO_PUBLIC_`, or place one in Expo/EAS configuration. In production, set `NODE_ENV=production`, `MOCK_ANALYSIS=false`, a high-entropy `RECALL_TOKEN_PEPPER`, `AI_ANALYSIS_ENABLED=true`, the RevenueCat v1 secret key, and an HTTPS `RECALL_PUBLIC_BASE_URL`; terminate TLS at the service or a trusted reverse proxy. Restrict `ALLOWED_ORIGIN` where the client environment makes that effective. Back up the SQLite database if invitation, revocation, quota, and cache continuity must survive host replacement.
-
-## Development build
-
-Native OCR and purchase testing require a development or preview build rather than Expo Go.
-
-```sh
-eas build --profile development --platform android
-```
-
-After final validation, create the standalone internal preview with:
-
-```sh
-eas build --profile preview --platform android
-```
-
-## Demo flow
-
-Use real AI and stable sample screenshots for the final demo:
-
-1. Open Inbox and analyze the INGREM product grid.
-2. Show four products, then Save All Products.
-3. Open Library and the generated INGREM Smart Bundle.
-4. Show Relevant Now and a scholarship reminder in Upcoming.
-5. Review Screenshot Cleanup and its Gallery deletion warning.
-6. Open Profile, the RevenueCat paywall, and the Recall Pro state.
-
-See [docs/demo-script.md](docs/demo-script.md) for the timed version.
-
-## Known limitations
-
-- Physical-device AI quality depends on screenshot clarity, OCR quality, connectivity, and provider availability.
-- The hackathon backend has installation access rather than full user authentication. Its supplemental request limiter is in-memory; durable quotas and spending state are SQLite-backed.
-- Access is installation-local and cannot sync across devices. Clearing/reinstall behavior follows platform SecureStore/Keychain behavior.
-- CORS is not an authentication boundary for native clients.
-- Exact date/time actions still require user review when the screenshot is incomplete.
-- RevenueCat offerings and products must be configured in its dashboard.
+- [Architecture](docs/architecture.md)
+- [Deployment plan](docs/deployment.md)
+- [Privacy policy draft](docs/privacy-policy.md)
+- [Judge guide](docs/judge-guide.md)
+- [Next Gen submission checklist](docs/next-gen-submission.md)
+- [Release QA](docs/release-qa.md)
+- [Release notes](docs/release-notes.md)
+- [Submission notes](docs/submission-notes.md)
+- [Submission asset checklist](docs/submission-checklist.md)
+- [Demo script](docs/demo-script.md)
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Recall is open source under the [MIT License](LICENSE).

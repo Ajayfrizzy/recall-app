@@ -1,6 +1,25 @@
 # Recall Release QA
 
-Milestone 10 is not a completed release candidate until the physical Android checklist passes on the target Samsung device. Automated checks do not replace device testing.
+## Status at September 25, 2026
+
+Reported passed on the existing physical Samsung installation:
+
+- screenshot discovery, permissions, and creation dates;
+- onboarding and screenshot organization;
+- real AI analysis and reminders;
+- judge AI access and complimentary RevenueCat Pro activation;
+- latest thumbnail, typography, timestamp, and UI refinements.
+
+These results establish regression coverage on the existing development installation. They do not verify a release APK or a new judge's first-run experience.
+
+Still pending and release-blocking:
+
+- public HTTPS backend deployment and verification;
+- EAS preview environment validation;
+- standalone preview APK with Metro stopped; and
+- clean first-time judge installation, invitation redemption, 90-day Pro confirmation, restart, and real analysis against the public backend.
+
+Keep unchecked items below unchecked unless that exact scenario has been exercised. Automated checks do not replace device testing.
 
 ## Build prerequisites
 
@@ -27,7 +46,12 @@ npm run bundles:check
 npm run resurfacing:check
 npm run cleanup:check
 npm run subscription:check
+npm run screenshots:check
+npm run library:check
+npm run ui:check
 npm run format:check
+cd server && npm run access:check
+cd ..
 git diff --check
 ```
 
@@ -169,4 +193,4 @@ The Android 14 selected-photo picker must be tested in a development or preview 
 
 ## Release blockers
 
-The release remains blocked by any unchecked physical item, missing public HTTPS backend, missing RevenueCat preview variables/offering, exposed backend key, or failed automated check.
+For the Next Gen submission, Google Play publication is not a requirement. The optional judge APK is not ready to distribute until the public HTTPS backend, preview configuration, standalone installation, and clean first-time judge flow pass. Any exposed backend secret or failed required automated check is also blocking.

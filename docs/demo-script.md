@@ -1,53 +1,58 @@
-# Recall demo script
+# Recall Demo Script
 
-Target length: 2–3 minutes. Use a real-AI build with `MOCK_ANALYSIS=false` and a backend-only OpenAI key.
+Target: approximately 1 minute 45 seconds. Record a physical Android device with real AI, `MOCK_ANALYSIS=false`, prepared non-personal screenshots, and no credentials or notifications visible.
 
-## 0:00–0:15 — Problem
+## 0:00-0:12 | The screenshot problem
 
-“We save screenshots because they matter, then forget why. Recall turns screenshots into actions.”
+Show the Inbox with several useful screenshots.
 
-Show the Inbox and briefly point out that screenshots remain local unless the user chooses AI analysis.
+“Screenshots are how we remember products, deadlines, events, and ideas, but they quickly become gallery clutter. Recall turns them into actions.”
 
-## 0:15–0:35 — Inbox and analysis
+## 0:12-0:38 | Real analysis
 
-Open the INGREM product-grid screenshot. Start analysis and mention that Recall combines on-device OCR with a compressed screenshot sent securely to the backend. The user still controls every resulting action.
+Open the prepared multi-product screenshot and tap Analyze. Keep the loading treatment brief, then show the completed result.
 
-Let the compact preview scan treatment show briefly, then point out the `AI analysis complete` result state. The preview can be tapped to inspect the full screenshot if needed.
+“Recall reads text on-device first. With my permission, optional Recall AI sends this one compressed screenshot and its OCR text to the backend, where GPT-5 mini returns a validated, structured result.”
 
-## 0:35–1:00 — Multi-product result
+Point to the real summary, separate product cards, and prices. Do not state item counts or details that differ from the actual result.
 
-Show the four distinct products and their paired prices. Tap **Save All Products** and show the completed states.
-Pause long enough to capture the button's loading state before the saved confirmation appears.
+## 0:38-0:55 | Turn the result into an action
 
-## 1:00–1:20 — Smart Bundle
+Tap **Save All Products** if the visible result supports it, then show the saved confirmation and open Library.
 
-Open Library, select Bundles, and open the INGREM bundle. Highlight the related items, lifecycle counts, and the ability to remove or restore an item.
+“The result is useful because I choose what happens next. Here I am saving these products; Recall never acts automatically.”
 
-## 1:20–1:40 — Scholarship reminder
+If the prepared result is an event/deadline instead, create the reminder and show it in Upcoming. Do not fabricate a result to fit the script.
 
-Open a scholarship screenshot, show the extracted deadline, create the reminder, and verify it in Upcoming. Emphasize that the user reviews the date and time.
+## 0:55-1:12 | Smart organization
 
-## 1:40–2:00 — Relevant Now
+Open the matching Smart Bundle, or return to Inbox and show a Relevant Now card.
 
-Return to Inbox and show a concise Relevant Now card with its primary action, Snooze, and Dismiss controls.
+“Related saves become Smart Bundles, while Relevant Now brings useful items back when they matter instead of leaving them buried in the gallery.”
 
-## 2:00–2:20 — Screenshot Cleanup
+Show either bundle membership or the Relevant Now action, Snooze, and Dismiss controls.
 
-Open Cleanup, select safe candidates, and open the confirmation. Pause on: “They will be removed from your Gallery.” Cancel during the recorded demo unless deletion is intentionally prepared.
+## 1:12-1:34 | RevenueCat Pro
 
-## 2:20–2:40 — Recall Pro
+Open Profile and show the already-prepared real **Recall Pro Active** state. Briefly open the RevenueCat-managed paywall only if it can be shown without disrupting the prepared entitlement.
 
-Open Profile, show Recall Free and the RevenueCat-managed paywall, then show a prepared real Recall Pro entitlement and the “Premium features active” state. Mention larger cleanup batches and up to five Relevant Now cards.
+“RevenueCat powers Recall Pro, the managed paywall, purchases, restore, and entitlement checks. Pro unlocks larger cleanup batches and more Relevant Now cards. Judges receive complimentary Pro through time-limited, invitation-only access.”
 
-## 2:40–2:55 — Close
+Do not show an invitation code or token.
 
-“Recall turns screenshots into actions instead of clutter.”
+## 1:34-1:45 | Close
 
-End on the Inbox or Library with real analyzed data visible.
+Return to the Library bundle or the analyzed result.
 
-## Demo safety
+“Recall turns screenshots from forgotten clutter into useful, user-controlled actions.”
 
-- Use airplane-mode/offline launch once before recording to confirm cached local state still opens.
-- Keep several sample screenshots ready: INGREM, Startup Abuja, scholarship, social content, plus one new product and one new event.
-- Do not use mock analysis or fake results in the final demo.
-- Do not show `.env`, API keys, raw logs, or personal notifications on screen.
+## Recording checklist
+
+- [ ] Total runtime is under 2:00; target 1:45.
+- [ ] Footage shows Recall functioning on the Android device.
+- [ ] Analysis is real, not a mock or fabricated result.
+- [ ] The screenshot contains no personal or confidential data.
+- [ ] No `.env`, API key, invitation, token, raw log, local IP, or notification is visible.
+- [ ] Dates, prices, result count, saved state, and Pro state match what is on screen.
+- [ ] No unauthorized music, trademarks, or copyrighted footage is included.
+- [ ] The final public video is uploaded to YouTube or Vimeo.

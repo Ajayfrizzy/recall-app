@@ -1,6 +1,12 @@
-# Recall Milestone 10 Release Notes
+# Recall Release Notes
 
 ## Implemented
+
+- Added explicit screenshot image loading, loaded, failed, and unavailable states so inaccessible assets are not presented as unexplained black rectangles.
+- Improved screenshot previews for portrait content and preserved recovery when media access or an asset URI changes.
+- Centralized more readable sans-serif body typography while retaining Recall's established dark visual identity.
+- Expanded screenshot timestamp normalization, persistence, newest-first sorting, and formatting regression coverage, including seconds, milliseconds, invalid/future dates, and the historical impossible-year case.
+- Refined dense screenshot detail, Library, bundle, Relevant Now, Cleanup, AI Access, and navigation presentation after physical-device review.
 
 - Corrected judge Pro provisioning for RevenueCat v1's `value.subscriber` response envelope, added machine-readable provisioning diagnostics, and made retry revalidate the existing judge installation without requiring another invitation.
 - Replaced the invitation field's selection-rewriting formatter with a fixed `RCL-` prefix, a plain 20-character editable body, and a separate formatted preview for stable typing, editing, and full-code paste.
@@ -29,6 +35,6 @@
 
 ## Validation status
 
-Automated results must be recorded in the Milestone 10 completion report. No paid OpenAI test is run by default.
+The latest UI refinements and the existing judge installation's AI/complimentary Pro activation were reported as passed on a physical Samsung device. Earlier physical testing also covered screenshot discovery and permissions, creation dates, onboarding, AI analysis, screenshot organization, and reminders. No paid OpenAI test runs by default.
 
-Physical Samsung testing and installation of a standalone preview APK remain required before this can be called a release candidate. See [release-qa.md](./release-qa.md).
+The public HTTPS backend, final standalone preview APK, and clean first-time judge installation remain pending. Existing-installation results must not be described as standalone release verification. See [release-qa.md](./release-qa.md).

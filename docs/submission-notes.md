@@ -20,6 +20,8 @@ Recall is not a screenshot chatbot or cloud gallery. It is a local-first action 
 
 Recall uses RevenueCat's `pro` entitlement, default offering, dashboard-managed Paywall, and purchase restoration. Free users can clean up 3 screenshots per batch and see 3 Relevant Now cards. Pro supports larger cleanup batches and up to 5 Relevant Now cards.
 
+Invitation-only AI access is separate from Pro. A judge invitation provisions 90-day AI access for the installation and requests a matching 90-day promotional `pro` entitlement; ordinary invitations never grant Pro. All AI limits still apply.
+
 ## AI integration
 
 The backend calls `gpt-5-mini` through the OpenAI Responses API with one compressed screenshot and its on-device OCR text. Strict Structured Outputs conform to `RecallAnalysis`, then Zod validates the result server-side and the mobile client validates it again. Provider failures fall back to the local result.
@@ -44,8 +46,16 @@ The project includes screenshot discovery, on-device OCR, structured semantic an
 
 ## Future work
 
+- Deploy and verify the planned public HTTPS backend
+- Build and verify a standalone APK and a clean first-time judge installation
 - Release-candidate QA across more Android devices and iOS
 - Authenticated production API access and distributed abuse protection
 - Broader evaluation sets for visual layouts, currencies, locales, and date formats
 - Better observability with privacy-safe aggregate metrics
-- Store-listing assets, final policy copy, and production deployment hardening
+- Final privacy-policy legal/contact details, retention decisions, submission assets, and production deployment hardening
+
+## Current validation
+
+The latest UI refinements and the existing judge installation's complimentary Pro activation were reported as passed on a physical Samsung device. The final video must show truthful results from a prepared real-AI run. The public HTTPS backend, standalone APK, and clean judge install are not yet verified.
+
+Recall is entering only the Next Gen Award. The official rules require the public repository and a public video, not Google Play publication. See [next-gen-submission.md](./next-gen-submission.md).

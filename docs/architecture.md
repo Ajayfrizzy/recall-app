@@ -1,6 +1,6 @@
 # Recall Architecture
 
-This document describes the implementation currently in the repository. The DigitalOcean production topology is planned, not deployed; see [deployment.md](./deployment.md).
+This document describes the implementation currently in the repository and its deployed single-host topology. The backend runs on an InterServer Ubuntu VPS behind Caddy; see [deployment.md](./deployment.md).
 
 ## System view
 
@@ -20,6 +20,10 @@ On-device OCR ------------> Local classification and fallback
                   Resize to <= 1800 px long edge, JPEG 85%
                                   |
                          HTTPS + Bearer token
+                                  v
+                    Caddy reverse proxy
+                                  |
+                         Compose private network
                                   v
                     Recall Node.js backend
                       |                 |
@@ -108,12 +112,14 @@ Default controls are:
 - $0.05 reserved before each provider request
 - 30 analyze requests per installation token per minute in process memory
 
-The spending ceiling is an application estimate based on configured token prices, not a provider billing guarantee. SQLite survives process restarts when its data directory is persistent; the per-minute limiter does not.
+The backend and Caddy run as Docker Compose services on one InterServer host. Caddy terminates HTTPS and is the only service with public ports; the backend is exposed only on the Compose network. SQLite is mounted from the `recall_data` volume, and online backups are written to the protected host backup directory.
+
+The spending ceiling is an application estimate based on configured token prices, not a provider billing guarantee. SQLite survives process and container replacement through its persistent volume; the per-minute limiter does not survive a backend restart.
 
 ## Trust boundaries and limitations
 
-- HTTPS protects traffic in transit only after the planned public proxy is deployed and verified.
+- Caddy terminates public HTTPS; backend port `8787` is not published on the host.
 - CORS is not authentication for a native app. Invitation-derived Bearer tokens protect AI routes.
 - `store: false` asks OpenAI not to store the Responses API object, but third-party handling remains governed by the applicable OpenAI terms and account settings.
 - Cached structured results currently have no automatic expiration or user-facing deletion endpoint.
-- A single SQLite file is suitable for the planned single-server deployment, not multiple independent backend replicas.
+- A single SQLite file is suitable for the current single-server deployment, not multiple independent backend replicas.

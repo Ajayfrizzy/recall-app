@@ -11,6 +11,8 @@ Internet -> Caddy :80/:443 -> backend :8787 (Compose network only)
 
 The backend image uses Node.js 22.23.3, runs as the unprivileged `node` user, and starts compiled JavaScript with Node. Caddy obtains and renews the public certificate for `recall-api.duckdns.org`; no DuckDNS token or Docker socket is used.
 
+The public HTTPS health endpoint returned `{"ok":true}` on September 26, 2026. This confirms endpoint availability, not the standalone APK or complete judge flow; those remain tracked in [release-qa.md](./release-qa.md).
+
 ## 1. Prepare the VPS
 
 Log in as the non-root deployment user. Docker and the Compose plugin are already installed.

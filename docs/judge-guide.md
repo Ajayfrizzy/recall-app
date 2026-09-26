@@ -39,7 +39,8 @@ Open Cleanup, review each candidate, and select only prepared test screenshots. 
 
 ## Known testing limits
 
-- The public HTTPS backend, final standalone APK, and clean first-time judge installation are still pending verification.
+- The public HTTPS backend is deployed and its health endpoint has been verified. End-to-end AI still depends on the runtime AI switch, quotas, and provider availability.
+- The final standalone APK and clean first-time judge installation are still pending verification and must not be distributed until the Release QA blockers pass.
 - AI requires connectivity and may fall back to the on-device result.
 - Access does not transfer between devices and there is no user account.
 - The current submission targets Android; Google Play publication is not required for this Next Gen entry.

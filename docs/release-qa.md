@@ -1,6 +1,11 @@
 # Recall Release QA
 
-## Status at September 25, 2026
+## Status at September 26, 2026
+
+Verified infrastructure:
+
+- the InterServer Docker Compose deployment is represented by the checked-in Compose, Caddy, and backend image configuration; and
+- the public HTTPS health endpoint returned `{"ok":true}` on September 26, 2026.
 
 Reported passed on the existing physical Samsung installation:
 
@@ -8,16 +13,15 @@ Reported passed on the existing physical Samsung installation:
 - onboarding and screenshot organization;
 - real AI analysis and reminders;
 - judge AI access and complimentary RevenueCat Pro activation;
-- latest thumbnail, typography, timestamp, and UI refinements.
+- thumbnail, typography, timestamp, and earlier UI refinements.
 
 These results establish regression coverage on the existing development installation. They do not verify a release APK or a new judge's first-run experience.
 
 Still pending and release-blocking:
 
-- public HTTPS backend deployment and verification;
 - EAS preview environment validation;
 - standalone preview APK with Metro stopped; and
-- clean first-time judge installation, invitation redemption, 90-day Pro confirmation, restart, and real analysis against the public backend.
+- clean first-time judge installation, invitation redemption, 90-day Pro confirmation, restart, real analysis against the public backend, and the final Relevant Now label retest.
 
 Keep unchecked items below unchecked unless that exact scenario has been exercised. Automated checks do not replace device testing.
 
@@ -49,6 +53,7 @@ npm run subscription:check
 npm run screenshots:check
 npm run library:check
 npm run ui:check
+npm run docs:check
 npm run format:check
 cd server && npm run access:check
 cd ..
@@ -150,6 +155,8 @@ The Android 14 selected-photo picker must be tested in a development or preview 
 ### Relevant Now and cleanup
 
 - [ ] Verify Relevant Now cards open, snooze, and dismiss with responsive button feedback.
+- [ ] On a physical Samsung device, verify **Snooze 1 day** is fully visible on deadline, bundle, content, and weekly-summary cards with both **Open** and **Open Upcoming** primary actions.
+- [ ] Increase Android font and display size, then confirm secondary actions move to another row without clipping, ellipsizing, hiding “day,” or reducing the touch targets.
 - [ ] Verify Free and Pro card limits.
 - [ ] In Cleanup, confirm Safe and Review-required labels remain distinct and kept screenshots are not silently selected for deletion.
 - [ ] Select and deselect candidates; verify checkbox state and selection counts.
@@ -193,4 +200,4 @@ The Android 14 selected-photo picker must be tested in a development or preview 
 
 ## Release blockers
 
-For the Next Gen submission, Google Play publication is not a requirement. The optional judge APK is not ready to distribute until the public HTTPS backend, preview configuration, standalone installation, and clean first-time judge flow pass. Any exposed backend secret or failed required automated check is also blocking.
+For the Next Gen submission, Google Play publication is not a requirement. The optional judge APK is not ready to distribute until preview configuration, standalone installation, the clean first-time judge flow, and the final Samsung Relevant Now retest pass. Any exposed backend secret or failed required automated check is also blocking.

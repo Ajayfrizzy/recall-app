@@ -2,9 +2,9 @@
 
 **Effective date:** [REVIEW AND INSERT]
 
-**Last updated:** September 25, 2026
+**Last updated:** September 26, 2026
 
-This draft reflects the current repository implementation. It is not legal advice and must be reviewed before publication. Replace every bracketed placeholder.
+This draft reflects the current repository implementation. It is not legal advice and must be reviewed before publication. The effective date, legal operator, contact details, provider-policy links, retention/deletion terms, security contact, age/geography/legal-basis terms, rights process, and change-notice method remain explicit bracketed placeholders; do not publish the policy until they are resolved.
 
 ## Who operates Recall
 
@@ -93,7 +93,7 @@ Deleting a screenshot from Gallery removes the media asset if Android completes 
 
 OpenAI and RevenueCat secret keys are intended to remain on the backend. Production mobile builds require an HTTPS backend URL. Backend access tokens and invitation codes are HMAC-hashed with a server-side pepper before database storage, and raw access tokens are stored on-device with SecureStore.
 
-No system can guarantee absolute security. Recall's production hosting, backups, access control, monitoring, incident response, and public HTTPS endpoint are not yet deployed or verified. **[SECURITY CONTACT / INCIDENT PROCESS REQUIRED]**
+No system can guarantee absolute security. Recall's backend is deployed on an InterServer VPS behind Caddy HTTPS, with a persistent SQLite volume and documented online backup and rollback procedures. The final operational monitoring, off-server backup schedule, access review, and incident-response process still require operator verification. **[SECURITY CONTACT / INCIDENT PROCESS REQUIRED]**
 
 ## Children, geography, legal bases, and rights
 

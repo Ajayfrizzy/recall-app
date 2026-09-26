@@ -37,6 +37,14 @@ for (const [name, title] of [
 assert.match(tabs, /tabBarLabelStyle: \{[^}]*fontSize: 11/);
 assert.match(actions, /flexShrink: 0/);
 assert.match(resurfacing, /flexWrap: 'wrap'/);
+assert.match(
+  resurfacing,
+  /<View style=\{styles\.secondaryActions\}>[\s\S]*?label="Snooze 1 day"[\s\S]*?label="Dismiss"[\s\S]*?<\/View>/,
+);
+assert.match(
+  resurfacing,
+  /secondaryActions: \{[\s\S]*?maxWidth: '100%'[\s\S]*?flexWrap: 'wrap'[\s\S]*?flexShrink: 0[\s\S]*?\}/,
+);
 
 assert.match(library, /numberOfLines=\{3\}/);
 assert.match(

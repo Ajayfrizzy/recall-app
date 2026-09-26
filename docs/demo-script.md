@@ -30,7 +30,7 @@ Open the matching Smart Bundle, or return to Inbox and show a Relevant Now card.
 
 “Related saves become Smart Bundles, while Relevant Now brings useful items back when they matter instead of leaving them buried in the gallery.”
 
-Show either bundle membership or the Relevant Now action, Snooze, and Dismiss controls.
+Show either bundle membership or the Relevant Now action, **Snooze 1 day**, and Dismiss controls.
 
 ## 1:12-1:34 | RevenueCat Pro
 

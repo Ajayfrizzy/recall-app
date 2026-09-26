@@ -1,0 +1,21 @@
+appId: com.ajayfrizzy.recall
+---
+- launchApp:
+    clearState: false
+
+- tapOn: '.*Inbox.*'
+- assertVisible: 'Recall'
+
+- tapOn: '.*Upcoming.*'
+- assertVisible: 'Upcoming'
+- assertVisible: 'Nothing upcoming|Calendar added|Reminder scheduled'
+
+- tapOn: '.*Library.*'
+- assertVisible: 'Library'
+- assertVisible: 'Products'
+
+- tapOn: '.*Profile.*'
+- assertVisible: 'Profile'
+- assertVisible: 'AI Access'
+
+- takeScreenshot: 'artifacts/profile'

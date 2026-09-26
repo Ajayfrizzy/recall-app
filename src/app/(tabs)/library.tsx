@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
@@ -45,6 +46,7 @@ const bundleSections: Array<{ value: BundleLifecycleSection; label: string }> = 
 ];
 
 export default function LibraryScreen() {
+  const insets = useSafeAreaInsets();
   const { items } = useLibrary();
   const { screenshots } = useScreenshots();
   const {
@@ -67,7 +69,7 @@ export default function LibraryScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}>
         <ThemedText type="subtitle">Library</ThemedText>
         <View accessibilityRole="tablist" style={styles.filters}>
           {filters.map((option) => (
@@ -234,15 +236,13 @@ function ScreenshotHistory({
             <ThemedText type="smallBold">{option.label}</ThemedText>
           </Pressable>
         ))}
-        <Pressable
-          accessibilityRole="tab"
-          accessibilityState={{ selected: false }}
-          onPress={() => router.push('/cleanup')}
-          style={styles.filter}
-        >
-          <ThemedText type="smallBold">Cleanup</ThemedText>
-        </Pressable>
       </View>
+      <ActionButton
+        label="Cleanup"
+        variant="secondary"
+        onPress={() => router.push('/cleanup')}
+        style={styles.refreshButton}
+      />
       {screenshots.length === 0 ? (
         <ThemedText themeColor="textSecondary" style={styles.empty}>
           {empty}
@@ -325,11 +325,22 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 24, gap: 12, paddingBottom: 110 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-  filter: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 8 },
-  filterSelected: { backgroundColor: Colors.dark.accentMuted },
+  filter: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: Colors.dark.textSecondary,
+    backgroundColor: Colors.dark.backgroundElement,
+  },
+  filterSelected: { backgroundColor: Colors.dark.accentMuted, borderColor: Colors.dark.accent },
   empty: { paddingTop: 20 },
   card: { padding: 16, borderRadius: 8, gap: 5 },
   refreshButton: {
     alignSelf: 'flex-start',
+    minHeight: 48,
+    borderColor: Colors.dark.textSecondary,
   },
 });

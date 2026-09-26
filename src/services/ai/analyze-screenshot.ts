@@ -2,6 +2,7 @@ import { aiAccessClient, getAnalysisApiUrl } from './access';
 import { prepareScreenshotForAnalysis } from './prepare-screenshot';
 import type { RecallAnalysis } from './types';
 import { isRecallAnalysis } from './validation';
+import { readResponseJson } from './response-json';
 import { authorizedAnalysisHeaders } from './analysis-policy';
 import {
   developmentPerformanceNow,
@@ -144,6 +145,7 @@ export async function analyzeScreenshotSemantically(input: {
         });
       }
     } catch (error) {
+      clearTimeout(timeout);
       logDevelopmentPerformance({
         requestId: input.requestId,
         stage: 'backend_round_trip',
@@ -158,13 +160,11 @@ export async function analyzeScreenshotSemantically(input: {
         );
       }
       throw error;
-    } finally {
-      clearTimeout(timeout);
     }
     let result: unknown;
     const parseStartedAt = developmentPerformanceNow();
     try {
-      result = await response.json();
+      result = await readResponseJson(response, controller.signal);
       if (input.requestId) {
         logDevelopmentPerformance({
           requestId: input.requestId,
@@ -174,6 +174,13 @@ export async function analyzeScreenshotSemantically(input: {
         });
       }
     } catch (error) {
+      if (controller.signal.aborted) {
+        throw new SemanticAnalysisError(
+          'AI analysis took too long, so Recall used on-device analysis.',
+          'analysis_timeout',
+          { cause: error },
+        );
+      }
       if (input.requestId) {
         logDevelopmentPerformance({
           requestId: input.requestId,
@@ -187,6 +194,8 @@ export async function analyzeScreenshotSemantically(input: {
         'invalid_response',
         { cause: error },
       );
+    } finally {
+      clearTimeout(timeout);
     }
     if (!response.ok) {
       const code = serverErrorCode(result);

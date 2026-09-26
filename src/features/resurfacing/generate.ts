@@ -1,6 +1,7 @@
 import type { RecallBundle } from '@/features/bundles/types';
 import type { LibraryItem } from '@/features/library/types';
 import type { UpcomingItem } from '@/features/upcoming/types';
+import { snoozeIdentity } from './preferences';
 import {
   dateBucket,
   daysUntil,
@@ -185,7 +186,13 @@ function preferenceAllows(
   now: number,
 ): boolean {
   const preference = preferences.find((candidate) => candidate.id === card.id);
-  return !preference?.dismissedAt && !(preference?.snoozedUntil && preference.snoozedUntil > now);
+  const snoozed = preferences.some(
+    (candidate) =>
+      candidate.snoozedUntil !== undefined &&
+      candidate.snoozedUntil > now &&
+      snoozeIdentity(candidate.id) === snoozeIdentity(card.id),
+  );
+  return !preference?.dismissedAt && !snoozed;
 }
 
 export function generateResurfacingCards(

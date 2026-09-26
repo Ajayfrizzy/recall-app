@@ -7,16 +7,35 @@ const revenueCatAndroidKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY?
 assert(backendUrl, 'EXPO_PUBLIC_ANALYSIS_API_URL is required for the Android preview build.');
 const parsedBackendUrl = new URL(backendUrl);
 assert.equal(parsedBackendUrl.protocol, 'https:', 'The preview backend URL must use HTTPS.');
+const hostname = parsedBackendUrl.hostname.toLowerCase().replace(/\.$/, '');
 assert(
-  !['localhost', '127.0.0.1', '10.0.2.2'].includes(parsedBackendUrl.hostname) &&
-    !/^192\.168\./.test(parsedBackendUrl.hostname) &&
-    !/^10\./.test(parsedBackendUrl.hostname),
+  !/^(localhost|.*\.(localhost|local|internal))$/.test(hostname) &&
+    !/^(0|10|127)\./.test(hostname) &&
+    !/^192\.168\./.test(hostname) &&
+    !/^169\.254\./.test(hostname) &&
+    !/^172\.(1[6-9]|2\d|3[01])\./.test(hostname) &&
+    !/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(hostname) &&
+    !hostname.startsWith('['),
   'The preview backend URL must be reachable outside the development LAN.',
+);
+assert(
+  !parsedBackendUrl.username && !parsedBackendUrl.password,
+  'Do not embed credentials in the backend URL.',
 );
 assert(
   revenueCatAndroidKey,
   'EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY is required for the Android preview build.',
 );
+assert(
+  /^(goog|test)_[A-Za-z0-9]+$/.test(revenueCatAndroidKey),
+  'Use an Android public SDK key or a RevenueCat Test Store public key.',
+);
+if (process.env.EAS_BUILD_PROFILE === 'production') {
+  assert(
+    revenueCatAndroidKey.startsWith('goog_'),
+    'Production builds must use the Google Play public SDK key, not Test Store.',
+  );
+}
 assert.notEqual(
   process.env.EXPO_PUBLIC_ALLOW_INSECURE_ANALYSIS_HTTP?.trim().toLowerCase(),
   'true',

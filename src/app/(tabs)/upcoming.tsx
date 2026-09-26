@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EmptyState } from '@/components/empty-state';
@@ -6,6 +7,7 @@ import { useUpcoming } from '@/features/upcoming/context';
 import { formatScheduledDateTime } from '@/features/upcoming/format';
 
 export default function UpcomingScreen() {
+  const insets = useSafeAreaInsets();
   const { items } = useUpcoming();
   const sorted = [...items].sort((a, b) => {
     if (a.date && b.date) return a.date - b.date;
@@ -16,7 +18,7 @@ export default function UpcomingScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}>
         <ThemedText type="subtitle">Upcoming</ThemedText>
         {sorted.length === 0 ? (
           <EmptyState

@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RECALL_STATE_KEY } from './keys';
 import { migratePersistedState } from './migrations';
-import { createEmptyPersistedState, type PersistedRecallStateV1 } from './types';
+import type { PersistedRecallStateV1 } from './types';
+import { decodeRecallState } from './decode';
 
 let writeQueue = Promise.resolve();
 
@@ -12,11 +13,10 @@ function warn(operation: 'read' | 'write' | 'clear', error: unknown) {
 export async function loadRecallState(): Promise<PersistedRecallStateV1> {
   try {
     const stored = await AsyncStorage.getItem(RECALL_STATE_KEY);
-    if (stored === null) return createEmptyPersistedState();
-    return migratePersistedState(JSON.parse(stored));
+    return decodeRecallState(stored);
   } catch (error) {
     warn('read', error);
-    return createEmptyPersistedState();
+    throw error;
   }
 }
 
@@ -24,8 +24,7 @@ export function saveRecallState(state: PersistedRecallStateV1): Promise<void> {
   const validated = migratePersistedState(state);
   writeQueue = writeQueue
     .catch(() => undefined)
-    .then(() => AsyncStorage.setItem(RECALL_STATE_KEY, JSON.stringify(validated)))
-    .catch((error) => warn('write', error));
+    .then(() => AsyncStorage.setItem(RECALL_STATE_KEY, JSON.stringify(validated)));
   return writeQueue;
 }
 
@@ -35,6 +34,7 @@ export async function clearRecallStorage(): Promise<void> {
     await AsyncStorage.removeItem(RECALL_STATE_KEY);
   } catch (error) {
     warn('clear', error);
+    throw error;
   }
 }
 

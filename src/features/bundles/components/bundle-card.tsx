@@ -78,7 +78,7 @@ export function BundleCard({
             label={action.label}
             loadingLabel="Updating bundle..."
             state={acting ? 'loading' : 'idle'}
-            variant="ghost"
+            variant="secondary"
             compact
             onPress={() => {
               setActing(true);
@@ -111,9 +111,9 @@ const styles = StyleSheet.create({
   },
   details: { flex: 1, justifyContent: 'center', padding: 12, gap: 3 },
   action: {
-    alignItems: 'flex-start',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.dark.border,
-    borderRadius: 0,
+    margin: 12,
+    minHeight: 48,
+    backgroundColor: Colors.dark.backgroundSelected,
+    borderColor: Colors.dark.textSecondary,
   },
 });

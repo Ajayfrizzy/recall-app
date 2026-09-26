@@ -1,0 +1,25 @@
+# Requires an accessible, pending screenshot. SCREENSHOT_NAME is its filename.
+# Does not analyze, save, or delete the screenshot.
+appId: com.ajayfrizzy.recall
+---
+- launchApp:
+    clearState: false
+- tapOn: '.*Inbox.*'
+- scrollUntilVisible:
+    element:
+      text: 'Recall'
+    direction: UP
+- scrollUntilVisible:
+    element:
+      text: 'Open ${SCREENSHOT_NAME}'
+    direction: DOWN
+- tapOn: 'Open ${SCREENSHOT_NAME}'
+- assertVisible: 'View screenshot full screen'
+- takeScreenshot: 'artifacts/screenshot-details'
+- back
+- assertVisible: 'Open ${SCREENSHOT_NAME}'
+- scrollUntilVisible:
+    element:
+      text: 'Recall'
+    direction: UP
+- assertVisible: 'Recall'

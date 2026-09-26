@@ -28,7 +28,7 @@ export function ActionButton({
   loadingLabel?: string;
   successLabel?: string;
   state?: ActionButtonState;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outlined';
   compact?: boolean;
   onPress: () => void;
   accessibilityLabel?: string;
@@ -69,7 +69,7 @@ export function ActionButton({
         style,
       ]}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, preserveLabelWidth && styles.fullWidthContent]}>
         {state === 'loading' ? (
           <ActivityIndicator
             color={variant === 'primary' || variant === 'danger' ? '#fff' : Colors.dark.accent}
@@ -82,11 +82,12 @@ export function ActionButton({
         ) : null}
         <ThemedText
           type="smallBold"
-          numberOfLines={2}
+          numberOfLines={preserveLabelWidth ? undefined : 2}
           maxFontSizeMultiplier={1.5}
           style={[
             styles.label,
             preserveLabelWidth && styles.preserveLabelWidth,
+            variant === 'outlined' && styles.mutedText,
             variant === 'primary' || variant === 'danger' ? styles.primaryText : undefined,
           ]}
         >
@@ -119,11 +120,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: { flexShrink: 1, textAlign: 'center' },
-  preserveLabelWidth: { flexShrink: 0 },
+  // Give these labels the button's inner width, rather than a tight intrinsic
+  // text box that Android can wrap differently when it draws the text.
+  fullWidthContent: { alignSelf: 'stretch', flexWrap: 'wrap' },
+  preserveLabelWidth: { flexShrink: 0, flexGrow: 1, maxWidth: '100%' },
   primary: { backgroundColor: Colors.dark.accent },
   secondary: { backgroundColor: Colors.dark.backgroundElement, borderColor: Colors.dark.border },
   danger: { backgroundColor: '#B93842' },
   ghost: { backgroundColor: 'transparent' },
+  outlined: { backgroundColor: 'transparent', borderColor: Colors.dark.textSecondary },
+  mutedText: { color: Colors.dark.textSecondary },
   disabled: { opacity: 0.48 },
   primaryText: { color: '#fff' },
   icon: { lineHeight: 20 },

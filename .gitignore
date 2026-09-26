@@ -169,3 +169,7 @@ AGENTS.md
 CLAUDE.md
 
 call.md
+
+# Native UI captures can include private device content.
+artifacts/
+.maestro/artifacts/

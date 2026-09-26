@@ -1,0 +1,30 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      RUN_OPENAI_LIVE_TEST: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix server
+      - run: npx tsc --noEmit
+      - run: npm run typecheck --prefix server
+      - run: npm run fixtures:check --prefix server
+      - run: npm run access:check --prefix server
+      - run: npm run actions:check && npm run ai-access:check && npm run persistence:check
+      - run: npm run bundles:check && npm run resurfacing:check && npm run cleanup:check
+      - run: npm run subscription:check && npm run screenshots:check && npm run library:check
+      - run: npm run ui:check && npm run docs:check && npm run format:check
+      - run: node scripts/check-release-config.test.mjs
+      - run: git diff --check

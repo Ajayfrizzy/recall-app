@@ -8,6 +8,8 @@ This draft reflects the current repository implementation. It is not legal advic
 
 ## Who operates Recall
 
+Publication is pending. The repository's license attribution does not establish the legal operator, support address, retention commitments, or effective date. Those details must be confirmed by the operator rather than inferred from source control.
+
 Recall is operated by **[LEGAL NAME / ENTITY REQUIRED]**. Privacy questions or requests can be sent to **[CONTACT EMAIL REQUIRED]** at **[POSTAL ADDRESS OR OTHER REQUIRED CONTACT DETAILS]**.
 
 ## Information Recall handles
@@ -40,7 +42,7 @@ Recall AI is optional and invitation protected. After the user acknowledges the 
 - filename, dimensions, and screenshot creation time; and
 - an installation access credential.
 
-The Recall backend sends the image, OCR text, and time context to OpenAI's Responses API for GPT-5 mini analysis. Requests set `store: false`; this is a technical request setting, not a promise about all provider logging or legal retention. OpenAI's handling is governed by the applicable OpenAI terms, privacy commitments, account settings, and law. **[LINK TO APPLICABLE OPENAI POLICY / DPA REQUIRED]**
+The Recall backend sends the image, OCR text, and time context to OpenAI's Responses API for GPT-5 mini analysis. Requests set `store: false`; this is a technical request setting, not a promise about all provider logging or legal retention. OpenAI's handling is governed by the applicable OpenAI terms, privacy commitments, account settings, and law. See [OpenAI's privacy policy](https://openai.com/policies/privacy-policy/) and [API data controls](https://platform.openai.com/docs/guides/your-data). **[CONFIRM APPLICABLE ACCOUNT TERMS / DPA BEFORE PUBLICATION]**
 
 Recall does not send screenshot history, Library contents, reminders, or unrelated app state in an analysis request.
 
@@ -48,7 +50,7 @@ Recall does not send screenshot history, Library contents, reminders, or unrelat
 
 Recall uses RevenueCat to load subscription offerings, show a paywall, process/restore purchases through the platform store, and determine whether the `pro` entitlement is active. Judge invitations also create a dedicated RevenueCat App User ID and ask the backend to provision a time-limited promotional entitlement.
 
-RevenueCat may process app user identifiers, purchase and entitlement information, device/app metadata, and related diagnostics under its own terms and privacy policy. **[LINK TO REVENUECAT PRIVACY POLICY REQUIRED]**
+RevenueCat may process app user identifiers, purchase and entitlement information, device/app metadata, and related diagnostics under its own terms and [privacy policy](https://www.revenuecat.com/privacy/). **[CONFIRM APPLICABLE PROVIDER TERMS BEFORE PUBLICATION]**
 
 ## Storage
 

@@ -36,6 +36,8 @@ Show either bundle membership or the Relevant Now action, **Snooze 1 day**, and 
 
 Open Profile and show the already-prepared real **Recall Pro Active** state. Briefly open the RevenueCat-managed paywall only if it can be shown without disrupting the prepared entitlement.
 
+An active judge-Pro installation hides purchase options. To show the paywall, capture a separate prepared Free installation, then show the Pro feature difference. Do not deactivate or replace a working judge identity during recording. Label Test Store/sandbox footage accurately; complimentary Pro is not a store purchase.
+
 “RevenueCat powers Recall Pro, the managed paywall, purchases, restore, and entitlement checks. Pro unlocks larger cleanup batches and more Relevant Now cards. Judges receive complimentary Pro through time-limited, invitation-only access.”
 
 Do not show an invitation code or token.
@@ -47,6 +49,8 @@ Return to the Library bundle or the analyzed result.
 “Recall turns screenshots from forgotten clutter into useful, user-controlled actions.”
 
 ## Recording checklist
+
+The final under-two-minute public video is required for Next Gen. A store listing is not. Keep eligibility, icon/screenshot dimensions, and upload requirements in [submission.md](./submission.md); this checklist covers recording only.
 
 - [ ] Total runtime is under 2:00; target 1:45.
 - [ ] Footage shows Recall functioning on the Android device.

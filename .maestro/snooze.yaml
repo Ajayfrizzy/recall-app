@@ -1,0 +1,25 @@
+# MUTATES STATE: use a disposable Relevant Now card with a unique CARD_TITLE.
+# Requires that card and its Snooze control to fit together on screen.
+# CARD_TITLE is a Maestro regex; do not use a title shared by other cards.
+appId: com.ajayfrizzy.recall
+---
+- launchApp:
+    clearState: false
+- tapOn: '.*Inbox.*'
+- scrollUntilVisible:
+    element:
+      text: 'Recall'
+    direction: UP
+- assertVisible: 'Recall'
+- assertVisible: '${CARD_TITLE}'
+- takeScreenshot: 'artifacts/before-snooze'
+- tapOn:
+    text: 'Snooze 1 day'
+    below:
+      text: '${CARD_TITLE}'
+- extendedWaitUntil:
+    notVisible: '${CARD_TITLE}'
+    timeout: 10000
+- takeScreenshot: 'artifacts/after-snooze'
+# Toasts are brief and not reliably exposed by all Android accessibility drivers.
+# Confirm "Snoozed for 1 day" visually during this run.

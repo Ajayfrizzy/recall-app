@@ -63,11 +63,15 @@ The current Android configuration requests image/media permissions. Calendar acc
 
 A normal identical request may reuse the per-installation SQLite cache. Only the explicit **Reanalyze with Recall AI** path bypasses cache lookup.
 
+The mobile AI request deadline covers both HTTP headers and response-body reading. Stalled body reading is raced against cancellation; timeout and invalid-response paths retain the on-device fallback without automatic paid retries.
+
 ## Local persistence
 
 AsyncStorage holds a versioned JSON state containing screenshot statuses and structured analyses, saved Library items, Upcoming reminders/events, action records, Smart Bundles, bundle overrides, Relevant Now preferences, the AI-processing acknowledgement, and onboarding completion. Screenshot image bytes remain in the Android Gallery.
 
 The AI installation token, expiration, judge metadata, and provisioning status are stored separately in Expo SecureStore. Clearing or reinstalling behavior depends on the platform's storage behavior. Recall currently has no account or cross-device sync.
+
+Storage read failures, malformed JSON, and unsupported state versions show a retry screen instead of silently opening empty state. Writes retain optimistic in-memory state but persist in order. Failed writes remain pending until an explicit retry succeeds, and a dialog warns about losing unsaved changes if the app closes. This is recovery feedback, not a backup service.
 
 ## Actions and reminders
 
@@ -79,6 +83,8 @@ Smart Bundles group related locally stored Library items. Users can refresh memb
 
 Relevant Now derives cards locally from saved content, upcoming dates, screenshot state, and user preferences. Snooze and dismiss choices are persisted. Free and Pro presentation limits come from the subscription feature rules.
 
+Snooze hides the underlying item for a full 24 hours, including across deadline date-bucket changes, bundle updates, and summary week rollover. Existing occurrence IDs are normalized for snooze matching; Dismiss remains occurrence-specific. Refresh occurs at the next snooze expiry or midnight and when the app returns to the foreground. Items return only if still eligible and within the ranked card limit. Snooze does not cancel reminders or delete saved content.
+
 ## Screenshot Cleanup
 
 Cleanup derives candidates from screenshots, action records, and bundle membership. The user selects candidates, sees whether an item is safe or needs review, and confirms deletion. Android performs the Gallery deletion; Recall refreshes Media Library afterward to reconcile what was actually removed. Saved Recall data is not silently deleted with the gallery asset.
@@ -87,7 +93,7 @@ Cleanup derives candidates from screenshots, action records, and bundle membersh
 
 The mobile RevenueCat SDK uses public platform SDK keys, anonymous customer identities by default, the `pro` entitlement, the default offering, RevenueCat Paywalls, and Restore Purchases. The backend RevenueCat v1 secret is used only for judge promotional entitlement provisioning and is never included in the app.
 
-Free users can select up to 3 cleanup items per batch and see up to 3 Relevant Now cards. Pro raises those limits, including up to 5 Relevant Now cards.
+Free users can select up to 3 cleanup items per batch and see up to 3 Relevant Now cards. Pro removes the application-level cleanup batch cap and allows up to 5 Relevant Now cards.
 
 ## Invitations and judge access
 

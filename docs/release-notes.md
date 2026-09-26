@@ -9,9 +9,12 @@
 - Added invitation-based AI access, SecureStore installation credentials, server-side quotas, estimated spending controls, structured-result caching, and redacted operational diagnostics.
 - Packaged the Node.js backend for the InterServer VPS with Docker Compose, Caddy HTTPS, persistent SQLite, online backup, restore testing, and image rollback instructions.
 - Refined Android permissions, image states, timestamps, accessibility states, reduced-motion behavior, typography, action feedback, and touch targets after physical-device review.
-- Fixed Relevant Now secondary action layout so **Snooze 1 day** remains complete and wraps below longer primary actions when required.
+- Fixed Android Snooze text measurement with full inner label width and scaling-aware button minimums. Primary actions fill their own row; Snooze and Dismiss fill available space and wrap at larger text sizes.
+- Added clearer Library filters/action buttons, safe-area spacing on all root tabs, and scaling-aware tab-bar height.
+- Made snooze apply to the underlying item for 24 hours across date changes, with expiry refresh and confirmation. Dismiss remains occurrence-specific.
+- Added recoverable storage error feedback, response-body timeout protection, stricter release configuration validation, offline CI configuration, and Maestro smoke flows.
 
-The public backend health endpoint is verified. The final standalone preview APK, clean first-time judge flow, and physical Samsung retest of the Relevant Now label remain tracked in [release-qa.md](./release-qa.md).
+The public backend health endpoint and existing-development-installation Samsung smoke tests have been verified. Final standalone APK testing, clean first-time judge flow, hosted CI execution, and the full card-type/24-hour device matrix remain tracked in [release-qa.md](./release-qa.md).
 
 ## Earlier milestones
 

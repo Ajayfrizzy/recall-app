@@ -4,6 +4,10 @@ Recall is an Android app that turns screenshots into user-controlled actions. It
 
 Recall never performs a suggested action or deletes a Gallery item without confirmation.
 
+## Shipaton 2026 — Next Gen
+
+Recall is being prepared for Shipaton 2026's **Next Gen Award**, which evaluates the public repository and demo video rather than a published store listing. Entrants must meet the student and academic-email requirements in the [official rules](https://revenuecat-shipaton-2026.devpost.com/rules). The final demo video and submission screenshots are pending. See the [submission checklist](docs/submission.md) and [judge guide](docs/judge-guide.md).
+
 ## Features
 
 - On-device OCR and local classification that work without Recall AI
@@ -39,10 +43,25 @@ See [Architecture](docs/architecture.md) for the data flow and trust boundaries,
 ## Mobile development
 
 ```sh
-npm install
+git clone https://github.com/Ajayfrizzy/recall-app.git
+cd recall-app
+npm ci
+npm ci --prefix server
 cp .env.example .env
-npm run start
 ```
+
+For local-only testing, leave the API URL and RevenueCat keys empty rather than using the example placeholder values. Skip AI activation. Screenshot discovery, OCR/local classification, saves, reminders, and calendar actions do not require AI access. AI and purchases require their respective configuration.
+
+Create and install a native development build, then start Metro:
+
+```sh
+npx eas-cli login
+npx eas-cli build --profile development --platform android
+# Install the resulting development APK on the device.
+npx expo start --dev-client
+```
+
+Open Recall's development client and connect to the displayed Metro URL. EAS requires an Expo account; Android Studio with `npx expo run:android` is the local-build alternative. Expo Go cannot replace this native build. For USB testing, run `adb reverse tcp:8081 tcp:8081` and start Metro with `npx expo start --dev-client --localhost`. Install the server dependencies above even for local-only testing because the check scripts use its TypeScript runner.
 
 Set these mobile variables in `.env`:
 
@@ -86,6 +105,7 @@ npm run subscription:check
 npm run ui:check
 npm run docs:check
 npm run format:check
+node scripts/check-release-config.test.mjs
 ```
 
 Run backend checks separately:
@@ -103,6 +123,8 @@ npm run build
 
 ## Builds
 
+The [GitHub Actions workflow](.github/workflows/checks.yml) runs offline checks on pushes and pull requests. A successful GitHub-hosted run is not yet recorded. Native Maestro checks run separately; see [Release QA](docs/release-qa.md#maestro-native-smoke-tests) for setup, commands, and results.
+
 ```sh
 eas build --profile development --platform android
 eas build --profile preview --platform android
@@ -112,7 +134,7 @@ The `preview` profile creates an internal APK. Run `npm run release:config-check
 
 ## Access and subscriptions
 
-Free users can clean up to 3 screenshots per batch and see up to 3 Relevant Now cards. Recall Pro raises both limits, including up to 5 Relevant Now cards. RevenueCat supplies the default offering, managed paywall, purchases, restore flow, and entitlement state.
+Free users can clean up to 3 screenshots per batch and see up to 3 Relevant Now cards. Recall Pro removes the application-level cleanup batch cap and allows up to 5 Relevant Now cards. Android still controls deletion confirmation. RevenueCat supplies the default offering, managed paywall, purchases, restore flow, and entitlement state.
 
 Standard invitations enable AI only. Judge invitations create 90-day installation access and request a matching 90-day promotional `pro` entitlement. Invitations never bypass AI quotas, concurrency limits, the shutdown switch, or the spending ceiling.
 
@@ -139,7 +161,6 @@ Review the draft [Privacy Policy](docs/privacy-policy.md) before testing with pe
 - [Demo recording script](docs/demo-script.md)
 - [Privacy policy draft](docs/privacy-policy.md)
 - [Release history](docs/release-notes.md)
-- [Documentation inventory](docs/documentation-inventory.md)
 
 ## License
 

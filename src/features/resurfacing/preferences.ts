@@ -1,4 +1,27 @@
 import type { ResurfacingPreference } from './types';
+import { nextLocalMidnight } from './time';
+
+// Keep occurrence IDs for dismissal, but compare snoozes by their source item.
+// Normalize existing persisted IDs too, so active snoozes survive this update.
+export function snoozeIdentity(id: string): string {
+  if (/^(deadline|event):/.test(id)) {
+    return id.replace(/:(overdue|today|tomorrow|3days|7days|later)$/, '');
+  }
+  if (id.startsWith('bundle:')) return id.replace(/:recent:\d{4}-\d{2}-\d{2}$/, '');
+  if (id.startsWith('content:')) return id.replace(/:read-later:\d{4}-\d{2}-\d{2}$/, '');
+  if (/^summary:week:\d{4}-\d{2}$/.test(id)) return 'summary:week';
+  return id;
+}
+
+export function nextResurfacingRefresh(preferences: ResurfacingPreference[], now: number): number {
+  return preferences.reduce(
+    (next, preference) =>
+      preference.snoozedUntil && preference.snoozedUntil > now
+        ? Math.min(next, preference.snoozedUntil)
+        : next,
+    nextLocalMidnight(now),
+  );
+}
 
 export const RESURFACING_PREFERENCE_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 

@@ -39,7 +39,10 @@ for (const [name, title] of [
 assert.match(tabs, /tabBarLabelStyle: \{[^}]*fontSize: 11/);
 assert.match(actions, /flexShrink: 0/);
 assert.match(actions, /preserveLabelWidth && styles\.preserveLabelWidth/);
-assert.match(actions, /preserveLabelWidth: \{ flexShrink: 0 \}/);
+assert.match(actions, /styles\.content, preserveLabelWidth && styles\.fullWidthContent/);
+assert.match(actions, /fullWidthContent: \{ alignSelf: 'stretch', flexWrap: 'wrap' \}/);
+assert.match(actions, /preserveLabelWidth: \{ flexShrink: 0, flexGrow: 1, maxWidth: '100%' \}/);
+assert.match(actions, /numberOfLines=\{preserveLabelWidth \? undefined : 2\}/);
 assert.match(
   resurfacing,
   /<View style=\{styles\.actionRows\}>[\s\S]*?<View style=\{styles\.primaryActions\}>[\s\S]*?label=\{card\.action\.label\}[\s\S]*?<\/View>[\s\S]*?<View style=\{styles\.secondaryActions\}>[\s\S]*?label="Snooze 1 day"[\s\S]*?label="Dismiss"[\s\S]*?<\/View>/,
@@ -54,12 +57,14 @@ assert.match(secondaryActions, /flexDirection: 'row'/);
 assert.match(secondaryActions, /flexWrap: 'wrap'/);
 assert.match(
   resurfacing,
-  /label="Snooze 1 day"[\s\S]*?preserveLabelWidth[\s\S]*?style=\{styles\.snoozeAction\}/,
+  /label="Snooze 1 day"[\s\S]*?preserveLabelWidth[\s\S]*?minWidth: 120 \* actionTextScale/,
 );
 assert.match(
   resurfacing,
-  /label="Dismiss"[\s\S]*?preserveLabelWidth[\s\S]*?style=\{styles\.dismissAction\}/,
+  /label="Dismiss"[\s\S]*?preserveLabelWidth[\s\S]*?minWidth: 88 \* actionTextScale/,
 );
+assert.match(resurfacing, /const \{ fontScale \} = useWindowDimensions\(\)/);
+assert.match(resurfacing, /actionTextScale = Math\.max\(1, fontScale\)/);
 assert.match(snoozeAction, /minWidth: 120/);
 assert.match(dismissAction, /minWidth: 88/);
 assert.doesNotMatch(

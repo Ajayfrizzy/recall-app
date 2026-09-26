@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { ActionButton } from '@/components/action-button';
 import { ThemedText } from '@/components/themed-text';
@@ -19,6 +20,7 @@ const PACKAGE_PERIOD_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeAction, setActiveAction] = useState<'upgrade' | 'restore' | 'retry' | 'judge-pro'>();
   const [judgeProMessage, setJudgeProMessage] = useState<string>();
@@ -66,7 +68,7 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 24 }]}>
         <ThemedText type="subtitle">Profile</ThemedText>
         <ThemedText themeColor="textSecondary">
           Manage your Recall preferences and subscription.

@@ -4,6 +4,8 @@ This document consolidates the competition checklist, proposed submission copy, 
 
 The submission period ends **September 30, 2026 at 11:45 PM PDT**. Recall is entering only the Next Gen Award.
 
+That is **October 1, 2026 at 7:45 AM in Lagos (WAT)**. Submit ahead of the deadline. The official rules were rechecked on September 26, 2026. Next Gen eligibility requires active student enrollment and a qualifying student/academic email; lack of time to publish to a store is not an eligibility condition.
+
 ## Eligibility
 
 - [ ] The entrant is an active student enrolled in high school, college, university, bootcamp, or another academic program.
@@ -28,6 +30,8 @@ The submission period ends **September 30, 2026 at 11:45 PM PDT**. Recall is ent
 - [ ] Repository and history contain no secrets, real invitations, tokens, personal screenshots, or unauthorized material.
 
 Next Gen uses the public repository and demo video instead of a published store listing. No paid Apple or Google developer account and no App Store or Google Play release is required.
+
+The required evidence is the functional public repository, open-source license, English description, public demonstration video, icon, and screenshot specified below. An APK, judge invitation, and complimentary Pro are optional supporting material. Keep their verification requirements separate from the category's mandatory submission requirements.
 
 ## Devpost requirements
 
@@ -64,7 +68,7 @@ Recall is a local-first action layer rather than a screenshot chatbot or cloud g
 
 ### RevenueCat integration
 
-Recall uses RevenueCat's `pro` entitlement, default offering, dashboard-managed paywall, purchases, and restore flow. Free users can clean up 3 screenshots per batch and see 3 Relevant Now cards. Pro supports larger cleanup batches and up to 5 Relevant Now cards.
+Recall uses RevenueCat's `pro` entitlement, default offering, dashboard-managed paywall, purchases, and restore flow. Free users can clean up 3 screenshots per batch and see 3 Relevant Now cards. Pro removes the application-level cleanup batch cap and allows up to 5 Relevant Now cards.
 
 Invitation-only AI access is separate from Pro. A judge invitation provisions 90-day AI access for the installation and requests a matching 90-day promotional `pro` entitlement; standard invitations never grant Pro. Normal AI quotas and safety controls still apply.
 
@@ -89,12 +93,17 @@ The project includes screenshot discovery, on-device OCR, semantic analysis, act
 - [x] Smart Bundles, Relevant Now, reminders, cleanup, and local persistence are implemented.
 - [x] Public InterServer HTTPS backend health endpoint is deployed and verified.
 - [x] Existing-development-installation Samsung testing covered the core flow and judge complimentary Pro activation.
+- [x] Samsung Maestro runs passed navigation, prepared screenshot opening/return, saved Library content after restart, and immediate snooze disappearance.
+- [x] Local offline checks passed, including the storage-recovery, response-body deadline, and midnight snooze regression checks.
+- [ ] GitHub-hosted Checks workflow has a successful run for the final published revision.
 - [ ] Final standalone APK and clean first-time judge installation pass [Release QA](./release-qa.md).
 - [ ] Final video uses real AI (`MOCK_ANALYSIS=false`) with prepared non-personal screenshots and truthful results.
 - [ ] Final icon and 1179x2556 screenshots are exported and inspected.
 - [ ] Final repository visibility, license detection, links, and fresh setup are checked from a logged-out or clean environment.
 
 Do not describe existing-development-installation results as standalone APK verification.
+
+Do not describe promotional judge Pro activation as a completed store purchase. Demonstrate RevenueCat's paywall and entitlement-based feature limits, and identify any Test Store or sandbox transaction accurately. The final video URL, exported submission icon/screenshot, public repository accessibility, student eligibility, and completed Devpost fields still need confirmation.
 
 ## Submission assets
 

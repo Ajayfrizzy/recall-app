@@ -1,0 +1,29 @@
+# Requires a saved item whose title matches SAVED_TITLE (a Maestro regex).
+# Use the displayed product/content title, NOT the screenshot filename.
+# With a development build, keep Metro running and select the project if needed.
+appId: com.ajayfrizzy.recall
+---
+- launchApp:
+    clearState: false
+- tapOn: '.*Library.*'
+- tapOn:
+    text: 'All'
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: '${SAVED_TITLE}'
+    direction: DOWN
+- assertVisible: '${SAVED_TITLE}'
+- stopApp
+- launchApp:
+    clearState: false
+- tapOn: '.*Library.*'
+- tapOn:
+    text: 'All'
+    index: 0
+- scrollUntilVisible:
+    element:
+      text: '${SAVED_TITLE}'
+    direction: DOWN
+- assertVisible: '${SAVED_TITLE}'
+- takeScreenshot: 'artifacts/library-after-restart'

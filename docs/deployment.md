@@ -13,6 +13,8 @@ The backend image uses Node.js 22.23.3, runs as the unprivileged `node` user, an
 
 The public HTTPS health endpoint returned `{"ok":true}` on September 26, 2026. This confirms endpoint availability, not the standalone APK or complete judge flow; those remain tracked in [release-qa.md](./release-qa.md).
 
+Backup schedules, off-server replication, and restore drills below are operator procedures, not claims that each is already configured or verified. Record evidence before treating them as operational guarantees. Mobile CI and Maestro results are maintained in Release QA; this document remains the backend operations runbook.
+
 ## 1. Prepare the VPS
 
 Log in as the non-root deployment user. Docker and the Compose plugin are already installed.

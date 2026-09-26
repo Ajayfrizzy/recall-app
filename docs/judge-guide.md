@@ -4,6 +4,8 @@ Recall's official Next Gen evaluation materials are the public source repository
 
 ## Install an optional APK
 
+Before following APK instructions, use the public repository's [README](../README.md) for setup and [submission guide](./submission.md) for the entry's assets. The final public video link, optional APK link, and support contact are still pending; do not treat this guide as confirmation that those assets have been published.
+
 1. Download the APK only from the private or public link included in the Devpost submission.
 2. On Android, allow installation from that source when prompted, then install Recall.
 3. Open Recall. The APK must run without Metro or a development launcher.
@@ -31,7 +33,15 @@ Use non-sensitive screenshots created for judging. Do not upload credentials, fi
 
 Judge access lasts 90 days from successful invitation redemption. It is tied to that installation, is revocable, and remains subject to daily quotas, global limits, concurrent-request controls, the AI shutdown switch, and the estimated spending ceiling. Standard invitations activate AI but do not grant Pro.
 
-Recall Pro raises the Screenshot Cleanup batch limit and the number of Relevant Now cards. It does not activate AI by itself.
+Recall Free allows 3 cleanup items per batch and 3 Relevant Now cards. Pro removes the application-level cleanup batch cap and allows 5 Relevant Now cards. It does not activate AI by itself. Judge promotional activation is separate from a store purchase and is not evidence that the purchase/restore test matrix has passed.
+
+## Prepared demonstration examples
+
+- Use a non-personal product screenshot, save a product, then find its extracted product title in Library. The title can differ from the screenshot filename.
+- Use a deadline screenshot with an explicit future date and time. Review the proposed reminder before confirming it, then check Upcoming.
+- For Relevant Now, choose an eligible test deadline. Snooze hides that item for 24 hours without cancelling its reminder; after expiry it returns only if still relevant and within the displayed-card limit. Dismiss applies to the particular occurrence.
+
+No example requires a real invitation to be published. On-device OCR and local classification remain available without AI activation. Developer smoke-test commands and their limits are in [Release QA](./release-qa.md#maestro-native-smoke-tests).
 
 ## Screenshot Cleanup
 

@@ -7,7 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
-import { AppState } from 'react-native';
+import { Alert, AppState, Platform, ToastAndroid } from 'react-native';
 import { useBundles } from '@/features/bundles/context';
 import { useLibrary } from '@/features/library/context';
 import { usePersistence } from '@/features/persistence/context';
@@ -15,8 +15,7 @@ import { useUpcoming } from '@/features/upcoming/context';
 import { getSubscriptionLimits } from '@/features/subscription/features';
 import { useSubscription } from '@/features/subscription/context';
 import { generateResurfacingCards } from './generate';
-import { upsertResurfacingPreference } from './preferences';
-import { nextLocalMidnight } from './time';
+import { nextResurfacingRefresh, upsertResurfacingPreference } from './preferences';
 import type { RecallResurfacingCard } from './types';
 
 interface ResurfacingContextValue {
@@ -39,7 +38,10 @@ export function ResurfacingProvider({ children }: PropsWithChildren) {
   const refreshResurfacing = useCallback(() => setNow(Date.now()), []);
 
   useEffect(() => {
-    const delay = Math.max(1_000, nextLocalMidnight() - Date.now() + 250);
+    const delay = Math.max(
+      1_000,
+      nextResurfacingRefresh(state.resurfacingPreferences, now) - Date.now() + 250,
+    );
     const timeout = setTimeout(refreshResurfacing, delay);
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') refreshResurfacing();
@@ -48,7 +50,7 @@ export function ResurfacingProvider({ children }: PropsWithChildren) {
       clearTimeout(timeout);
       subscription.remove();
     };
-  }, [now, refreshResurfacing]);
+  }, [now, refreshResurfacing, state.resurfacingPreferences]);
 
   const cards = useMemo(
     () =>
@@ -87,8 +89,14 @@ export function ResurfacingProvider({ children }: PropsWithChildren) {
           snoozedAt,
         ),
       }));
+      refreshResurfacing();
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Snoozed for 1 day', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Snoozed for 1 day');
+      }
     },
-    [updateState],
+    [updateState, refreshResurfacing],
   );
 
   const value = useMemo(

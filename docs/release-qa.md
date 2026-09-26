@@ -17,13 +17,52 @@ Reported passed on the existing physical Samsung installation:
 
 These results establish regression coverage on the existing development installation. They do not verify a release APK or a new judge's first-run experience.
 
-Still pending and release-blocking:
+Additional evidence from the existing Samsung development build:
+
+- Maestro navigation passed across all four tabs. The flow now also checks destination-specific content.
+- Screenshot opening, detail display, Back navigation, and return to the Inbox heading passed with a prepared pending screenshot.
+- A saved Library product remained visible after stopping and relaunching the app.
+- A disposable Relevant Now card disappeared after Snooze; this does not verify the full 24-hour wait.
+- Manual inspection confirmed the complete Snooze label at the original font scale and 150%, wrapping secondary buttons, improved tab label space, and Library/Profile heading spacing.
+- Local TypeScript, mobile regression checks, backend offline checks, release UI checks, formatting, and release-validator tests passed. New checks cover midnight/expiry snooze logic, storage recovery, and stalled response-body cancellation.
+
+The GitHub Actions workflow exists locally; a hosted run is not yet confirmed. Maestro text assertions do not prove that glyphs are visibly rendered without clipping. Keep the full card-type and standalone matrices below pending until exercised.
+
+Still pending before distributing the optional APK:
 
 - EAS preview environment validation;
 - standalone preview APK with Metro stopped; and
 - clean first-time judge installation, invitation redemption, 90-day Pro confirmation, restart, real analysis against the public backend, and the final Relevant Now label retest.
 
 Keep unchecked items below unchecked unless that exact scenario has been exercised. Automated checks do not replace device testing.
+
+Next Gen requires a public repository and demo video, not a store release or APK. Submission assets and eligibility are tracked only in [submission.md](./submission.md); APK readiness is a separate quality gate.
+
+## Maestro native smoke tests
+
+On macOS, install Maestro following its [official installation guide](https://docs.maestro.dev/getting-started/installing-maestro). The tested local setup uses Java 17, Android platform tools, and a USB-debugging-authorized Samsung device. If Maestro is installed but not found, add `$HOME/.maestro/bin` to PATH. If Java is missing:
+
+```sh
+brew install --cask temurin@17
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export PATH="$JAVA_HOME/bin:$HOME/.maestro/bin:$PATH"
+java -version
+maestro --version
+adb devices
+```
+
+Run from the repository root. Replace `DEVICE_SERIAL` with the serial from `adb devices`. Complete onboarding and grant screenshot access first. For a development build, keep Metro running and load Recall before starting. These flows preserve app data; do not run them against unrelated personal fixtures.
+
+```sh
+maestro --device DEVICE_SERIAL test .maestro/navigation.yaml
+maestro --device DEVICE_SERIAL test -e SCREENSHOT_NAME="YOUR_PENDING_SCREENSHOT.jpg" .maestro/screenshot-open.yaml
+maestro --device DEVICE_SERIAL test -e SAVED_TITLE="YOUR_DISPLAYED_PRODUCT_TITLE" .maestro/library-restart.yaml
+maestro --device DEVICE_SERIAL test -e CARD_TITLE="YOUR_UNIQUE_TEST_DEADLINE" .maestro/snooze.yaml
+```
+
+The screenshot must still be pending in Inbox. `SAVED_TITLE` is the displayed saved item title, not the screenshot filename; selectors accept regular expressions. The Snooze flow changes state: use a disposable, uniquely titled card whose title and Snooze button are visible together. Observe the brief confirmation toast manually. Captures may include device content; keep generated artifacts out of Git and public submissions.
+
+Repeat visual review at normal and enlarged font/display sizes, then restore the original settings. Repeat the same flows on the final standalone APK with Metro stopped. Do not count the development-build results as standalone verification or a real 24-hour expiry test.
 
 ## Build prerequisites
 
@@ -55,6 +94,7 @@ npm run library:check
 npm run ui:check
 npm run docs:check
 npm run format:check
+node scripts/check-release-config.test.mjs
 cd server && npm run access:check
 cd ..
 git diff --check
@@ -179,14 +219,14 @@ The Android 14 selected-photo picker must be tested in a development or preview 
 
 ### Physical Android judge flow
 
-1. Configure the HTTPS backend with `REVENUECAT_SECRET_API_KEY`, restart it, and verify the mobile public Android SDK key belongs to the same RevenueCat project with the `pro` entitlement.
+1. Configure the HTTPS backend with `REVENUECAT_SECRET_API_KEY`, recreate it with `docker compose up -d --force-recreate backend`, and verify the mobile public Android SDK key belongs to the same RevenueCat project with the `pro` entitlement.
 2. On the already-redeemed judge installation that currently shows Recall Free, open Profile and tap **Retry Pro Activation**. Do not enter another invitation. Confirm the backend logs one redacted `judge_provisioning` success event and Profile changes to **Recall Pro Active** only after the SDK refresh confirms active `pro`.
-3. If the existing installation remains pending, record the machine-readable backend error code. For project/entitlement mismatch, verify the backend secret and APK public Android SDK key belong to the same RevenueCat project and that its entitlement identifier is exactly `pro`; restart the backend after changing its environment.
+3. If the existing installation remains pending, record the machine-readable backend error code. For project/entitlement mismatch, verify the backend secret and APK public Android SDK key belong to the same RevenueCat project and that its entitlement identifier is exactly `pro`; recreate the backend after changing its environment. A container restart does not reload `env_file` values.
 4. Create one judge code in a private terminal with `npm run access:admin -- create-judge-invitations 1`; retain its invitation ID and send the code through a private channel.
 5. Install a fresh development or preview APK on the physical device. Open **Profile → Activate AI**. Paste the complete formatted code, then repeat with lowercase and accidental spaces. Type, backspace, delete, and replace a character in the middle; confirm the fixed `RCL-` prefix stays visible, the caret does not jump, and the preview is correct.
 6. Activate once. Confirm **Recall AI Active**, then **Recall Pro Active**, the 90-day expiration date, and **Continue**. Reopen Profile and confirm no Upgrade/Paywall action is shown.
 7. Force-stop and reopen the app. Confirm both AI and Pro remain active and an AI request still observes the normal daily/global/spending limits.
-8. For recovery testing, block the backend's RevenueCat request or temporarily remove its secret, redeem a different judge code, and confirm AI stays active while Pro is pending. Restore the backend configuration, restart it, and use **Retry Pro Activation**; do not enter another invitation.
+8. On an isolated test backend, simulate a RevenueCat provisioning failure and confirm AI stays active while Pro is pending. Restore connectivity/configuration, recreate the backend if environment values changed, and use **Retry Pro Activation**; do not enter another invitation. Do not remove required production secrets to simulate failure: production startup rejects missing secrets.
 9. On a separate fresh installation, redeem a standard code and confirm it activates AI without changing the RevenueCat identity or enabling Pro.
 10. On a device with an active sandbox purchase or purchase history, redeem a judge code and verify the existing identity and entitlement remain intact.
 

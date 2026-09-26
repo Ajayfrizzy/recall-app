@@ -10,7 +10,8 @@ import {
   generateSummaryCard,
   generateUpcomingCards,
 } from './generate';
-import { daysUntil } from './time';
+import { daysUntil, nextLocalMidnight } from './time';
+import { nextResurfacingRefresh, snoozeIdentity } from './preferences';
 import { RESURFACING_PRIORITY, type ResurfacingPreference } from './types';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -165,6 +166,56 @@ const snoozed: ResurfacingPreference = {
   id: eventCard.id,
   snoozedUntil: now + 24 * 60 * 60 * 1000,
 };
+const day = 24 * 60 * 60 * 1000;
+const deadlineSnooze = { id: todayCard.id, snoozedUntil: now + day };
+const deadlineSources = { upcoming: [deadlineToday], library: [], bundles: [] };
+for (const time of [nextLocalMidnight(now), now + day - 1]) {
+  assert(
+    generateResurfacingCards(deadlineSources, [deadlineSnooze], time).length === 0,
+    'deadline snooze ended early when today became overdue',
+  );
+}
+assert(
+  generateResurfacingCards(deadlineSources, [deadlineSnooze], now + day)[0]?.bucket === 'overdue',
+  'deadline did not return at the exact 24-hour expiry',
+);
+assert(
+  generateResurfacingCards(deadlineSources, [{ id: todayCard.id, dismissedAt: now }], now + day)
+    .length === 1,
+  'dismissal must remain occurrence-specific',
+);
+assert(
+  generateResurfacingCards(
+    { ...deadlineSources, upcoming: [{ ...deadlineToday, id: 'another-deadline' }] },
+    [deadlineSnooze],
+    now,
+  ).length === 1,
+  'snooze hid an unrelated deadline',
+);
+const afterMidnight = nextLocalMidnight(now);
+assert(nextResurfacingRefresh([deadlineSnooze], now) === afterMidnight, 'midnight refresh lost');
+assert(
+  nextResurfacingRefresh([deadlineSnooze], afterMidnight) === now + day,
+  'expiry refresh not scheduled after midnight',
+);
+assert(
+  nextResurfacingRefresh([deadlineSnooze], now + day) === nextLocalMidnight(now + day),
+  'expired snooze caused a refresh loop',
+);
+assert(
+  nextResurfacingRefresh([deadlineSnooze, { id: 'other', snoozedUntil: now + 1000 }], now) ===
+    now + 1000,
+  'refresh must use the earliest pending expiry',
+);
+assert(
+  snoozeIdentity('bundle:shopping:example:recent:2026-09-20') ===
+    snoozeIdentity('bundle:shopping:example:recent:2026-09-21'),
+  'bundle update changed snooze identity',
+);
+assert(
+  snoozeIdentity('summary:week:2026-38') === snoozeIdentity('summary:week:2026-39'),
+  'week rollover changed summary snooze identity',
+);
 assert(
   generateResurfacingCards(
     { upcoming: [eventInThreeDays], library: [], bundles: [] },

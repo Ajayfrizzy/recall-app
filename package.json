@@ -55,11 +55,11 @@
     "ui:check": "node scripts/check-release-ui.mjs",
     "docs:check": "node scripts/check-doc-links.mjs",
     "bundles:check": "server/node_modules/.bin/tsx src/features/bundles/grouping.check.ts && server/node_modules/.bin/tsx src/features/bundles/membership.check.ts && server/node_modules/.bin/tsx src/features/bundles/lifecycle.check.ts",
-    "persistence:check": "server/node_modules/.bin/tsx src/services/storage/migrations.check.ts",
+    "persistence:check": "server/node_modules/.bin/tsx src/services/storage/migrations.check.ts && server/node_modules/.bin/tsx src/features/persistence/recovery.check.ts",
     "resurfacing:check": "server/node_modules/.bin/tsx src/features/resurfacing/resurfacing.check.ts",
     "cleanup:check": "server/node_modules/.bin/tsx src/features/cleanup/cleanup.check.ts",
     "subscription:check": "server/node_modules/.bin/tsx src/features/subscription/subscription.check.ts",
-    "ai-access:check": "server/node_modules/.bin/tsx src/services/ai/access-client.check.ts",
+    "ai-access:check": "server/node_modules/.bin/tsx src/services/ai/access-client.check.ts && server/node_modules/.bin/tsx src/services/ai/response-json.check.ts",
     "screenshots:check": "server/node_modules/.bin/tsx src/features/screenshots/creation-time.check.ts && server/node_modules/.bin/tsx src/features/screenshots/image-state.check.ts && server/node_modules/.bin/tsx src/features/screenshots/records.check.ts && server/node_modules/.bin/tsx src/features/screenshots/history.check.ts && server/node_modules/.bin/tsx src/features/screenshots/permission-state.check.ts",
     "release:config-check": "node --env-file-if-exists=.env scripts/check-release-config.mjs"
   },

@@ -14,6 +14,7 @@ import { AnalyzeRequestSchema } from '../schemas/recall-analysis.js';
 import { analyzeWithMock, isMockAnalysisEnabled } from '../services/mock-analysis.js';
 import { analyzeWithOpenAI } from '../services/openai.js';
 import { bearerToken, getAnalysisAccessStore } from '../services/access-control.js';
+import { developmentRequestId, logDevelopmentPerformance } from '../development-performance.js';
 
 const MAX_BODY_BYTES = 13_000_000;
 
@@ -50,18 +51,40 @@ export async function analyzeRoute(
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
-  if (!hasJsonContentType(request)) {
-    sendJson(response, 415, { error: 'invalid_content_type' });
-    return;
-  }
+  const requestId = developmentRequestId(request);
+  const requestStartedAt = performance.now();
+  let requestOutcome: 'ok' | 'failed' | 'cached' | 'mock' = 'ok';
+  if (requestId) response.setHeader('x-recall-request-id', requestId);
 
   try {
+    if (!hasJsonContentType(request)) {
+      requestOutcome = 'failed';
+      sendJson(response, 415, { error: 'invalid_content_type' });
+      return;
+    }
     const rawToken = bearerToken(request.headers.authorization);
     const limiterKey = rawToken
       ? `token:${createHash('sha256').update(rawToken).digest('hex')}`
       : `address:${request.socket.remoteAddress ?? 'unknown'}`;
     checkAnalysisRateLimit(limiterKey);
-    const body = AnalyzeRequestSchema.parse(await readBody(request));
+    const uploadStartedAt = performance.now();
+    let rawBody: unknown;
+    try {
+      rawBody = await readBody(request);
+      logDevelopmentPerformance(requestId, {
+        stage: 'upload_receive',
+        durationMs: performance.now() - uploadStartedAt,
+        outcome: 'ok',
+      });
+    } catch (error) {
+      logDevelopmentPerformance(requestId, {
+        stage: 'upload_receive',
+        durationMs: performance.now() - uploadStartedAt,
+        outcome: 'failed',
+      });
+      throw error;
+    }
+    const body = AnalyzeRequestSchema.parse(rawBody);
     const imageDataUrl = body.imageDataUrl ?? `data:image/jpeg;base64,${body.imageBase64}`;
     const access = getAnalysisAccessStore();
     const fingerprint = access.fingerprint([
@@ -71,12 +94,14 @@ export async function analyzeRoute(
     ]);
     const reservation = access.reserveAnalysis(rawToken, fingerprint, body.reanalyze);
     if (reservation.kind === 'cached') {
+      requestOutcome = 'cached';
       sendJson(response, 200, reservation.analysis);
       return;
     }
 
     try {
       if (isMockAnalysisEnabled()) {
+        requestOutcome = 'mock';
         const analysis = analyzeWithMock(body.ocrText);
         access.completeAnalysis(reservation.id, analysis, {
           inputTokens: 0,
@@ -86,12 +111,28 @@ export async function analyzeRoute(
         sendJson(response, 200, analysis);
         return;
       }
-      const result = await analyzeWithOpenAI({
-        imageDataUrl,
-        ocrText: body.ocrText,
-        currentTimestamp: new Date().toISOString(),
-        timezone: body.timezone,
-      });
+      const openAiStartedAt = performance.now();
+      let result: Awaited<ReturnType<typeof analyzeWithOpenAI>>;
+      try {
+        result = await analyzeWithOpenAI({
+          imageDataUrl,
+          ocrText: body.ocrText,
+          currentTimestamp: new Date().toISOString(),
+          timezone: body.timezone,
+        });
+        logDevelopmentPerformance(requestId, {
+          stage: 'openai_processing',
+          durationMs: performance.now() - openAiStartedAt,
+          outcome: 'ok',
+        });
+      } catch (error) {
+        logDevelopmentPerformance(requestId, {
+          stage: 'openai_processing',
+          durationMs: performance.now() - openAiStartedAt,
+          outcome: 'failed',
+        });
+        throw error;
+      }
       access.completeAnalysis(reservation.id, result.analysis, result.usage);
       sendJson(response, 200, result.analysis);
     } catch (error) {
@@ -99,6 +140,7 @@ export async function analyzeRoute(
       throw error;
     }
   } catch (error) {
+    requestOutcome = 'failed';
     if (error instanceof AccessControlError) {
       sendJson(response, error.status, { error: error.code });
     } else if (error instanceof InvalidJsonError) {
@@ -120,5 +162,12 @@ export async function analyzeRoute(
     } else {
       sendJson(response, 500, { error: 'internal_error' });
     }
+  } finally {
+    logDevelopmentPerformance(requestId, {
+      stage: 'backend_request',
+      durationMs: performance.now() - requestStartedAt,
+      outcome: requestOutcome,
+      statusCode: response.statusCode,
+    });
   }
 }

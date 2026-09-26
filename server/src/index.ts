@@ -29,7 +29,11 @@ const origin = process.env.ALLOWED_ORIGIN ?? 'http://localhost:8081';
 
 const server = createServer(async (request, response) => {
   response.setHeader('access-control-allow-origin', origin);
-  response.setHeader('access-control-allow-headers', 'authorization,content-type');
+  response.setHeader(
+    'access-control-allow-headers',
+    'authorization,content-type,x-recall-request-id',
+  );
+  response.setHeader('access-control-expose-headers', 'x-recall-request-id');
   response.setHeader('access-control-allow-methods', 'POST,GET,OPTIONS');
   if (request.method === 'OPTIONS') {
     response.writeHead(204);

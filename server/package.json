@@ -18,6 +18,7 @@
     "db:restore-test": "node dist/server/src/scripts/sqlite-restore-test.js",
     "openai:schema-check": "tsx src/schemas/check-openai-schema.ts",
     "openai:config-check": "tsx src/services/check-openai.ts",
+    "performance:check": "tsx src/development-performance.check.ts",
     "format:check": "prettier --check ."
   },
   "dependencies": {

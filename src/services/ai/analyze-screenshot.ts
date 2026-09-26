@@ -3,6 +3,10 @@ import { prepareScreenshotForAnalysis } from './prepare-screenshot';
 import type { RecallAnalysis } from './types';
 import { isRecallAnalysis } from './validation';
 import { authorizedAnalysisHeaders } from './analysis-policy';
+import {
+  developmentPerformanceNow,
+  logDevelopmentPerformance,
+} from '@/services/development-performance';
 
 export type SemanticAnalysisErrorCode =
   | 'missing_access_token'
@@ -74,6 +78,7 @@ export async function analyzeScreenshotSemantically(input: {
   ocrText: string;
   metadata: { filename?: string | null; width: number; height: number; creationTime?: number };
   accessToken: string;
+  requestId?: string;
   reanalyze?: boolean;
 }): Promise<RecallAnalysis> {
   if (!input.accessToken) {
@@ -85,17 +90,35 @@ export async function analyzeScreenshotSemantically(input: {
 
   try {
     const baseUrl = getAnalysisApiUrl();
-    const prepared = await prepareScreenshotForAnalysis(input.uri, {
-      width: input.metadata.width,
-      height: input.metadata.height,
-    });
+    const prepared = await prepareScreenshotForAnalysis(
+      input.uri,
+      {
+        width: input.metadata.width,
+        height: input.metadata.height,
+      },
+      input.requestId,
+    );
+    if (input.requestId) {
+      const base64 = prepared.imageDataUrl.slice(prepared.imageDataUrl.indexOf(',') + 1);
+      const paddingBytes = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+      logDevelopmentPerformance({
+        requestId: input.requestId,
+        stage: 'prepared_image',
+        imageBytes: Math.floor((base64.length * 3) / 4) - paddingBytes,
+        outcome: 'ok',
+      });
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 55_000);
     let response: Response;
+    const requestStartedAt = developmentPerformanceNow();
     try {
       response = await fetch(`${baseUrl}/analyze`, {
         method: 'POST',
-        headers: authorizedAnalysisHeaders(input.accessToken),
+        headers: {
+          ...authorizedAnalysisHeaders(input.accessToken),
+          ...(input.requestId ? { 'x-recall-request-id': input.requestId } : {}),
+        },
         signal: controller.signal,
         body: JSON.stringify({
           imageDataUrl: prepared.imageDataUrl,
@@ -112,7 +135,21 @@ export async function analyzeScreenshotSemantically(input: {
           ...(input.reanalyze ? { reanalyze: true } : {}),
         }),
       });
+      if (input.requestId) {
+        logDevelopmentPerformance({
+          requestId: input.requestId,
+          stage: 'backend_round_trip',
+          durationMs: developmentPerformanceNow() - requestStartedAt,
+          outcome: response.ok ? 'ok' : 'failed',
+        });
+      }
     } catch (error) {
+      logDevelopmentPerformance({
+        requestId: input.requestId,
+        stage: 'backend_round_trip',
+        durationMs: developmentPerformanceNow() - requestStartedAt,
+        outcome: 'failed',
+      });
       if (controller.signal.aborted) {
         throw new SemanticAnalysisError(
           'AI analysis took too long, so Recall used on-device analysis.',
@@ -125,9 +162,26 @@ export async function analyzeScreenshotSemantically(input: {
       clearTimeout(timeout);
     }
     let result: unknown;
+    const parseStartedAt = developmentPerformanceNow();
     try {
       result = await response.json();
+      if (input.requestId) {
+        logDevelopmentPerformance({
+          requestId: input.requestId,
+          stage: 'response_parse',
+          durationMs: developmentPerformanceNow() - parseStartedAt,
+          outcome: 'ok',
+        });
+      }
     } catch (error) {
+      if (input.requestId) {
+        logDevelopmentPerformance({
+          requestId: input.requestId,
+          stage: 'response_parse',
+          durationMs: developmentPerformanceNow() - parseStartedAt,
+          outcome: 'failed',
+        });
+      }
       throw new SemanticAnalysisError(
         'Recall AI returned an invalid response, so on-device analysis was used.',
         'invalid_response',
@@ -153,13 +207,26 @@ export async function analyzeScreenshotSemantically(input: {
         'request_rejected',
       );
     }
-    if (!isRecallAnalysis(result)) {
-      throw new SemanticAnalysisError(
-        'Recall AI returned an invalid result, so on-device analysis was used.',
-        'invalid_response',
-      );
+    const validationStartedAt = developmentPerformanceNow();
+    if (isRecallAnalysis(result)) {
+      logDevelopmentPerformance({
+        requestId: input.requestId,
+        stage: 'response_validation',
+        durationMs: developmentPerformanceNow() - validationStartedAt,
+        outcome: 'ok',
+      });
+      return result;
     }
-    return result;
+    logDevelopmentPerformance({
+      requestId: input.requestId,
+      stage: 'response_validation',
+      durationMs: developmentPerformanceNow() - validationStartedAt,
+      outcome: 'failed',
+    });
+    throw new SemanticAnalysisError(
+      'Recall AI returned an invalid result, so on-device analysis was used.',
+      'invalid_response',
+    );
   } catch (error) {
     if (error instanceof SemanticAnalysisError) throw error;
     throw new SemanticAnalysisError(

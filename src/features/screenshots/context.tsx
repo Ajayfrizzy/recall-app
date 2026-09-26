@@ -34,6 +34,12 @@ import { ANALYSIS_VERSION } from '@/services/storage/types';
 import { useAiAccess } from '@/features/ai-access/context';
 import { shouldRequestSemanticAnalysis } from '@/services/ai/analysis-policy';
 import { restorePersistedScreenshotState, sortScreenshotsNewestFirst } from './records';
+import {
+  createDevelopmentRequestId,
+  developmentPerformanceNow,
+  logDevelopmentPerformance,
+  waitForUiFrame,
+} from '@/services/development-performance';
 
 type State = Record<string, RecallScreenshot>;
 type Action =
@@ -270,6 +276,9 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       }
 
       logAnalysisIdentity('before analysis', screenshot);
+      const requestId = __DEV__ ? createDevelopmentRequestId() : undefined;
+      const analysisStartedAt = developmentPerformanceNow();
+      let analysisOutcome: 'ok' | 'failed' | 'fallback' = 'ok';
       analysesInFlight.current.add(id);
       dispatch({
         type: 'analysis',
@@ -278,7 +287,25 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
       });
 
       try {
-        const ocr = await recognizeScreenshotText(screenshot.uri);
+        const ocrStartedAt = developmentPerformanceNow();
+        let ocr;
+        try {
+          ocr = await recognizeScreenshotText(screenshot.uri);
+          logDevelopmentPerformance({
+            requestId,
+            stage: 'ocr',
+            durationMs: developmentPerformanceNow() - ocrStartedAt,
+            outcome: 'ok',
+          });
+        } catch (error) {
+          logDevelopmentPerformance({
+            requestId,
+            stage: 'ocr',
+            durationMs: developmentPerformanceNow() - ocrStartedAt,
+            outcome: 'failed',
+          });
+          throw error;
+        }
         const localAnalysis: ScreenshotAnalysis = {
           status: 'complete',
           analysisVersion: ANALYSIS_VERSION,
@@ -301,11 +328,13 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
               ocrText: ocr.text,
               metadata: screenshot,
               accessToken,
+              requestId,
               reanalyze: options?.reanalyze === true,
             });
             finalAnalysis = { ...localAnalysis, semantic, analysisSource: 'semantic' };
           } catch (semanticError) {
             if (!(semanticError instanceof SemanticAnalysisError)) throw semanticError;
+            analysisOutcome = 'fallback';
             if (
               semanticError.code === 'invalid_access_token' ||
               semanticError.code === 'access_token_expired' ||
@@ -326,6 +355,7 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           id,
           analysis: finalAnalysis,
         });
+        const savingStartedAt = developmentPerformanceNow();
         await updateState((current) => {
           const persistedStatus = current.screenshots[id]?.status;
           if (__DEV__ && persistedStatus && persistedStatus !== screenshot.status) {
@@ -347,7 +377,24 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           persistedScreenshotsRef.current = { ...current.screenshots, [id]: saved };
           return { ...current, screenshots: persistedScreenshotsRef.current };
         });
+        logDevelopmentPerformance({
+          requestId,
+          stage: 'saving',
+          durationMs: developmentPerformanceNow() - savingStartedAt,
+          outcome: 'ok',
+        });
+        if (requestId) {
+          const uiStartedAt = developmentPerformanceNow();
+          await waitForUiFrame();
+          logDevelopmentPerformance({
+            requestId,
+            stage: 'ui_completion',
+            durationMs: developmentPerformanceNow() - uiStartedAt,
+            outcome: 'ok',
+          });
+        }
       } catch (analysisError) {
+        analysisOutcome = 'failed';
         let message = "Recall couldn't analyze this screenshot. Try again.";
         if (analysisError instanceof OcrError) {
           if (analysisError.code === 'unsupported_platform') {
@@ -364,6 +411,12 @@ export function ScreenshotProvider({ children }: PropsWithChildren) {
           analysis: { ...createIdleScreenshotAnalysis(), status: 'failed', error: message },
         });
       } finally {
+        logDevelopmentPerformance({
+          requestId,
+          stage: 'analysis_total',
+          durationMs: developmentPerformanceNow() - analysisStartedAt,
+          outcome: analysisOutcome,
+        });
         logAnalysisIdentity('after analysis', screenshot);
         analysesInFlight.current.delete(id);
       }

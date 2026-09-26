@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionButton } from '@/components/action-button';
 import { EmptyState } from '@/components/empty-state';
 import { ThemedText } from '@/components/themed-text';
@@ -20,6 +21,7 @@ const galleryIcon = {
 } as const;
 
 export default function InboxScreen() {
+  const insets = useSafeAreaInsets();
   const { cards, dismissCard, snoozeCard } = useResurfacing();
   const {
     screenshots,
@@ -49,7 +51,7 @@ export default function InboxScreen() {
     return (
       <ThemedView style={styles.container}>
         <ScrollView
-          contentContainerStyle={styles.permissionContent}
+          contentContainerStyle={[styles.permissionContent, { paddingTop: insets.top + 40 }]}
           keyboardShouldPersistTaps="handled"
         >
           <PermissionStateView
@@ -67,7 +69,7 @@ export default function InboxScreen() {
   return (
     <ThemedView style={styles.container}>
       <FlatList
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + Layout.screenPadding }]}
         data={error || pending.length === 0 ? [] : pending}
         keyExtractor={(item) => item.id}
         refreshing={refreshing}
@@ -314,7 +316,6 @@ const styles = StyleSheet.create({
   permissionContent: {
     flexGrow: 1,
     padding: Layout.screenPadding,
-    paddingTop: 40,
     paddingBottom: 110,
   },
   header: { marginBottom: 24 },

@@ -21,6 +21,7 @@ export function ActionButton({
   compact = false,
   onPress,
   accessibilityLabel,
+  preserveLabelWidth = false,
   style,
 }: {
   label: string;
@@ -31,6 +32,7 @@ export function ActionButton({
   compact?: boolean;
   onPress: () => void;
   accessibilityLabel?: string;
+  preserveLabelWidth?: boolean;
   style?: ViewStyle;
 }) {
   const reduceMotion = useReducedMotion();
@@ -84,6 +86,7 @@ export function ActionButton({
           maxFontSizeMultiplier={1.5}
           style={[
             styles.label,
+            preserveLabelWidth && styles.preserveLabelWidth,
             variant === 'primary' || variant === 'danger' ? styles.primaryText : undefined,
           ]}
         >
@@ -116,6 +119,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: { flexShrink: 1, textAlign: 'center' },
+  preserveLabelWidth: { flexShrink: 0 },
   primary: { backgroundColor: Colors.dark.accent },
   secondary: { backgroundColor: Colors.dark.backgroundElement, borderColor: Colors.dark.border },
   danger: { backgroundColor: '#B93842' },

@@ -38,9 +38,16 @@ export function ResurfacingCard({
           ) : null}
           <ThemedText themeColor="textSecondary">{card.message}</ThemedText>
         </Pressable>
-        <View style={styles.actions}>
+        <View style={styles.actionRows}>
           {card.action?.route ? (
-            <ActionButton label={card.action.label} compact onPress={open} style={styles.action} />
+            <View style={styles.primaryActions}>
+              <ActionButton
+                label={card.action.label}
+                compact
+                onPress={open}
+                style={styles.action}
+              />
+            </View>
           ) : null}
           <View style={styles.secondaryActions}>
             <ActionButton
@@ -49,7 +56,8 @@ export function ResurfacingCard({
               state={activeAction === 'snooze' ? 'loading' : activeAction ? 'disabled' : 'idle'}
               variant="ghost"
               compact
-              style={styles.action}
+              preserveLabelWidth
+              style={styles.snoozeAction}
               onPress={() => {
                 setActiveAction('snooze');
                 void onSnooze().finally(() => setActiveAction(undefined));
@@ -61,7 +69,8 @@ export function ResurfacingCard({
               state={activeAction === 'dismiss' ? 'loading' : activeAction ? 'disabled' : 'idle'}
               variant="ghost"
               compact
-              style={styles.action}
+              preserveLabelWidth
+              style={styles.dismissAction}
               onPress={() => {
                 setActiveAction('dismiss');
                 void onDismiss().finally(() => setActiveAction(undefined));
@@ -77,14 +86,15 @@ export function ResurfacingCard({
 const styles = StyleSheet.create({
   card: { padding: 16, borderRadius: 8, gap: 12 },
   copy: { gap: 4 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 8 },
+  actionRows: { flexDirection: 'column', alignItems: 'flex-start', gap: 8 },
+  primaryActions: { flexDirection: 'row', alignItems: 'flex-start' },
   secondaryActions: {
-    maxWidth: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    flexShrink: 0,
     alignItems: 'flex-start',
     gap: 8,
   },
   action: { alignSelf: 'flex-start' },
+  snoozeAction: { alignSelf: 'flex-start', minWidth: 120 },
+  dismissAction: { alignSelf: 'flex-start', minWidth: 88 },
 });

@@ -14,18 +14,18 @@ The Next Gen category accepts a **public open-source repository with a license a
 
 **Status: SUBMITTED (creator-confirmed).** The creator confirmed completion of the Devpost submission after filling out the entry, providing the Vimeo link and preparing the submitted screenshots and icon. The final Devpost project-page URL has not been supplied, so this record does not claim an independent review of every saved form field or media attachment.
 
-| Submission component | Recorded status |
-| --- | --- |
-| Competition category | Next Gen Award only, as selected for Recall. |
-| Devpost entry | **Submitted**, confirmed by the creator September 27, 2026. |
-| Project title | Recall. |
-| Narrated video | [Vimeo upload complete](https://vimeo.com/1230602934); prepared running time approximately 1:42. |
-| Source code | [Public GitHub repository](https://github.com/Ajayfrizzy/recall-app), MIT-licensed. |
-| Images | Icon and seven submission screenshots committed under `docs/assets/submission/`; creator confirmed completing the entry's media workflow. |
-| RevenueCat integration | Default offering, managed paywall, `pro` entitlement, purchases and restore flow; AI access is invitation-protected separately from Pro. |
-| Store release | Not required for this Next Gen entry; Recall was not represented as published on Google Play. |
-| Optional judge APK | Not supplied as a verified distribution artifact. |
-| Privacy policy | Pre-publication draft with confirmed operator and contact; outstanding retention/request procedures and legal review remain clearly identified. |
+| Submission component   | Recorded status                                                                                                                                 |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Competition category   | Next Gen Award only, as selected for Recall.                                                                                                    |
+| Devpost entry          | **Submitted**, confirmed by the creator September 27, 2026.                                                                                     |
+| Project title          | Recall.                                                                                                                                         |
+| Narrated video         | [Vimeo upload complete](https://vimeo.com/1230602934); prepared running time approximately 1:42.                                                |
+| Source code            | [Public GitHub repository](https://github.com/Ajayfrizzy/recall-app), MIT-licensed.                                                             |
+| Images                 | Icon and seven submission screenshots committed under `docs/assets/submission/`; creator confirmed completing the entry's media workflow.       |
+| RevenueCat integration | Default offering, managed paywall, `pro` entitlement, purchases and restore flow; AI access is invitation-protected separately from Pro.        |
+| Store release          | Not required for this Next Gen entry; Recall was not represented as published on Google Play.                                                   |
+| Optional judge APK     | Not supplied as a verified distribution artifact.                                                                                               |
+| Privacy policy         | Pre-publication draft with confirmed operator and contact; outstanding retention/request procedures and legal review remain clearly identified. |
 
 **Post-submission housekeeping (optional, not outstanding competition-entry requirements):** Save the Devpost confirmation and project-page URL when available, retain the exact submitted media and source revision, and avoid describing later builds as the original submitted build. Any future downloadable judge APK should first pass the standalone and invitation tests in [Release QA](./release-qa.md).
 

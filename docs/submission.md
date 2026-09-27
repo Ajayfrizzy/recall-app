@@ -1,35 +1,41 @@
 # Recall — RevenueCat Shipaton 2026 Next Gen Submission
 
 **Category:** Next Gen Award only.  
-**Deadline:** September 30, 2026 at **11:45 PM PDT** = October 1, 2026 at **7:45 AM WAT (Lagos)**. Submit ahead of the deadline.  
+**Submission:** Creator-confirmed as submitted September 27, 2026.  
+**Competition deadline:** September 30, 2026 at **11:45 PM PDT** = October 1, 2026 at **7:45 AM WAT (Lagos)**.  
 **Official rules:** https://revenuecat-shipaton-2026.devpost.com/rules  
-**Project source:** https://github.com/Ajayfrizzy/recall-app
+**Project source:** https://github.com/Ajayfrizzy/recall-app  
+**Submitted demonstration:** https://vimeo.com/1230602934  
+**Devpost project page:** Not supplied for inclusion in this record.
 
 The Next Gen category accepts a **public open-source repository with a license and an under-two-minute demonstration** in place of a published app-store listing. A paid Google/Apple developer account, Play Store release, and standalone judge APK are **not required** for this category. Active student enrollment and a qualifying academic/student email on Devpost are essential; verify eligibility and all final form fields against the official rules.
 
-## Essential submission checklist
+## Submission record — September 27, 2026
 
-- [x] Confirm active student status, qualifying Devpost academic/student email and Next Gen-only category selection.
-- [x] Complete the public Devpost project page and all required English fields before the deadline.
-- [x] Verify the GitHub repository is visible while logged out, includes the actual source, setup instructions and a visible MIT `LICENSE` file; check Git history for secrets and private screenshots.
-- [x] Record and edit an Android demonstration with the creator's human narration, approximately 1:42. **Prepared locally, publication pending.**
-- [x] Review the exact final MP4: real product behavior and RevenueCat integration are visible; voice-over matches the scene; no live tokens, invitation codes, notifications, personal information or unauthorized media are exposed.
-- [x] Upload the approved final demo to **public or judge-accessible unlisted YouTube/Vimeo** and verify it from a logged-out browser. **Public video URL: TO ADD AFTER UPLOAD.**
-- [x] Prepare a **1024 × 1024 PNG** Recall icon and **1179 × 2556 PNG** Android screenshots without device frames. **Prepared locally; commit to the repo and recheck image dimensions.**
-- [x] Upload the app icon and at least one correctly sized, frame-free screenshot to the Devpost submission; choose screenshots that clearly demonstrate the app.
-- [x] Complete the project description, explicitly explain the RevenueCat offering/paywall, `pro` entitlement, subscription restoration, Free/Pro limits, and time-limited promotional judge access.
-- [x] Confirm any required RevenueCat project ID and other Devpost fields in the actual form, without adding secret API keys.
-- [x] Review final assets, category selection and all links; submit the entry and verify the submitted-project page.
+**Status: SUBMITTED (creator-confirmed).** The creator confirmed completion of the Devpost submission after filling out the entry, providing the Vimeo link and preparing the submitted screenshots and icon. The final Devpost project-page URL has not been supplied, so this record does not claim an independent review of every saved form field or media attachment.
 
-**Optional, separate from required Next Gen materials:** An EAS standalone APK and private judge invitation may help reviewers test Recall, but share them only after clean-install and public-backend checks pass. Do not claim a promotional Pro grant is a paid store purchase.
+| Submission component | Recorded status |
+| --- | --- |
+| Competition category | Next Gen Award only, as selected for Recall. |
+| Devpost entry | **Submitted**, confirmed by the creator September 27, 2026. |
+| Project title | Recall. |
+| Narrated video | [Vimeo upload complete](https://vimeo.com/1230602934); prepared running time approximately 1:42. |
+| Source code | [Public GitHub repository](https://github.com/Ajayfrizzy/recall-app), MIT-licensed. |
+| Images | Icon and seven submission screenshots committed under `docs/assets/submission/`; creator confirmed completing the entry's media workflow. |
+| RevenueCat integration | Default offering, managed paywall, `pro` entitlement, purchases and restore flow; AI access is invitation-protected separately from Pro. |
+| Store release | Not required for this Next Gen entry; Recall was not represented as published on Google Play. |
+| Optional judge APK | Not supplied as a verified distribution artifact. |
+| Privacy policy | Pre-publication draft with confirmed operator and contact; outstanding retention/request procedures and legal review remain clearly identified. |
+
+**Post-submission housekeeping (optional, not outstanding competition-entry requirements):** Save the Devpost confirmation and project-page URL when available, retain the exact submitted media and source revision, and avoid describing later builds as the original submitted build. Any future downloadable judge APK should first pass the standalone and invitation tests in [Release QA](./release-qa.md).
 
 ## Submission assets
 
-Use `docs/assets/submission/` to store the finalized icon and screenshot PNGs in Git. Descriptive filenames such as `icon.png`, `relevant-now.png`, `library.png`, `upcoming.png`, `products.png`, `smart-bundles.png` and `pro-paywall.png` are suitable **only when those names match the actual images**. Keep app-runtime assets under `assets/` separate. Avoid placeholder images, debug IDs, personal screenshots and inappropriate subscription-platform wording. Do not imply local media is already committed or uploaded to Devpost.
+The corrected icon and seven screenshots are committed under [`docs/assets/submission/`](./assets/submission/): `icon.png`, `Screenshot1.jpeg`, `Screenshot2.jpeg`, `Screenshot3.jpeg`, `Screenshot4.jpeg`, `Screenshot5.jpeg`, `Screenshot6.png` and `Screenshot7.jpeg`. Keep app-runtime assets under `assets/` separate. The creator confirmed completing the Devpost submission. This documentation does not independently inventory which of the seven repository screenshots appear in the published gallery.
 
-Prepared local recording: `Recall_Shipaton_Demo_Human_Voice.mp4` (approximately 1:42). **Public video URL:** not supplied. See [demo guide](./demo-script.md) for the scene sequence and final playback/privacy checks.
+Submitted Vimeo demonstration: [Recall narrated Android walkthrough](https://vimeo.com/1230602934) (prepared runtime approximately 1:42). See [demo guide](./demo-script.md) for the intended scene sequence and media record.
 
-## Copy-ready Devpost project description
+## Project-description archive
 
 ### Tagline
 
@@ -61,20 +67,10 @@ The implementation addresses multiple products in one screenshot, ambiguous date
 
 ### Why Next Gen
 
-Recall is entered in the **Next Gen Award**, the student-only category that evaluates a working mobile demonstration, a public open-source repository, thoughtful technical choices and thoughtful RevenueCat monetization without requiring a paid developer account or a published store listing.
+Recall was submitted to the **Next Gen Award**, the student-only category that evaluates a working mobile demonstration, a public open-source repository, thoughtful technical choices and thoughtful RevenueCat monetization without requiring a paid developer account or a published store listing.
 
-## Evidence and remaining tasks
+## Current limits and post-submission notes
 
-| Item | Status based on supplied documents and conversation |
-| --- | --- |
-| Android implementation and RevenueCat integration | Implemented; see [architecture](./architecture.md). |
-| Public HTTPS backend `/health` | Reported verified September 26; this is not end-to-end fresh-install proof. |
-| Final edited and human-narrated video | Prepared locally, approximately 1:42; final playback and public upload still require confirmation. |
-| Required-size icon and screenshots | Prepared locally; verify actual final files are committed under `docs/assets/submission/` before checking repository asset placement. |
-| Privacy-policy draft | Operator/contact supplied; retention and request-handling procedure and legal review remain unresolved. |
-| Student/academic-email eligibility | Verify in Devpost; do not infer from app development. |
-| Public repository and LICENSE visibility | Check logged-out access before submission. |
-| Public video URL and final Devpost submission | Not yet supplied or verified. |
-| Optional standalone APK and clean judge installation | Do not mark passed until the checks in [Release QA](./release-qa.md) are documented. |
+The entry is submitted. The latest source and submitted demonstration should not be presented as a verified standalone APK: the previously documented clean-install and first-time judge tests remain separate optional QA work. The privacy policy remains a pre-publication draft and does not claim automatic backend deletion or a completed backend deletion-request workflow. Preserve the submitted entry and media as a reference if development continues.
 
-Useful internal documents: [Judge guide](./judge-guide.md), [Release QA](./release-qa.md), [Deployment](./deployment.md), [Privacy-policy draft](./privacy-policy.md), [Demo guide](./demo-script.md).
+Useful internal documents: [Judge guide](./judge-guide.md), [Release QA](./release-qa.md), [Deployment](./deployment.md), [Privacy-policy draft](./privacy-policy.md), [Demo record](./demo-script.md).

@@ -2,7 +2,7 @@
 
 **Last updated:** September 27, 2026
 
-**Effective date:** Not yet set; to be assign during production/launch date.
+**Effective date:** To be assigned on the date this policy is published.
 
 This draft describes Recall's current implementation and identifies items that must be decided or reviewed before publication. It does not create functionality that Recall does not have. The operator and contact details have been provided, but retention and privacy-request procedures, applicable provider and jurisdictional terms, incident response, change notices, and geographic availability are not finalized. Recall currently has no automatic or self-service backend data deletion.
 

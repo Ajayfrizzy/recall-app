@@ -6,12 +6,12 @@ Recall never performs a suggested action or deletes a Gallery item without confi
 
 ## Shipaton 2026 — Next Gen
 
-Recall is entered in the **Next Gen Award** at RevenueCat Shipaton 2026. This category uses a public, licensed source repository and demonstration video rather than requiring a published app-store listing. Entrants must meet the student and academic-email requirements in the [official rules](https://revenuecat-shipaton-2026.devpost.com/rules). The edited demonstration video (with human narration), 1024 × 1024 icon, and 1179 × 2556 submission screenshots have been prepared; public video publication and final Devpost upload must still be confirmed. See the [submission guide](docs/submission.md) and [judge guide](docs/judge-guide.md).
+Recall was **submitted to the Next Gen Award** at RevenueCat Shipaton 2026 on September 27, 2026 (submission confirmed by the creator). This category accepts a public, MIT-licensed repository and demonstration video without requiring an app-store listing. The [narrated demonstration is on Vimeo](https://vimeo.com/1230602934); the icon and seven screenshots are committed under [`docs/assets/submission/`](docs/assets/submission/). The creator also confirmed that the Devpost submission was completed. See the [submission record](docs/submission.md) and [judge guide](docs/judge-guide.md).
 
 ### Submission media
 
-- **Demonstration:** Edited Android walkthrough with human narration, under two minutes. Add its public YouTube or Vimeo URL here once published; the local video file is not a public link.
-- **Images:** The corrected app icon and submission screenshots belong in `docs/assets/submission/` when committed to the repository. The icon is 1024 × 1024 and screenshots are 1179 × 2556, without device frames.
+- **Demonstration:** [Watch the submitted narrated Android demo on Vimeo](https://vimeo.com/1230602934) (approximately 1:42).
+- **Images:** The app icon and seven submission screenshots are committed in [`docs/assets/submission/`](docs/assets/submission/). The creator confirmed submitting the Devpost entry; the exact Devpost gallery selection is not independently documented here.
 - **Optional judge APK:** Provide an installation link only after the standalone build and clean judge activation have passed the [release QA](docs/release-qa.md). The APK is not a prerequisite for this category.
 
 ## Features
@@ -129,14 +129,14 @@ npm run build
 
 ## Builds
 
-The [GitHub Actions workflow](.github/workflows/checks.yml) runs offline checks on pushes and pull requests. A successful GitHub-hosted run is not yet recorded. Native Maestro checks run separately; see [Release QA](docs/release-qa.md#maestro-native-smoke-tests) for setup, commands, and results.
+The [GitHub Actions workflow](.github/workflows/checks.yml) runs offline checks on pushes and pull requests. The attached release QA has no confirmed hosted run; consult current GitHub Actions results before describing CI as passed. Native Maestro checks run separately; see [Release QA](docs/release-qa.md#maestro-native-smoke-tests) for setup, commands, and results.
 
 ```sh
 eas build --profile development --platform android
 eas build --profile preview --platform android
 ```
 
-The `preview` profile creates an internal APK. Run `npm run release:config-check` in the configured preview environment before building. The public backend is deployed, but the final standalone APK and clean first-time judge flow still require release verification.
+The `preview` profile creates an internal APK. Run `npm run release:config-check` in the configured preview environment before building. The public backend is deployed. A standalone APK and clean first-time judge flow are optional and have not been recorded as verified.
 
 ## Access and subscriptions
 
@@ -159,6 +159,10 @@ Invitation administration is documented in the private-operator sections of [Dep
 - AI quality depends on screenshot clarity, OCR quality, connectivity, and provider availability.
 
 Read the [Privacy Policy (pre-publication draft)](docs/privacy-policy.md) before testing with personal screenshots. The identified operator is Oluwaseun Ajao, and privacy requests may be sent to ajayholuwaseun@gmail.com. The publication date, backend retention policy, workable privacy-request procedure, applicable legal review, and geographic availability still require final decisions. No automatic backend deletion or self-service deletion is implemented.
+
+## Submission status
+
+The creator confirmed that the Next Gen Devpost entry was submitted on September 27, 2026, with the narrated Vimeo demonstration and the prepared image assets. The submitted entry is not an app-store release. The Devpost project URL has not been supplied for inclusion here. Changes to the source after submission should not be represented as features shown in the submitted demo unless separately evidenced.
 
 ## Documentation
 

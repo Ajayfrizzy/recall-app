@@ -1,32 +1,33 @@
-# Recall — Final Next Gen Demo Guide
+# Recall — Submitted Next Gen Demonstration
 
 **Entry:** RevenueCat Shipaton 2026, Next Gen Award (student category).  
-**Prepared asset:** `Recall_Shipaton_Demo_Human_Voice.mp4`, edited Android footage with the creator's own recorded narration. Approximate runtime: **1 minute 42 seconds**.  
-**Publishing status:** The local video has been prepared; a public YouTube/Vimeo URL has **not** been supplied or verified.
+**Submitted demonstration:** [Watch Recall on Vimeo](https://vimeo.com/1230602934). Edited Android footage with the creator's own recorded narration; prepared runtime approximately **1 minute 42 seconds**.  
+**Submission status:** The creator confirmed submission of the Next Gen entry on September 27, 2026.
 
-The final entry should lead with the product problem and working mobile experience, demonstrate RevenueCat's subscription experience, and finish with the student-category context. The Next Gen entry is judged using a public demo and open-source repository; a public store listing is not required. See [submission.md](./submission.md).
+This file records the submitted demonstration and its intended scene sequence. The Next Gen entry uses a public demonstration and open-source repository; a store listing was not required. See [submission.md](./submission.md).
 
 ## Scene order in the edited demonstration
 
-| Sequence | What the footage communicates | Narration topic |
-| --- | --- | --- |
-| 1 | Onboarding and screenshot access | Screenshots are easy to save and easy to forget; Recall turns them into actions. |
-| 2 | Screenshot OCR, optional AI and deadline detection | On-device text recognition and user-authorized AI analysis. |
-| 3 | Create a reminder; inspect Upcoming | The user chooses notification timing. |
-| 4 | Event detection and calendar flow | Save a recognized event to the Android calendar. |
-| 5 | Multi-product extraction | Recognize separate products and prices. |
-| 6 | Smart Bundles and Relevant Now | Group related screenshots and resurface useful information. |
-| 7 | Profile and RevenueCat Pro | Show the genuine Pro entitlement/paywall state; explain that RevenueCat powers subscriptions. |
+| Sequence | What the footage communicates                      | Narration topic                                                                               |
+| -------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1        | Onboarding and screenshot access                   | Screenshots are easy to save and easy to forget; Recall turns them into actions.              |
+| 2        | Screenshot OCR, optional AI and deadline detection | On-device text recognition and user-authorized AI analysis.                                   |
+| 3        | Create a reminder; inspect Upcoming                | The user chooses notification timing.                                                         |
+| 4        | Event detection and calendar flow                  | Save a recognized event to the Android calendar.                                              |
+| 5        | Multi-product extraction                           | Recognize separate products and prices.                                                       |
+| 6        | Smart Bundles and Relevant Now                     | Group related screenshots and resurface useful information.                                   |
+| 7        | Profile and RevenueCat Pro                         | Show the genuine Pro entitlement/paywall state; explain that RevenueCat powers subscriptions. |
 
-**Important:** This is a scene guide, **not a verbatim transcript** of the final audio or a frame-accurate edit decision list. Compare it to the exported MP4 before publishing. Do not add a statement that is not actually spoken or shown. Do not imply a promotional judge entitlement is a completed Play Store purchase.
+**Important:** This is a scene guide, **not a verbatim transcript** of the final audio or a frame-accurate edit decision list. The actual submitted video is the source of truth for exact timing and narration. Do not add a statement that is not actually spoken or shown. Do not imply a promotional judge entitlement is a completed Play Store purchase.
 
-## Final publication checks
+## Submitted-media record
 
-- [ ] Play the final export from start to finish and verify human narration matches each scene; adjust audio placement if a statement precedes or follows the corresponding footage.
-- [ ] Keep essential footage under 2:00, on the target Android device, and make it viewable on YouTube or Vimeo (public or accessible unlisted, **not private**).
-- [ ] Show genuine AI results; do not misrepresent mocked results or staged purchases.
-- [ ] Check every frame for personal screenshots, live invitations, tokens, API keys, notifications and unauthorized third-party material.
-- [ ] Check the product names, dates, prices and visible subscription state against narration.
-- [ ] Publish the final URL in [submission.md](./submission.md) and Devpost only after testing access from a logged-out browser.
+- **Vimeo:** https://vimeo.com/1230602934
+- **Narration:** Creator-recorded human voice over edited Android footage.
+- **Length:** Approximately 1:42 as recorded during preparation; this document does not independently measure Vimeo playback.
+- **Devpost:** Entry submitted by the creator on September 27, 2026. The Devpost project-page URL has not been supplied.
+- **Integrity:** Do not represent staged purchases, promotional Pro provisioning, or unverified release-APK behavior as paid purchases or completed standalone tests.
+
+If the demonstration is replaced after submission, record the new video URL and explain any differences between the submitted entry and subsequent app changes in [submission.md](./submission.md).
 
 Official reference: [Shipaton 2026 rules](https://revenuecat-shipaton-2026.devpost.com/rules).

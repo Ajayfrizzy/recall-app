@@ -1,6 +1,6 @@
 # Recall Release QA
 
-## Status at September 26, 2026
+## Evidence status — documentation updated September 27, 2026
 
 Verified infrastructure:
 
@@ -17,6 +17,8 @@ Reported passed on the existing physical Samsung installation:
 
 These results establish regression coverage on the existing development installation. They do not verify a release APK or a new judge's first-run experience.
 
+**Submission media update (September 27):** An edited demonstration with the creator's human narration and required-size submission images have been prepared locally. Their existence is not proof that the public video URL, public Git repository, EAS preview build or clean-install judge flow is verified. Inspect and publish the exact final media files before checking them off in [submission.md](./submission.md).
+
 Additional evidence from the existing Samsung development build:
 
 - Maestro navigation passed across all four tabs. The flow now also checks destination-specific content.
@@ -28,7 +30,7 @@ Additional evidence from the existing Samsung development build:
 
 The GitHub Actions workflow exists locally; a hosted run is not yet confirmed. Maestro text assertions do not prove that glyphs are visibly rendered without clipping. Keep the full card-type and standalone matrices below pending until exercised.
 
-Still pending before distributing the optional APK:
+Still pending before distributing the **optional** APK (not a Next Gen eligibility requirement):
 
 - EAS preview environment validation;
 - standalone preview APK with Metro stopped; and
@@ -237,6 +239,10 @@ The Android 14 selected-photo picker must be tested in a development or preview 
 - [ ] Exercise rapid tab changes and long lists without crashes or blank screens.
 - [ ] Restart online and offline and verify no data loss.
 - [ ] Confirm the installed build does not require Metro or a development-only LAN backend.
+
+## Next Gen submission gate versus optional APK gate
+
+The **required Next Gen submission gate** is a qualifying student/academic Devpost profile, public source repository with a visible open-source license, truthful public Android video, correct icon and screenshot assets, and a complete English Devpost entry. Confirm these independently of APK readiness. The APK and private judge invitation are optional supporting material; do not delay a complete required submission solely because optional APK tests are pending.
 
 ## Release blockers
 

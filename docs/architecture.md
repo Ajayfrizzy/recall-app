@@ -69,7 +69,7 @@ The mobile AI request deadline covers both HTTP headers and response-body readin
 
 AsyncStorage holds a versioned JSON state containing screenshot statuses and structured analyses, saved Library items, Upcoming reminders/events, action records, Smart Bundles, bundle overrides, Relevant Now preferences, the AI-processing acknowledgement, and onboarding completion. Screenshot image bytes remain in the Android Gallery.
 
-The AI installation token, expiration, judge metadata, and provisioning status are stored separately in Expo SecureStore. Clearing or reinstalling behavior depends on the platform's storage behavior. Recall currently has no account or cross-device sync.
+The AI installation token, expiration, judge metadata, and provisioning status are stored separately in Expo SecureStore. Clearing Recall's application data removes local app records and credentials from that installation, but it does not necessarily remove backend or third-party data. Reinstalling behavior depends on the platform's storage behavior. Recall currently has no account or cross-device synchronization.
 
 Storage read failures, malformed JSON, and unsupported state versions show a retry screen instead of silently opening empty state. Writes retain optimistic in-memory state but persist in order. Failed writes remain pending until an explicit retry succeeds, and a dialog warns about losing unsaved changes if the app closes. This is recovery feedback, not a backup service.
 
@@ -127,5 +127,6 @@ The spending ceiling is an application estimate based on configured token prices
 - Caddy terminates public HTTPS; backend port `8787` is not published on the host.
 - CORS is not authentication for a native app. Invitation-derived Bearer tokens protect AI routes.
 - `store: false` asks OpenAI not to store the Responses API object, but third-party handling remains governed by the applicable OpenAI terms and account settings.
-- Cached structured results currently have no automatic expiration or user-facing deletion endpoint.
+- Backend access records and cached structured results currently have no general automatic deletion schedule or self-service deletion endpoint.
+- Deleting an Android Gallery screenshot does not automatically remove locally saved Recall data, and deactivating AI removes only the locally stored access credential.
 - A single SQLite file is suitable for the current single-server deployment, not multiple independent backend replicas.

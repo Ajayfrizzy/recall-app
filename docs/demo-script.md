@@ -1,62 +1,32 @@
-# Recall Demo Script
+# Recall — Final Next Gen Demo Guide
 
-Target: approximately 1 minute 45 seconds. Record a physical Android device with real AI, `MOCK_ANALYSIS=false`, prepared non-personal screenshots, and no credentials or notifications visible.
+**Entry:** RevenueCat Shipaton 2026, Next Gen Award (student category).  
+**Prepared asset:** `Recall_Shipaton_Demo_Human_Voice.mp4`, edited Android footage with the creator's own recorded narration. Approximate runtime: **1 minute 42 seconds**.  
+**Publishing status:** The local video has been prepared; a public YouTube/Vimeo URL has **not** been supplied or verified.
 
-## 0:00-0:12 | The screenshot problem
+The final entry should lead with the product problem and working mobile experience, demonstrate RevenueCat's subscription experience, and finish with the student-category context. The Next Gen entry is judged using a public demo and open-source repository; a public store listing is not required. See [submission.md](./submission.md).
 
-Show the Inbox with several useful screenshots.
+## Scene order in the edited demonstration
 
-“Screenshots are how we remember products, deadlines, events, and ideas, but they quickly become gallery clutter. Recall turns them into actions.”
+| Sequence | What the footage communicates | Narration topic |
+| --- | --- | --- |
+| 1 | Onboarding and screenshot access | Screenshots are easy to save and easy to forget; Recall turns them into actions. |
+| 2 | Screenshot OCR, optional AI and deadline detection | On-device text recognition and user-authorized AI analysis. |
+| 3 | Create a reminder; inspect Upcoming | The user chooses notification timing. |
+| 4 | Event detection and calendar flow | Save a recognized event to the Android calendar. |
+| 5 | Multi-product extraction | Recognize separate products and prices. |
+| 6 | Smart Bundles and Relevant Now | Group related screenshots and resurface useful information. |
+| 7 | Profile and RevenueCat Pro | Show the genuine Pro entitlement/paywall state; explain that RevenueCat powers subscriptions. |
 
-## 0:12-0:38 | Real analysis
+**Important:** This is a scene guide, **not a verbatim transcript** of the final audio or a frame-accurate edit decision list. Compare it to the exported MP4 before publishing. Do not add a statement that is not actually spoken or shown. Do not imply a promotional judge entitlement is a completed Play Store purchase.
 
-Open the prepared multi-product screenshot and tap Analyze. Keep the loading treatment brief, then show the completed result.
+## Final publication checks
 
-“Recall reads text on-device first. With my permission, optional Recall AI sends this one compressed screenshot and its OCR text to the backend, where GPT-5 mini returns a validated, structured result.”
+- [ ] Play the final export from start to finish and verify human narration matches each scene; adjust audio placement if a statement precedes or follows the corresponding footage.
+- [ ] Keep essential footage under 2:00, on the target Android device, and make it viewable on YouTube or Vimeo (public or accessible unlisted, **not private**).
+- [ ] Show genuine AI results; do not misrepresent mocked results or staged purchases.
+- [ ] Check every frame for personal screenshots, live invitations, tokens, API keys, notifications and unauthorized third-party material.
+- [ ] Check the product names, dates, prices and visible subscription state against narration.
+- [ ] Publish the final URL in [submission.md](./submission.md) and Devpost only after testing access from a logged-out browser.
 
-Point to the real summary, separate product cards, and prices. Do not state item counts or details that differ from the actual result.
-
-## 0:38-0:55 | Turn the result into an action
-
-Tap **Save All Products** if the visible result supports it, then show the saved confirmation and open Library.
-
-“The result is useful because I choose what happens next. Here I am saving these products; Recall never acts automatically.”
-
-If the prepared result is an event/deadline instead, create the reminder and show it in Upcoming. Do not fabricate a result to fit the script.
-
-## 0:55-1:12 | Smart organization
-
-Open the matching Smart Bundle, or return to Inbox and show a Relevant Now card.
-
-“Related saves become Smart Bundles, while Relevant Now brings useful items back when they matter instead of leaving them buried in the gallery.”
-
-Show either bundle membership or the Relevant Now action, **Snooze 1 day**, and Dismiss controls.
-
-## 1:12-1:34 | RevenueCat Pro
-
-Open Profile and show the already-prepared real **Recall Pro Active** state. Briefly open the RevenueCat-managed paywall only if it can be shown without disrupting the prepared entitlement.
-
-An active judge-Pro installation hides purchase options. To show the paywall, capture a separate prepared Free installation, then show the Pro feature difference. Do not deactivate or replace a working judge identity during recording. Label Test Store/sandbox footage accurately; complimentary Pro is not a store purchase.
-
-“RevenueCat powers Recall Pro, the managed paywall, purchases, restore, and entitlement checks. Pro unlocks larger cleanup batches and more Relevant Now cards. Judges receive complimentary Pro through time-limited, invitation-only access.”
-
-Do not show an invitation code or token.
-
-## 1:34-1:45 | Close
-
-Return to the Library bundle or the analyzed result.
-
-“Recall turns screenshots from forgotten clutter into useful, user-controlled actions.”
-
-## Recording checklist
-
-The final under-two-minute public video is required for Next Gen. A store listing is not. Keep eligibility, icon/screenshot dimensions, and upload requirements in [submission.md](./submission.md); this checklist covers recording only.
-
-- [ ] Total runtime is under 2:00; target 1:45.
-- [ ] Footage shows Recall functioning on the Android device.
-- [ ] Analysis is real, not a mock or fabricated result.
-- [ ] The screenshot contains no personal or confidential data.
-- [ ] No `.env`, API key, invitation, token, raw log, local IP, or notification is visible.
-- [ ] Dates, prices, result count, saved state, and Pro state match what is on screen.
-- [ ] No unauthorized music, trademarks, or copyrighted footage is included.
-- [ ] The final public video is uploaded to YouTube or Vimeo.
+Official reference: [Shipaton 2026 rules](https://revenuecat-shipaton-2026.devpost.com/rules).

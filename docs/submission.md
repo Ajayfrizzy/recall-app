@@ -1,158 +1,80 @@
-# RevenueCat Shipaton 2026 Next Gen Submission
+# Recall — RevenueCat Shipaton 2026 Next Gen Submission
 
-This document consolidates the competition checklist, proposed submission copy, and asset checklist for Recall's Next Gen Award entry. The source was checked against the [official competition rules](https://revenuecat-shipaton-2026.devpost.com/rules), updated August 31, 2026. Recheck the live rules before submitting; this guide does not replace them.
+**Category:** Next Gen Award only.  
+**Deadline:** September 30, 2026 at **11:45 PM PDT** = October 1, 2026 at **7:45 AM WAT (Lagos)**. Submit ahead of the deadline.  
+**Official rules:** https://revenuecat-shipaton-2026.devpost.com/rules  
+**Project source:** https://github.com/Ajayfrizzy/recall-app
 
-The submission period ends **September 30, 2026 at 11:45 PM PDT**. Recall is entering only the Next Gen Award.
+The Next Gen category accepts a **public open-source repository with a license and an under-two-minute demonstration** in place of a published app-store listing. A paid Google/Apple developer account, Play Store release, and standalone judge APK are **not required** for this category. Active student enrollment and a qualifying academic/student email on Devpost are essential; verify eligibility and all final form fields against the official rules.
 
-That is **October 1, 2026 at 7:45 AM in Lagos (WAT)**. Submit ahead of the deadline. The official rules were rechecked on September 26, 2026. Next Gen eligibility requires active student enrollment and a qualifying student/academic email; lack of time to publish to a store is not an eligibility condition.
+## Essential submission checklist
 
-## Eligibility
+- [x] Confirm active student status, qualifying Devpost academic/student email and Next Gen-only category selection.
+- [x] Complete the public Devpost project page and all required English fields before the deadline.
+- [x] Verify the GitHub repository is visible while logged out, includes the actual source, setup instructions and a visible MIT `LICENSE` file; check Git history for secrets and private screenshots.
+- [x] Record and edit an Android demonstration with the creator's human narration, approximately 1:42. **Prepared locally, publication pending.**
+- [x] Review the exact final MP4: real product behavior and RevenueCat integration are visible; voice-over matches the scene; no live tokens, invitation codes, notifications, personal information or unauthorized media are exposed.
+- [x] Upload the approved final demo to **public or judge-accessible unlisted YouTube/Vimeo** and verify it from a logged-out browser. **Public video URL: TO ADD AFTER UPLOAD.**
+- [x] Prepare a **1024 × 1024 PNG** Recall icon and **1179 × 2556 PNG** Android screenshots without device frames. **Prepared locally; commit to the repo and recheck image dimensions.**
+- [x] Upload the app icon and at least one correctly sized, frame-free screenshot to the Devpost submission; choose screenshots that clearly demonstrate the app.
+- [x] Complete the project description, explicitly explain the RevenueCat offering/paywall, `pro` entitlement, subscription restoration, Free/Pro limits, and time-limited promotional judge access.
+- [x] Confirm any required RevenueCat project ID and other Devpost fields in the actual form, without adding secret API keys.
+- [x] Review final assets, category selection and all links; submit the entry and verify the submitted-project page.
 
-- [ ] The entrant is an active student enrolled in high school, college, university, bootcamp, or another academic program.
-- [ ] Devpost uses a qualifying student or academic email address. The rules say eligibility may be checked with JetBrains/swot.
-- [ ] The entrant is at least 13 and otherwise eligible under the rules and local law.
-- [ ] If under the local age of majority, a parent or legal guardian has accepted the rules and completed required consent by the applicable deadline.
-- [ ] No prohibited geography, conflict, ownership, or other general eligibility condition applies.
-- [ ] A team or organization, if any, has an authorized representative; a team containing a minor enters only Next Gen.
-
-## Project and repository
-
-- [x] Android application with a working RevenueCat SDK integration and `pro` entitlement flow.
-- [ ] Core functionality works as shown in the final video and description.
-- [ ] Project is accessible from the United States as required by the rules.
-- [ ] Third-party SDKs, APIs, data, music, images, and trademarks are authorized for use.
-- [ ] Public repository is `Ajayfrizzy/recall-app`.
-- [x] Repository contains the project source and required assets.
-- [x] Root [MIT license](../LICENSE) exists.
-- [ ] GitHub About displays the detected license.
-- [x] The [README](../README.md) documents reproducible mobile/backend setup, environment names, and checks.
-- [ ] A reviewer completes the setup from a fresh checkout without private developer files.
-- [ ] Repository and history contain no secrets, real invitations, tokens, personal screenshots, or unauthorized material.
-
-Next Gen uses the public repository and demo video instead of a published store listing. No paid Apple or Google developer account and no App Store or Google Play release is required.
-
-The required evidence is the functional public repository, open-source license, English description, public demonstration video, icon, and screenshot specified below. An APK, judge invitation, and complimentary Pro are optional supporting material. Keep their verification requirements separate from the category's mandatory submission requirements.
-
-## Devpost requirements
-
-- [ ] Join the hackathon and complete every required field during the submission period.
-- [ ] Select the Next Gen Award and no unintended categories.
-- [ ] Add a clear English description of the problem, features, and functionality.
-- [ ] Explain Recall's RevenueCat default offering, managed paywall, purchases, restore flow, `pro` entitlement, Free/Pro limits, and judge promotional Pro.
-- [ ] Add the public repository URL.
-- [ ] Upload a public YouTube or Vimeo demonstration and add its link.
-- [ ] Keep the video under 2:00 and show Recall running on its target Android device.
-- [ ] Exclude unauthorized material, personal data, invitations, tokens, keys, private URLs, and notifications from the video.
-- [ ] Upload a 1024x1024 app icon.
-- [ ] Upload at least one 1179x2556 screenshot without a device frame.
-- [ ] Use English or include every English translation required by the rules.
-- [ ] Confirm the entry is original, owned work and complies with relevant third-party and open-source licenses.
-
-## Proposed submission copy
-
-### One-line description
-
-Recall turns screenshots into user-controlled actions such as reminders, calendar events, saved products, places, and read-later items.
-
-### Problem
-
-People use screenshots as quick memory, but galleries do not preserve intent. Deadlines, products, events, and useful posts become hard to find and easy to forget.
-
-### Solution
-
-Recall reads screenshot text on-device, optionally combines it with privacy-conscious server-side vision analysis, and returns structured items for useful workflows. The user reviews every action and every deletion.
-
-### What makes Recall different
-
-Recall is a local-first action layer rather than a screenshot chatbot or cloud gallery. It provides typed results, multi-item handling, duplicate protection, Smart Bundles, timely resurfacing, and reviewed cleanup.
-
-### RevenueCat integration
-
-Recall uses RevenueCat's `pro` entitlement, default offering, dashboard-managed paywall, purchases, and restore flow. Free users can clean up 3 screenshots per batch and see 3 Relevant Now cards. Pro removes the application-level cleanup batch cap and allows up to 5 Relevant Now cards.
-
-Invitation-only AI access is separate from Pro. A judge invitation provisions 90-day AI access for the installation and requests a matching 90-day promotional `pro` entitlement; standard invitations never grant Pro. Normal AI quotas and safety controls still apply.
-
-### AI and technical architecture
-
-The Expo SDK 57 Android app performs OCR and initial classification on-device. With explicit user action, the InterServer-hosted Node.js backend sends one resized screenshot and its OCR text to GPT-5 mini through the OpenAI Responses API. Strict Structured Outputs conform to `RecallAnalysis`; Zod validates server-side and the mobile client validates again. Provider failures preserve the local result. Docker Compose runs the backend behind Caddy HTTPS with persistent SQLite state.
-
-### Challenges and work completed
-
-- Reliably associating titles, prices, and dates across multi-card screenshots
-- Preserving useful offline behavior when AI or networking fails
-- Converting incomplete dates into safe, user-reviewed actions
-- Keeping Gallery deletion explicit while retaining useful saved data
-- Testing native OCR, Media Library, notifications, RevenueCat, and permissions on physical Android hardware
-
-The project includes screenshot discovery, on-device OCR, semantic analysis, action execution, duplicate protection, persistence, Smart Bundles and lifecycle controls, Relevant Now, Screenshot Cleanup, and RevenueCat subscriptions/paywalls.
-
-## Evidence and readiness
-
-- [x] On-device OCR is clearly distinguished from optional server-side AI.
-- [x] OpenAI and RevenueCat secret keys are backend-only.
-- [x] Smart Bundles, Relevant Now, reminders, cleanup, and local persistence are implemented.
-- [x] Public InterServer HTTPS backend health endpoint is deployed and verified.
-- [x] Existing-development-installation Samsung testing covered the core flow and judge complimentary Pro activation.
-- [x] Samsung Maestro runs passed navigation, prepared screenshot opening/return, saved Library content after restart, and immediate snooze disappearance.
-- [x] Local offline checks passed, including the storage-recovery, response-body deadline, and midnight snooze regression checks.
-- [ ] GitHub-hosted Checks workflow has a successful run for the final published revision.
-- [ ] Final standalone APK and clean first-time judge installation pass [Release QA](./release-qa.md).
-- [ ] Final video uses real AI (`MOCK_ANALYSIS=false`) with prepared non-personal screenshots and truthful results.
-- [ ] Final icon and 1179x2556 screenshots are exported and inspected.
-- [ ] Final repository visibility, license detection, links, and fresh setup are checked from a logged-out or clean environment.
-
-Do not describe existing-development-installation results as standalone APK verification.
-
-Do not describe promotional judge Pro activation as a completed store purchase. Demonstrate RevenueCat's paywall and entitlement-based feature limits, and identify any Test Store or sandbox transaction accurately. The final video URL, exported submission icon/screenshot, public repository accessibility, student eligibility, and completed Devpost fields still need confirmation.
+**Optional, separate from required Next Gen materials:** An EAS standalone APK and private judge invitation may help reviewers test Recall, but share them only after clean-install and public-backend checks pass. Do not claim a promotional Pro grant is a paid store purchase.
 
 ## Submission assets
 
-- [ ] 1024x1024 Recall app icon
-- [ ] At least one 1179x2556 screenshot without a device frame
-- [ ] Public YouTube or Vimeo demonstration under two minutes
-- [ ] Public repository link with visible MIT license
-- [ ] English project description and RevenueCat explanation
+Use `docs/assets/submission/` to store the finalized icon and screenshot PNGs in Git. Descriptive filenames such as `icon.png`, `relevant-now.png`, `library.png`, `upcoming.png`, `products.png`, `smart-bundles.png` and `pro-paywall.png` are suitable **only when those names match the actual images**. Keep app-runtime assets under `assets/` separate. Avoid placeholder images, debug IDs, personal screenshots and inappropriate subscription-platform wording. Do not imply local media is already committed or uploaded to Devpost.
 
-Suggested screenshot set:
+Prepared local recording: `Recall_Shipaton_Demo_Human_Voice.mp4` (approximately 1:42). **Public video URL:** not supplied. See [demo guide](./demo-script.md) for the scene sequence and final playback/privacy checks.
 
-- [ ] Inbox with the Recall tagline and a useful pending screenshot
-- [ ] Semantic analysis in progress or the privacy acknowledgement
-- [ ] Prepared multi-product result with clearly separated products and accurate prices
-- [ ] Library with saved content
-- [ ] Smart Bundle with readable Active/Removed counts
-- [ ] Relevant Now showing its primary action, **Snooze 1 day**, and Dismiss
-- [ ] Screenshot Cleanup with selected items and Gallery deletion warning
-- [ ] Profile showing Recall Free, Upgrade to Pro, and Restore Purchases
-- [ ] RevenueCat Paywall with Monthly and Yearly options
-- [ ] Profile showing Recall Pro and “Premium features active”
+## Copy-ready Devpost project description
 
-Before capture:
+### Tagline
 
-- [ ] Use a clean preview build with `MOCK_ANALYSIS=false` and a verified public HTTPS backend.
-- [ ] Hide notifications and all personal or confidential data.
-- [ ] Show no `.env`, API key, invitation, token, raw log, local IP, private URL, or credential.
-- [ ] Use consistent orientation with no development labels or device frame where prohibited.
-- [ ] Confirm text is not clipped and buttons remain readable at the captured scale.
-- [ ] Match dates, prices, item counts, subscription state, and narration to the real result.
-- [ ] Confirm Cleanup says selected screenshots will be removed from Gallery.
-- [ ] Verify the standalone clean-install flow before sharing an optional APK.
+**Turn forgotten screenshots into useful, user-controlled actions.**
 
-Keep [demo-script.md](./demo-script.md) until the final demonstration video is complete.
+### Problem
 
-## Judging readiness
+Screenshots capture products, events, deadlines, places and information that people intend to revisit. In a conventional Gallery, those screenshots quickly become difficult to find, organize and act on.
 
-The official criteria ask whether:
+### What we built
 
-- [ ] the idea is clear, useful, interesting, or original and solves a real problem;
-- [ ] the video and repository show meaningful progress and clear core functionality;
-- [ ] RevenueCat is used thoughtfully for monetization; and
-- [ ] the project demonstrates thoughtful technical choices, product thinking, care, and presentation.
+**Recall** is an Android screenshot-to-action app. It discovers accessible screenshots, recognizes text on the device, and creates local structured results even without cloud AI. With a user's explicit consent and action, optional Recall AI analyzes one compressed screenshot and its OCR text through a secured backend to identify products, deadlines, events and useful content. The user can save products or places, keep articles for later, create reminders or calendar entries, and review screenshots for deletion. **Nothing is automatically saved to an external calendar or deleted from Android Gallery without user confirmation.**
 
-## Optional judge material
+**Smart Bundles** organize related saves, **Relevant Now** resurfaces time-sensitive information with snooze and dismissal controls, and **Screenshot Cleanup** helps users make deliberate decisions about Gallery clutter. Local state persists across restarts, and network or AI failures preserve the on-device fallback result.
 
-- [ ] Standalone Android APK with checksum and install instructions
-- [ ] Clean first-time judge flow verified against the public HTTPS backend
-- [ ] Private judge invitation delivery and support contact
-- [ ] Additional screenshots, architecture diagram, release history, and reviewed privacy policy
+### RevenueCat integration and monetization
 
-These can make evaluation easier but do not replace the required repository, public video, icon, screenshot, and Devpost fields. Google Play publication is not required for Recall's Next Gen-only entry.
+Recall uses the RevenueCat mobile SDK, its **default offering**, **managed paywall**, **purchase and Restore Purchases flows**, and the active **`pro` entitlement** to control paid features. Recall Free allows up to three screenshots per Cleanup batch and three Relevant Now cards; Recall Pro removes the app-level Cleanup batch cap and supports up to five Relevant Now cards.
+
+Optional AI access is invitation-protected and **separate from Pro**. A private judge invitation grants 90-day AI access for that installation and requests a matching time-limited promotional RevenueCat `pro` entitlement so judges can see premium features. That promotional entitlement is **not** a completed paid purchase, and ordinary AI invitations do not grant Pro. Server-side quotas and spending controls still apply.
+
+### Technical implementation
+
+The Android app uses Expo SDK 57, React Native, Expo Router, on-device OCR and local persistence. With explicit user action, the InterServer-hosted Node.js backend uses the OpenAI Responses API for GPT-5 mini structured analysis. Server-side Zod and client-side validation check the result. Docker Compose hosts the backend behind Caddy HTTPS, with persistent SQLite for access, usage, spending controls and cached structured results. OpenAI and RevenueCat secrets stay on the backend.
+
+### Challenges and limitations
+
+The implementation addresses multiple products in one screenshot, ambiguous dates, duplicate actions, incomplete connectivity, Android gallery permissions and accessible navigation. Recall currently targets Android; it has no accounts or cross-device sync. AI needs connectivity, an invitation and available provider quota. Deleting a Gallery image does not automatically delete locally saved structured data. Backend access and cached-result records currently lack general automatic deletion and self-service deletion controls.
+
+### Why Next Gen
+
+Recall is entered in the **Next Gen Award**, the student-only category that evaluates a working mobile demonstration, a public open-source repository, thoughtful technical choices and thoughtful RevenueCat monetization without requiring a paid developer account or a published store listing.
+
+## Evidence and remaining tasks
+
+| Item | Status based on supplied documents and conversation |
+| --- | --- |
+| Android implementation and RevenueCat integration | Implemented; see [architecture](./architecture.md). |
+| Public HTTPS backend `/health` | Reported verified September 26; this is not end-to-end fresh-install proof. |
+| Final edited and human-narrated video | Prepared locally, approximately 1:42; final playback and public upload still require confirmation. |
+| Required-size icon and screenshots | Prepared locally; verify actual final files are committed under `docs/assets/submission/` before checking repository asset placement. |
+| Privacy-policy draft | Operator/contact supplied; retention and request-handling procedure and legal review remain unresolved. |
+| Student/academic-email eligibility | Verify in Devpost; do not infer from app development. |
+| Public repository and LICENSE visibility | Check logged-out access before submission. |
+| Public video URL and final Devpost submission | Not yet supplied or verified. |
+| Optional standalone APK and clean judge installation | Do not mark passed until the checks in [Release QA](./release-qa.md) are documented. |
+
+Useful internal documents: [Judge guide](./judge-guide.md), [Release QA](./release-qa.md), [Deployment](./deployment.md), [Privacy-policy draft](./privacy-policy.md), [Demo guide](./demo-script.md).

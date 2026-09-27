@@ -1,16 +1,19 @@
-# Recall Privacy Policy (Draft)
+# Recall Privacy Policy — Pre-publication Draft
 
-**Effective date:** [REVIEW AND INSERT]
+**Last updated:** September 27, 2026
 
-**Last updated:** September 26, 2026
+**Effective date:** Not yet set; to be assign during production/launch date.
 
-This draft reflects the current repository implementation. It is not legal advice and must be reviewed before publication. The effective date, legal operator, contact details, provider-policy links, retention/deletion terms, security contact, age/geography/legal-basis terms, rights process, and change-notice method remain explicit bracketed placeholders; do not publish the policy until they are resolved.
+This draft describes Recall's current implementation and identifies items that must be decided or reviewed before publication. It does not create functionality that Recall does not have. The operator and contact details have been provided, but retention and privacy-request procedures, applicable provider and jurisdictional terms, incident response, change notices, and geographic availability are not finalized. Recall currently has no automatic or self-service backend data deletion.
 
 ## Who operates Recall
 
-Publication is pending. The repository's license attribution does not establish the legal operator, support address, retention commitments, or effective date. Those details must be confirmed by the operator rather than inferred from source control.
+Recall is operated by **Oluwaseun Ajao**.
 
-Recall is operated by **[LEGAL NAME / ENTITY REQUIRED]**. Privacy questions or requests can be sent to **[CONTACT EMAIL REQUIRED]** at **[POSTAL ADDRESS OR OTHER REQUIRED CONTACT DETAILS]**.
+- **Privacy and security contact:** ajayholuwaseun@gmail.com
+- **Correspondence address:** First Unity Estate, Badore, Ajah.
+
+Users may contact this address with privacy inquiries. Receipt of an email does not itself trigger backend data deletion; the procedure for identifying and handling requests concerning backend and third-party data has not yet been defined.
 
 ## Information Recall handles
 
@@ -42,7 +45,7 @@ Recall AI is optional and invitation protected. After the user acknowledges the 
 - filename, dimensions, and screenshot creation time; and
 - an installation access credential.
 
-The Recall backend sends the image, OCR text, and time context to OpenAI's Responses API for GPT-5 mini analysis. Requests set `store: false`; this is a technical request setting, not a promise about all provider logging or legal retention. OpenAI's handling is governed by the applicable OpenAI terms, privacy commitments, account settings, and law. See [OpenAI's privacy policy](https://openai.com/policies/privacy-policy/) and [API data controls](https://platform.openai.com/docs/guides/your-data). **[CONFIRM APPLICABLE ACCOUNT TERMS / DPA BEFORE PUBLICATION]**
+The Recall backend sends the image, OCR text, and time context to OpenAI's Responses API for GPT-5 mini analysis. Requests set `store: false`; this is a technical request setting, not a promise about all provider logging or legal retention. OpenAI's handling is governed by the applicable OpenAI terms, privacy commitments, account settings, and law. See [OpenAI's privacy policy](https://openai.com/policies/privacy-policy/) and [API data controls](https://platform.openai.com/docs/guides/your-data). **Before publication:** Verify the account-specific OpenAI terms and whether a data processing agreement is required.
 
 Recall does not send screenshot history, Library contents, reminders, or unrelated app state in an analysis request.
 
@@ -50,7 +53,7 @@ Recall does not send screenshot history, Library contents, reminders, or unrelat
 
 Recall uses RevenueCat to load subscription offerings, show a paywall, process/restore purchases through the platform store, and determine whether the `pro` entitlement is active. Judge invitations also create a dedicated RevenueCat App User ID and ask the backend to provision a time-limited promotional entitlement.
 
-RevenueCat may process app user identifiers, purchase and entitlement information, device/app metadata, and related diagnostics under its own terms and [privacy policy](https://www.revenuecat.com/privacy/). **[CONFIRM APPLICABLE PROVIDER TERMS BEFORE PUBLICATION]**
+RevenueCat may process app user identifiers, purchase and entitlement information, device/app metadata, and related diagnostics under its own terms and [privacy policy](https://www.revenuecat.com/privacy/). **Before publication:** Verify the applicable RevenueCat terms and whether a data processing agreement is required.
 
 ## Storage
 
@@ -68,13 +71,14 @@ Server logs include limited usage, error, and RevenueCat provisioning diagnostic
 
 Current implementation facts:
 
-- Local app state remains until app data is cleared or the app changes/removes it through an available control.
+- Local Recall data can remain after the original screenshot is deleted from Android Gallery. It remains until application data is cleared or Recall changes or removes it through an existing control.
+- Clearing Recall's application data removes local app records and locally stored access credentials from that installation. It does not necessarily delete screenshots from Android Gallery or data held by Recall's backend, OpenAI, RevenueCat, or a platform store.
 - Expired or invalid Recall AI credentials are removed from SecureStore when detected.
-- Backend invitations, installation records, usage/cost records, and cached structured analyses do not currently have a general automatic retention purge.
+- Backend access records, including invitations, installation records, usage/cost records, and cached structured analyses, currently have no general automatic deletion schedule.
 - Active analysis reservations are removed after their timeout when subsequent access-control work reconciles them.
 - RevenueCat and OpenAI apply their own retention practices.
 
-Before public launch, the operator must define and publish retention periods and implement any required deletion process: **[RETENTION SCHEDULE AND DELETION PROCESS REQUIRED]**.
+**Not yet resolved:** The operator must determine an appropriate retention policy and an operational privacy-request procedure, including how records can be identified and how requests will be handled when deletion is legally required. No specific retention period or automatic deletion is claimed. Do not publish an unsupported deletion promise.
 
 ## Screenshot deletion and user controls
 
@@ -86,23 +90,26 @@ Users can:
 - review and confirm reminders, calendar events, saves, and other actions;
 - snooze or dismiss Relevant Now items;
 - select screenshots for Cleanup and cancel before deletion;
-- respond to Android's Gallery deletion confirmation; and
-- deactivate the locally stored Recall AI credential.
+- respond to Android's Gallery deletion confirmation;
+- deactivate the locally stored Recall AI credential; and
+- clear Recall's application data through Android settings to remove local Recall records from that installation.
 
-Deleting a screenshot from Gallery removes the media asset if Android completes the request. Recall's locally saved structured data or action records may remain. Deactivating AI removes the local credential but does not currently delete backend records or RevenueCat records. A user-facing backend deletion request workflow is not implemented.
+Deleting a screenshot from Gallery removes the media asset if Android completes the request. Recall's locally saved structured data or action records may remain. Deactivating AI removes the locally stored access credential but does not delete backend records or RevenueCat records. Clearing application data removes local Recall records but does not necessarily remove backend or third-party data. Recall does not currently implement automatic deletion of backend records or a self-service backend deletion feature.
 
 ## Security
 
 OpenAI and RevenueCat secret keys are intended to remain on the backend. Production mobile builds require an HTTPS backend URL. Backend access tokens and invitation codes are HMAC-hashed with a server-side pepper before database storage, and raw access tokens are stored on-device with SecureStore.
 
-No system can guarantee absolute security. Recall's backend is deployed on an InterServer VPS behind Caddy HTTPS, with a persistent SQLite volume and documented online backup and rollback procedures. The final operational monitoring, off-server backup schedule, access review, and incident-response process still require operator verification. **[SECURITY CONTACT / INCIDENT PROCESS REQUIRED]**
+No system can guarantee absolute security. Recall's backend is deployed on an InterServer VPS behind Caddy HTTPS, with a persistent SQLite volume and documented online backup and rollback procedures. The final operational monitoring, off-server backup schedule, access review, and incident-response process still require operator verification. Security reports can be sent to **ajayholuwaseun@gmail.com**. **Not yet resolved:** Document and verify the incident-response procedure before publication.
 
 ## Children, geography, legal bases, and rights
 
-The operator must decide and document intended age limits, supported countries, legal bases, international transfers, applicable consumer/privacy rights, request verification, appeal rights, and regulator contacts before publication. **[LEGAL REVIEW REQUIRED]**
+**Intended age:** Recall is intended for users aged **13 and older**. This intended audience is not a claim that all applicable child-privacy or parental-consent requirements have been fulfilled.
 
-The Shipaton Next Gen competition permits eligible student entrants aged 13 and older; that competition rule does not itself establish the age eligibility of Recall users.
+**Supported countries:** Not yet decided. No unrestricted worldwide availability is claimed.
+
+**Before publication:** Establish supported countries and review applicable parental-consent requirements, legal bases, international transfers, user rights, request verification and appeal procedures, and regulator-contact requirements. The competition's entrant age rules are separate from Recall's user eligibility.
 
 ## Changes
 
-This policy may be updated as Recall's implementation, deployment, or legal obligations change. The published policy should state the effective date and explain material changes. **[NOTICE METHOD REQUIRED]**
+This policy may be updated as Recall's implementation, deployment, or legal obligations change. The published policy should state the effective date and explain material changes. **Before publication:** Decide and document the method for communicating material changes. Recall has no user accounts or dedicated privacy-policy notification feature.

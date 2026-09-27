@@ -4,12 +4,16 @@ Recall's official Next Gen evaluation materials are the public source repository
 
 ## Install an optional APK
 
-Before following APK instructions, use the public repository's [README](../README.md) for setup and [submission guide](./submission.md) for the entry's assets. The final public video link, optional APK link, and support contact are still pending; do not treat this guide as confirmation that those assets have been published.
+Before following APK instructions, use the public repository's [README](../README.md) for setup and [submission guide](./submission.md) for the entry's assets. The edited demonstration and image assets are prepared locally; a public video URL and optional APK link have not been supplied or verified. The Next Gen entry does not require a store release or an APK. Contact: **ajayholuwaseun@gmail.com**.
 
 1. Download the APK only from the private or public link included in the Devpost submission.
 2. On Android, allow installation from that source when prompted, then install Recall.
 3. Open Recall. The APK must run without Metro or a development launcher.
-4. If Android blocks the install, do not disable broader device protections; report the exact message to **[JUDGE SUPPORT CONTACT REQUIRED]**.
+4. If Android blocks the install, do not disable broader device protections; report the exact message to **ajayholuwaseun@gmail.com**.
+
+## What the Next Gen submission provides
+
+The required judging materials are the public [source repository](https://github.com/Ajayfrizzy/recall-app), its MIT license, and the under-two-minute Android demo. The final public video URL belongs in [submission.md](./submission.md) once uploaded. A playable APK and private judge invitation are optional extras, not conditions for Next Gen entry.
 
 ## Try the core flow
 
@@ -50,7 +54,7 @@ Open Cleanup, review each candidate, and select only prepared test screenshots. 
 ## Known testing limits
 
 - The public HTTPS backend is deployed and its health endpoint has been verified. End-to-end AI still depends on the runtime AI switch, quotas, and provider availability.
-- The final standalone APK and clean first-time judge installation are still pending verification and must not be distributed until the Release QA blockers pass.
+- The final standalone APK and clean first-time judge installation were marked pending in the supplied Release QA; do not distribute or describe either as verified unless a later documented test proves it.
 - AI requires connectivity and may fall back to the on-device result.
 - Access does not transfer between devices and there is no user account.
 - The current submission targets Android; Google Play publication is not required for this Next Gen entry.

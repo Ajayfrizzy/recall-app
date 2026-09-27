@@ -1,21 +1,27 @@
 # Recall Release History
 
-## 1.0.0 release candidate | September 2026
+## 1.0.0 — Next Gen submission candidate | September 2026
 
-- Implemented Android screenshot discovery, selected-photo permission handling, on-device OCR, local classification, structured AI analysis, and graceful local fallback.
-- Added user-confirmed reminders, calendar events, product/place/read-later saves, multi-item actions, duplicate protection, and versioned local persistence.
-- Added Smart Bundles, Relevant Now, Screenshot Cleanup, and their persisted lifecycle controls.
-- Integrated RevenueCat's default offering, managed paywall, purchases, restore flow, `pro` entitlement, Free/Pro limits, and judge promotional Pro provisioning.
-- Added invitation-based AI access, SecureStore installation credentials, server-side quotas, estimated spending controls, structured-result caching, and redacted operational diagnostics.
-- Packaged the Node.js backend for the InterServer VPS with Docker Compose, Caddy HTTPS, persistent SQLite, online backup, restore testing, and image rollback instructions.
-- Refined Android permissions, image states, timestamps, accessibility states, reduced-motion behavior, typography, action feedback, and touch targets after physical-device review.
-- Fixed Android Snooze text measurement with full inner label width and scaling-aware button minimums. Primary actions fill their own row; Snooze and Dismiss fill available space and wrap at larger text sizes.
-- Added clearer Library filters/action buttons, safe-area spacing on all root tabs, and scaling-aware tab-bar height.
-- Made snooze apply to the underlying item for 24 hours across date changes, with expiry refresh and confirmation. Dismiss remains occurrence-specific.
-- Added recoverable storage error feedback, response-body timeout protection, stricter release configuration validation, offline CI configuration, and Maestro smoke flows.
+Recall is an Android screenshot-to-action app submitted to **RevenueCat Shipaton 2026's Next Gen Award**. Its required evaluation materials are the public open-source source code and a short demonstration, rather than a Google Play listing.
 
-The public backend health endpoint and existing-development-installation Samsung smoke tests have been verified. Final standalone APK testing, clean first-time judge flow, hosted CI execution, and the full card-type/24-hour device matrix remain tracked in [release-qa.md](./release-qa.md).
+### Implemented features
 
-## Earlier milestones
+- Screenshot discovery and selected-photo permissions; on-device OCR, local classification and optional GPT-5 mini analysis with validated structured results and a local fallback.
+- User-confirmed reminders, calendar events, product/place/Read Later saves, multi-item handling and duplicate protection.
+- Smart Bundles, Relevant Now with persisted snooze/dismissal, Screenshot Cleanup with explicit Android Gallery deletion confirmation, and persistent local state.
+- RevenueCat default offering, managed paywall, purchasing/restoration integration, `pro` entitlement checks, Free/Pro feature limits and judge-only complimentary Pro provisioning.
+- Invitation-protected AI access, backend quotas and spending controls, SecureStore installation credentials, and limited operational diagnostics.
+- InterServer Ubuntu deployment configuration with Docker Compose, Caddy HTTPS, persistent SQLite, backup/restore scripts and rollback instructions.
+- Android accessibility, timestamp, button-layout, safe-area, error-recovery and response-timeout improvements.
 
-Earlier development established the four root tabs (Inbox, Upcoming, Library, and Profile), strict OpenAI Structured Outputs with server/client validation, local-first fallback, and the initial RevenueCat subscription flow. Detailed commit history remains available in Git; repetitive milestone-by-milestone implementation notes are intentionally omitted here.
+### Demonstration and submission preparation
+
+- An edited Android video with the creator's own narration has been prepared locally (approximately 1:42); the public video URL is not yet recorded in these documents.
+- A 1024 × 1024 icon and submission screenshots have been prepared. Only mark repository asset placement complete after committing the final PNGs under `docs/assets/submission/`.
+- The privacy-policy draft now identifies the operator and contact. Retention decisions and privacy-request procedures remain unresolved; see [privacy-policy.md](./privacy-policy.md).
+
+### Verification boundary
+
+The supplied Release QA records a verified public HTTPS health response, development-installation Samsung tests, Maestro smoke tests and passing local checks. **That evidence does not automatically establish** a passing clean standalone APK, a fresh judge activation, a complete 24-hour snooze device test or a successful hosted CI run. Update [release-qa.md](./release-qa.md) as new evidence is obtained.
+
+Detailed implementation history is available in Git; this file intentionally omits repetitive per-milestone notes.

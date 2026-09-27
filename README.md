@@ -6,7 +6,13 @@ Recall never performs a suggested action or deletes a Gallery item without confi
 
 ## Shipaton 2026 — Next Gen
 
-Recall is being prepared for Shipaton 2026's **Next Gen Award**, which evaluates the public repository and demo video rather than a published store listing. Entrants must meet the student and academic-email requirements in the [official rules](https://revenuecat-shipaton-2026.devpost.com/rules). The final demo video and submission screenshots are pending. See the [submission checklist](docs/submission.md) and [judge guide](docs/judge-guide.md).
+Recall is entered in the **Next Gen Award** at RevenueCat Shipaton 2026. This category uses a public, licensed source repository and demonstration video rather than requiring a published app-store listing. Entrants must meet the student and academic-email requirements in the [official rules](https://revenuecat-shipaton-2026.devpost.com/rules). The edited demonstration video (with human narration), 1024 × 1024 icon, and 1179 × 2556 submission screenshots have been prepared; public video publication and final Devpost upload must still be confirmed. See the [submission guide](docs/submission.md) and [judge guide](docs/judge-guide.md).
+
+### Submission media
+
+- **Demonstration:** Edited Android walkthrough with human narration, under two minutes. Add its public YouTube or Vimeo URL here once published; the local video file is not a public link.
+- **Images:** The corrected app icon and submission screenshots belong in `docs/assets/submission/` when committed to the repository. The icon is 1024 × 1024 and screenshots are 1179 × 2556, without device frames.
+- **Optional judge APK:** Provide an installation link only after the standalone build and clean judge activation have passed the [release QA](docs/release-qa.md). The APK is not a prerequisite for this category.
 
 ## Features
 
@@ -143,13 +149,16 @@ Invitation administration is documented in the private-operator sections of [Dep
 ## Privacy and limitations
 
 - Original screenshots stay in Android Gallery unless the user confirms deletion.
+- Deleting a Gallery screenshot does not automatically delete locally saved Recall analyses or action records.
+- Deactivating Recall AI removes the locally stored access credential; it does not delete backend records.
+- Clearing Recall's application data removes local records from that installation but does not necessarily remove backend or third-party data.
 - The backend does not store uploaded image bytes or OCR text as standalone fields, but it does store access records, quota/cost records, request fingerprints, and cached structured analysis JSON in SQLite.
-- Recall has no user account or cross-device sync.
-- Backend structured-result cache records do not yet have an automatic retention purge or user-facing deletion workflow.
+- Backend access records and cached structured analysis currently have no general automatic deletion schedule. Recall has no self-service backend deletion feature.
+- Recall has no user account or cross-device synchronization.
 - Android is the release target; iOS is not release-qualified.
 - AI quality depends on screenshot clarity, OCR quality, connectivity, and provider availability.
 
-Review the draft [Privacy Policy](docs/privacy-policy.md) before testing with personal screenshots. Its legal identity, contact, effective-date, retention, and related publication placeholders remain intentionally unresolved.
+Read the [Privacy Policy (pre-publication draft)](docs/privacy-policy.md) before testing with personal screenshots. The identified operator is Oluwaseun Ajao, and privacy requests may be sent to ajayholuwaseun@gmail.com. The publication date, backend retention policy, workable privacy-request procedure, applicable legal review, and geographic availability still require final decisions. No automatic backend deletion or self-service deletion is implemented.
 
 ## Documentation
 
@@ -158,8 +167,8 @@ Review the draft [Privacy Policy](docs/privacy-policy.md) before testing with pe
 - [Judge guide](docs/judge-guide.md)
 - [Release QA](docs/release-qa.md)
 - [Shipaton submission guide](docs/submission.md)
-- [Demo recording script](docs/demo-script.md)
-- [Privacy policy draft](docs/privacy-policy.md)
+- [Demo guide and narration](docs/demo-script.md)
+- [Privacy policy (pre-publication draft)](docs/privacy-policy.md)
 - [Release history](docs/release-notes.md)
 
 ## License
